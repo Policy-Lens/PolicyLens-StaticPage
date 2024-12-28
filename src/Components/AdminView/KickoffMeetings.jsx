@@ -54,7 +54,7 @@ const KickoffMeetings = () => {
 
   const handleFormSubmit = (values) => {
     console.log("Meeting Details:", values);
-    closeMeetingModal(); // Close the modal after submission
+    closeMeetingModal();
   };
 
   return (

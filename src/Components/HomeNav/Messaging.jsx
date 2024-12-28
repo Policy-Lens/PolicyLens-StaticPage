@@ -1,5 +1,5 @@
 import React from "react";
-import Sidebar from "./Sidebar"; // Import the sidebar component
+import Sidebar from "./Sidebar"; 
 
 const MessagingPage = () => {
   return (

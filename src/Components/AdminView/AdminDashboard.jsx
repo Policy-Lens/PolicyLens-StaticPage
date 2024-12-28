@@ -1,5 +1,5 @@
 import React from "react";
-import SideNav from "../WorkFlow/SideNav"; // Assuming SideNav is in the same directory
+import SideNav from "../WorkFlow/SideNav"; 
 
 const AdminDashboard = () => {
   return (

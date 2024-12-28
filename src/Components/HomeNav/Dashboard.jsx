@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "./Sidebar"; // Adjust the import path to match your project structure
+import Sidebar from "./Sidebar"; 
 
 const DashboardPage = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

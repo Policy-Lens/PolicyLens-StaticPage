@@ -90,7 +90,7 @@ const BrainstormSolution = () => {
         </Form>
       </Modal>
 
-      {/* Assign Task Button positioned in the bottom-right corner */}
+      
       <div className="absolute bottom--8 right-4">
         <Button type="default" onClick={() => setIsModalOpen(true)}>
           Assign Task

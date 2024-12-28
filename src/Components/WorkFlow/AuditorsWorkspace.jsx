@@ -33,8 +33,8 @@ const AuditorWorkspace = () => {
                         multiple={false}
                         customRequest={({ file, onSuccess }) => {
                             setTimeout(() => {
-                                onSuccess("ok"); // Mock success
-                                setUploadedFile(file.name); // Set uploaded file name
+                                onSuccess("ok"); 
+                                setUploadedFile(file.name); 
                                 message.success(`${file.name} uploaded successfully.`);
                             }, 500);
                         }}

@@ -13,7 +13,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 
 const Sidebar = () => {
-    const [collapsed, setCollapsed] = useState(false); // Sidebar collapse state
+    const [collapsed, setCollapsed] = useState(false); 
     const location = useLocation();
 
     const menuItems = [
@@ -30,7 +30,7 @@ const Sidebar = () => {
         <div
             className={`h-screen bg-white shadow-md transition-all duration-300`}
             style={{
-                width: collapsed ? "80px" : "220px", // Maintain original width when expanded
+                width: collapsed ? "80px" : "220px", 
                 position: "fixed",
                 top: 0,
                 left: 0,

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "./Sidebar"; // Adjust the import path according to your project structure
+import Sidebar from "./Sidebar"; 
 
 const CompaniesPage = () => {
     const [companies, setCompanies] = useState([
@@ -82,8 +82,7 @@ const CompaniesPage = () => {
             <Sidebar />
 
             {/* Main Content */}
-            <div className="flex-1 ml-[240px] p-8 bg-gray-50"> {/* Adjusted margin-left */}
-                {/* Added `ml-[240px]` to account for the Sidebar's width */}
+            <div className="flex-1 ml-[240px] p-8 bg-gray-50"> 
                 <h1 className="text-2xl font-bold text-gray-800 mb-6">Companies</h1>
 
                 <div className="flex justify-end gap-4 mb-4">

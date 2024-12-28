@@ -23,8 +23,8 @@ function InquirySection({ onContinue }) {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleUploadChange(panelKey, info)}
-          beforeUpload={() => false} // Prevent auto-upload
-          showUploadList={false} // Hide file previews
+          beforeUpload={() => false} 
+          showUploadList={false} 
           multiple
         >
           <button
@@ -48,8 +48,8 @@ function InquirySection({ onContinue }) {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleUploadChange(panelKey, info)}
-          beforeUpload={() => false} // Prevent auto-upload
-          showUploadList={false} // Hide file previews
+          beforeUpload={() => false} 
+          showUploadList={false} 
           multiple
         >
           <button

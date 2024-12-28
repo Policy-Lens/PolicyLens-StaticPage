@@ -21,7 +21,7 @@ import PlanningAudit from "./PlanningAudit";
 import ExecutionPage from "./ExecutionPage";
 import EvaluationPage from "./EvaluationPage";
 import CertificationPage from "./Certification";
-import SideNav from "./SideNav"; // Import the SideNav component
+import SideNav from "./SideNav"; 
 import { Outlet } from "react-router-dom";
 import KickoffMeetings from "./KickoffMeetings";
 

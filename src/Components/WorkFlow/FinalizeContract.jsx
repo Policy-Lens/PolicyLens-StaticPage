@@ -48,8 +48,8 @@ function FinalizeContract() {
           <Upload
             fileList={fileList}
             onChange={handleDescriptionUploadChange}
-            beforeUpload={() => false} // Prevent auto-upload
-            showUploadList={false} // Hide file previews
+            beforeUpload={() => false} 
+            showUploadList={false} 
             multiple
           >
             <button

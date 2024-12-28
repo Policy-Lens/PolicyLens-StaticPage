@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "./Sidebar"; // Adjust the path to your Sidebar component
+import Sidebar from "./Sidebar"; 
 
 const AuditorsPage = () => {
     const [auditors, setAuditors] = useState([
@@ -45,7 +45,7 @@ const AuditorsPage = () => {
 
     const toggleActionMode = () => {
         setIsActionMode(!isActionMode);
-        setSelectedAuditors([]); // Reset selections when toggling
+        setSelectedAuditors([]); 
     };
 
     const handleCheckboxChange = (auditorName) => {
@@ -60,7 +60,7 @@ const AuditorsPage = () => {
         setAuditors((prev) =>
             prev.filter((auditor) => !selectedAuditors.includes(auditor.name))
         );
-        toggleActionMode(); // Exit action mode after deleting
+        toggleActionMode(); 
     };
 
     const handleEdit = () => {
@@ -69,8 +69,8 @@ const AuditorsPage = () => {
                 ", "
             )}`
         );
-        // Here you can implement a modal or redirection to an edit page
-        toggleActionMode(); // Exit action mode
+        
+        toggleActionMode(); 
     };
 
     return (

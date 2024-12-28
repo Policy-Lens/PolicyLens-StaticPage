@@ -36,8 +36,8 @@ const GapAnalysis = () => {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleFileChange(panelKey, info)}
-          beforeUpload={() => false} // Prevent auto-upload
-          showUploadList={false} // Hide file previews
+          beforeUpload={() => false} 
+          showUploadList={false} 
           multiple
         >
           <button

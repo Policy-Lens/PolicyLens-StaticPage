@@ -11,11 +11,11 @@ import {
 } from "@ant-design/icons";
 
 const SideNav = () => {
-  const [collapsed, setCollapsed] = useState(false); // Sidebar collapse state
-  const [activeItem, setActiveItem] = useState(""); // Default active item
-  const location = useLocation(); // Access current location/path
+  const [collapsed, setCollapsed] = useState(false); 
+  const [activeItem, setActiveItem] = useState(""); 
+  const location = useLocation(); 
 
-  // Set active item based on the current path
+  
   useEffect(() => {
     const path = location.pathname;
     if (path.includes("projects/dashboard")) {

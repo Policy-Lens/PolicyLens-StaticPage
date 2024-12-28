@@ -38,9 +38,9 @@ function ServiceRequirements() {
           <Upload
             fileList={fileList}
             onChange={handleUploadChange}
-            beforeUpload={() => false} // Prevent auto-upload
+            beforeUpload={() => false} 
             multiple
-            showUploadList={false} // Hide file previews
+            showUploadList={false} 
           >
             <Button
               icon={<PaperClipOutlined />}

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import Sidebar from "../HomeNav/Sidebar"; // Adjust the path based on your folder structure
+import Sidebar from "../HomeNav/Sidebar"; 
 
 const Projects = () => {
-  const [activeItem, setActiveItem] = useState("projects"); // Default active item set to "projects"
+  const [activeItem, setActiveItem] = useState("projects"); 
 
   const cards = [
     {

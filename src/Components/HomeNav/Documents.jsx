@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Layout } from "antd";
-import Sidebar from "./Sidebar"; // Adjust the import path to match your project structure
+import Sidebar from "./Sidebar"; 
 
 const { Content } = Layout;
 
@@ -28,7 +28,7 @@ const DocumentsPage = () => {
 
     const toggleDeleteMode = () => {
         setDeleteMode(!isDeleteMode);
-        setSelectedDocs([]); // Reset selections when toggling
+        setSelectedDocs([]); 
     };
 
     const handleCheckboxChange = (docName) => {
@@ -43,7 +43,7 @@ const DocumentsPage = () => {
         setDocuments((prev) =>
             prev.filter((doc) => !selectedDocs.includes(doc.name))
         );
-        toggleDeleteMode(); // Exit delete mode after deleting
+        toggleDeleteMode(); 
     };
 
     return (

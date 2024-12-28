@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 
 const TopNavBar = () => {
-  const [activeItem, setActiveItem] = useState("plc"); // Default active item
+  const [activeItem, setActiveItem] = useState("plc"); 
 
   const navItems = [
     { key: "plc", label: "Project Lifecycle (PLC)", icon: <HomeOutlined /> },
@@ -32,7 +32,7 @@ const TopNavBar = () => {
         {navItems.map((item) => (
           <div
             key={item.key}
-            onClick={() => setActiveItem(item.key)} // Highlight the clicked item
+            onClick={() => setActiveItem(item.key)} 
             className={`flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer transition-all duration-200 
               ${
                 activeItem === item.key

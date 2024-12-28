@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button, Upload, Collapse, Input } from "antd";
 import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
-import SideNav from "../WorkFlow/SideNav"; // Assuming SideNav is in this path
+import SideNav from "../WorkFlow/SideNav"; 
 
 const { TextArea } = Input;
 const { Panel } = Collapse;
@@ -40,7 +40,7 @@ const AdminDocumentsPage = () => {
     setDocuments((prev) =>
       prev.filter((doc) => !selectedDocs.includes(doc.name))
     );
-    setDeleteMode(false); // Exit delete mode after deleting
+    setDeleteMode(false); 
   };
 
   return (
@@ -114,7 +114,7 @@ const AdminDocumentsPage = () => {
           </tbody>
         </table>
 
-        {/* Add Document Section (if currentSection is 'add') */}
+        
         {currentSection === "add" && (
           <div className="mt-8">
             <h2 className="text-xl font-bold mb-4">Add New Document</h2>
