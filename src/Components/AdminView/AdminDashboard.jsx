@@ -1,38 +1,40 @@
-import React from "react";
-import SideNav from "../WorkFlow/SideNav"; 
+import React, { useState } from "react";
+import SideNav from "../WorkFlow/SideNav";
 
 const AdminDashboard = () => {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <SideNav />
+      <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6 bg-gray-100">
+      <div
+        className={`flex-1 p-6 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-60"
+          }`}
+      >
         {/* Dashboard Header */}
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
         {/* Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Stat Card 1 */}
+       
           <div className="bg-gray-50 shadow-md rounded-lg p-6 border border-gray-200">
             <h2 className="text-gray-600 font-medium">Total Users</h2>
             <p className="text-3xl font-bold text-gray-800 mt-2">1,234</p>
           </div>
 
-          {/* Stat Card 2 */}
           <div className="bg-gray-50 shadow-md rounded-lg p-6 border border-gray-200">
             <h2 className="text-gray-600 font-medium">Active Projects</h2>
             <p className="text-3xl font-bold text-gray-800 mt-2">56</p>
           </div>
 
-          {/* Stat Card 3 */}
           <div className="bg-gray-50 shadow-md rounded-lg p-6 border border-gray-200">
             <h2 className="text-gray-600 font-medium">Pending Tasks</h2>
             <p className="text-3xl font-bold text-gray-800 mt-2">8</p>
           </div>
 
-          {/* Stat Card 4 */}
           <div className="bg-gray-50 shadow-md rounded-lg p-6 border border-gray-200">
             <h2 className="text-gray-600 font-medium">Revenue</h2>
             <p className="text-3xl font-bold text-gray-800 mt-2">$12,345</p>
@@ -41,7 +43,9 @@ const AdminDashboard = () => {
 
         {/* Quick Actions Section */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-8 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">Quick Actions</h2>
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">
+            Quick Actions
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button className="bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 transition">
               Add User
@@ -60,7 +64,9 @@ const AdminDashboard = () => {
 
         {/* Recent Activity Section */}
         <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">Recent Activity</h2>
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">
+            Recent Activity
+          </h2>
           <table className="w-full text-left">
             <thead>
               <tr className="border-b">

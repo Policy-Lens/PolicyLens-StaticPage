@@ -3,6 +3,7 @@ import SideNav from "../WorkFlow/SideNav";
 
 const ProjectTeamPage = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); // State for SideNav collapse
 
   const project = {
     name: "Project 1",
@@ -21,10 +22,13 @@ const ProjectTeamPage = () => {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <SideNav />
+      <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main content */}
-      <div className="flex-1 p-10 bg-gray-100">
+      <div
+        className={`p-10 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-56"
+          } flex-1`}
+      >
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Project Team</h1>
         <div className="bg-white p-4 rounded-lg shadow-xl w-full h-72 flex flex-col justify-between border border-gray-200 hover:shadow-2xl transition-shadow">
           {/* Project Header */}
@@ -60,7 +64,7 @@ const ProjectTeamPage = () => {
             {project.team.map((member, idx) => (
               <div
                 key={idx}
-                className="flex justify-between items-center bg-gray-50 p-2 rounded-md shadow-sm hover:shadow-md transition-shadow"
+                className="flex justify-between items-center p-2 rounded-md shadow-sm hover:shadow-md transition-shadow"
               >
                 <span className="text-base font-medium text-gray-800">
                   {member.name}

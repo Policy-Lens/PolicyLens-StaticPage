@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
+import SideNav from "./SideNav";
+import { Outlet } from "react-router-dom";
 import ServiceRequirements from "./ServiceRequirements";
 import GapAnalysis from "./GapAnalysis";
 import StakeholderInterviews from "./StakeholderInterviews";
@@ -21,17 +23,14 @@ import PlanningAudit from "./PlanningAudit";
 import ExecutionPage from "./ExecutionPage";
 import EvaluationPage from "./EvaluationPage";
 import CertificationPage from "./Certification";
-import SideNav from "./SideNav"; 
-import { Outlet } from "react-router-dom";
 import KickoffMeetings from "./KickoffMeetings";
-
 
 const steps = [
   { title: "Service Requirements", content: <ServiceRequirements /> },
   { title: "Inquiry Section", content: <InquirySection /> },
   { title: "Finalize Contract", content: <FinalizeContract /> },
   { title: "Kickoff Meetings", content: <KickoffMeetings /> },
-  { title: "Gap Analysis. ", content: <GapAnalysis /> },
+  { title: "Gap Analysis", content: <GapAnalysis /> },
   { title: "Stakeholder Interviews", content: <StakeholderInterviews /> },
   { title: "Data Analysis", content: <DataAnalysis /> },
   { title: "Report Presentation", content: <ReportPresentation /> },
@@ -49,12 +48,13 @@ const steps = [
   { title: "Planning Audit", content: <PlanningAudit /> },
   { title: "Execution Section", content: <ExecutionPage /> },
   { title: "Evaluation Section", content: <EvaluationPage /> },
-  { title: "Certification section", content: <CertificationPage /> },
+  { title: "Certification Section", content: <CertificationPage /> },
 ];
 
 const CarouselHorizontalStepper = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     scrollToStep(currentStep);
@@ -81,39 +81,34 @@ const CarouselHorizontalStepper = () => {
   };
 
   return (
-    <div className="flex h-screen ">
+    <div className="flex h-screen">
       {/* Sidebar */}
-      <SideNav />
+       <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content */}
-      <div className="flex-1 max-w-7xl mx-auto p-2 ">
-
-        {/* Scrollable Navigation with Consistent Alignment */}
+      <div className={`flex-1 max-w-7xl mx-auto p-2 mr-3 ${collapsed ? "ml-16 max-w-[90rem]" : "ml-60"}`}>
+        {/* Scrollable Navigation */}
         <div
           ref={containerRef}
-          className="flex items-center mb-6 overflow-x-auto space-x-8 px-4 " 
+          className="flex items-center mb-6 overflow-x-auto space-x-8 px-4"
         >
           {steps.map((step, index) => (
             <div
               key={index}
-              className={`flex flex-col items-center ${
-                index === currentStep
+              className={`flex flex-col items-center ${index === currentStep
                   ? "text-blue-600 font-semibold"
                   : "text-gray-500"
-              }`}
-            >
-              {/* Step Circle */}
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                  index <= currentStep ? "bg-blue-500 text-white" : "bg-gray-300"
                 }`}
+            >
+              <div
+                className={`w-10 h-10 flex items-center justify-center rounded-full ${index <= currentStep
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-300"
+                  }`}
               >
                 {index + 1}
               </div>
-              {/* Step Title */}
-              <span className="mt-2 text-sm text-center w-20">
-                {step.title}
-              </span>
+              <span className="mt-2 text-sm text-center w-20">{step.title}</span>
             </div>
           ))}
         </div>
@@ -155,7 +150,7 @@ const CarouselHorizontalStepper = () => {
           </button>
         </div>
       </div>
-      <Outlet/>
+      <Outlet />
     </div>
   );
 };

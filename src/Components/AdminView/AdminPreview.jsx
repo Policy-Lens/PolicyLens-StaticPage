@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { List, Tag, Typography, Space, Button } from "antd";
 import { CheckCircleOutlined } from "@ant-design/icons";
-import SideNav from "../WorkFlow/SideNav"; 
+import SideNav from "../WorkFlow/SideNav";
 
 const { Text } = Typography;
 
@@ -110,6 +110,7 @@ const PreviewPage = () => {
   ];
 
   const [view, setView] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
 
   const renderListView = () => (
     <List
@@ -117,46 +118,21 @@ const PreviewPage = () => {
       itemLayout="horizontal"
       dataSource={tasks}
       renderItem={(item) => (
-        <List.Item
-          style={{
-            background: "#FFFFFF",
-            marginBottom: "8px",
-            borderRadius: "10px",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            padding: "20px",
-          }}
-        >
-          <Space size="large" style={{ display: "flex", alignItems: "center" }}>
-            <CheckCircleOutlined
-              style={{ fontSize: "24px", color: "#52c41a" }}
-            />
+        <List.Item className="bg-white mb-2 rounded-lg shadow-md p-5">
+          <Space size="large" className="flex items-center">
+            <CheckCircleOutlined className="text-2xl text-green-500" />
             <div>
-              <Text style={{ fontSize: "16px", fontWeight: "500" }}>
-                {item.name}
-              </Text>
+              <Text className="text-lg font-medium">{item.name}</Text>
               {item.preview && (
-                <div
-                  style={{ fontSize: "14px", color: "gray", marginTop: "4px" }}
-                >
-                  {item.preview}
-                </div>
+                <div className="text-sm text-gray-500 mt-1">{item.preview}</div>
               )}
-              <div
-                style={{ fontSize: "14px", color: "gray", marginTop: "4px" }}
-              >
+              <div className="text-sm text-gray-500 mt-1">
                 <b>User:</b> {item.user} | <b>Role:</b> {item.role} |{" "}
                 <b>Timestamp:</b> {item.timestamp}
               </div>
             </div>
           </Space>
-          <Tag
-            color="success"
-            style={{
-              fontSize: "14px",
-              padding: "5px 10px",
-              borderRadius: "20px",
-            }}
-          >
+          <Tag className="text-sm px-3 py-1 rounded-full bg-green-100 text-green-600">
             Completed
           </Tag>
         </List.Item>
@@ -165,63 +141,36 @@ const PreviewPage = () => {
   );
 
   const renderJsonView = () => (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "60vh",
-      }}
-    >
-      <pre
-        style={{
-          backgroundColor: "#f5f5f5",
-          padding: "20px",
-          borderRadius: "10px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          textAlign: "left",
-          maxWidth: "80%",
-          overflowX: "auto",
-        }}
-      >
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <pre className="bg-gray-100 p-5 rounded-lg shadow-md text-left max-w-[80%] overflow-x-auto">
         {JSON.stringify(tasks, null, 2)}
       </pre>
     </div>
   );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="flex min-h-screen">
       {/* Sidebar */}
-      <SideNav />
+      <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content */}
       <div
-        style={{
-          flex: 1,
-          padding: "24px",
-          backgroundColor: "#F5F5F5",
-        }}
+        className={`flex-1 p-6 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-60"
+          }`}
       >
-        <h1
-          style={{
-            fontSize: "28px",
-            fontWeight: "bold",
-            textAlign: "center",
-            marginBottom: "30px",
-          }}
-        >
+        <h1 className="text-2xl font-bold text-center mb-8">
           Preview of Completed Tasks
         </h1>
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <div className="text-center mb-5">
           <Button
             type={view === "list" ? "primary" : "default"}
             onClick={() => setView("list")}
+            className="mr-2"
           >
             List View
           </Button>
           <Button
             type={view === "json" ? "primary" : "default"}
-            style={{ marginLeft: "10px" }}
             onClick={() => setView("json")}
           >
             JSON View
@@ -230,7 +179,7 @@ const PreviewPage = () => {
         {view === "list" && renderListView()}
         {view === "json" && renderJsonView()}
         {view === "" && (
-          <p style={{ textAlign: "center" }}>
+          <p className="text-center">
             Please select a view to display the tasks.
           </p>
         )}

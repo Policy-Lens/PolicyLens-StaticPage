@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import Sidebar from "./Sidebar"; 
+import { useState } from "react";
+import Sidebar from "./Sidebar";
 
 const DashboardPage = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -13,14 +13,17 @@ const DashboardPage = () => {
     return (
         <div className="flex min-h-screen bg-gray-100">
             {/* Sidebar */}
-            <Sidebar onCollapse={setIsSidebarCollapsed} />
+            <Sidebar onToggle={setIsSidebarCollapsed} />
 
             {/* Main Content */}
             <div
-                className={`flex-1 p-6 transition-all duration-300 ${isSidebarCollapsed ? "ml-12" : "ml-48"
-                    }`}
+                className={`transition-all duration-300`}
+                style={{
+                    marginLeft: isSidebarCollapsed ? "80px" : "220px", // Adjust margin based on sidebar state
+                    flex: 1,
+                }}
             >
-                <div className="max-w-6xl mx-auto">
+                <div className="max-w-6xl mx-auto p-6">
                     <h1 className="text-3xl font-semibold text-gray-800 mb-6">Dashboard</h1>
 
                     {/* Audit Stats Section */}

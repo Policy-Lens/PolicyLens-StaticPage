@@ -1,15 +1,14 @@
 import React, { useState } from "react";
-import { Button, Upload, Collapse, Input } from "antd";
-import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
-import SideNav from "../WorkFlow/SideNav"; 
+import { Button, Upload, Input } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+import SideNav from "../WorkFlow/SideNav";
 
 const { TextArea } = Input;
-const { Panel } = Collapse;
 
 const AdminDocumentsPage = () => {
-  const [currentSection, setCurrentSection] = useState("");
-  const [isDeleteMode, setDeleteMode] = useState(false);
-  const [selectedDocs, setSelectedDocs] = useState([]);
+  const [currentSection, setCurrentSection] = useState(""); // Manage sections (Add, Edit, etc.)
+  const [isDeleteMode, setDeleteMode] = useState(false); // Track if delete mode is active
+  const [selectedDocs, setSelectedDocs] = useState([]); // Track selected documents for deletion
   const [documents, setDocuments] = useState([
     {
       name: "Admin ISO 9001 Certification",
@@ -27,7 +26,9 @@ const AdminDocumentsPage = () => {
       dateIssued: "2024-11-10",
     },
   ]);
+  const [collapsed, setCollapsed] = useState(false); // Track SideNav state
 
+  // Handle checkbox change for selecting documents for deletion
   const handleCheckboxChange = (docName) => {
     setSelectedDocs((prev) =>
       prev.includes(docName)
@@ -36,85 +37,129 @@ const AdminDocumentsPage = () => {
     );
   };
 
+  // Handle deletion of selected documents
   const handleDelete = () => {
     setDocuments((prev) =>
       prev.filter((doc) => !selectedDocs.includes(doc.name))
     );
-    setDeleteMode(false); 
+    setDeleteMode(false); // Exit delete mode after deletion
+  };
+
+  // Show "Edit" buttons and multi-select options
+  const handleEditClick = () => {
+    setCurrentSection("edit");
   };
 
   return (
     <div className="flex min-h-screen">
       {/* SideNav */}
-      <SideNav />
+      <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content */}
-      <div className="flex-grow p-8 bg-gray-50">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
-            Project Documents
-          </h1>
-          <div className="flex gap-4">
+      <div
+        className={`flex-grow p-8 bg-gray-50 transition-all duration-300 ${collapsed ? "ml-16" : "ml-60"
+          }`}
+      >
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Project Documents</h1>
+
+        {/* Action buttons (Add, Delete, Cancel) */}
+        <div className="flex justify-end gap-4 mb-4">
+          {currentSection === "edit" ? (
+            <>
+              {/* Add Document Button */}
+              <Button
+                onClick={() => setCurrentSection("add")}
+                className="px-4 py-2 rounded-lg font-medium shadow-md bg-gray-500 text-white hover:bg-gray-600"
+              >
+                Add Document
+              </Button>
+
+              {/* Delete Button */}
+              <Button
+                onClick={isDeleteMode ? handleDelete : () => setDeleteMode(true)}
+                className={`px-4 py-2 rounded-lg font-medium shadow-md transition 
+                ${isDeleteMode ? "bg-red-500 text-white hover:bg-red-600" : "bg-gray-500 text-white hover:bg-gray-600"}`}
+              >
+                {isDeleteMode ? "Confirm Delete" : "Delete"}
+              </Button>
+
+              {/* Cancel Button */}
+              <Button
+                onClick={() => setCurrentSection("")}
+                className="px-4 py-2 rounded-lg font-medium shadow-md bg-gray-500 text-white hover:bg-gray-600"
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
             <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCurrentSection("add")}
+              onClick={handleEditClick}
+              className="px-4 py-2 rounded-lg font-medium shadow-md bg-blue-500 text-white hover:bg-blue-600"
             >
-              Add Document
+              Edit
             </Button>
-            <Button
-              type="default"
-              className={`${isDeleteMode
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-500 text-white"
-                } px-4 py-2 rounded-lg hover:bg-gray-600`}
-              onClick={
-                isDeleteMode ? handleDelete : () => setDeleteMode(true)
-              }
-            >
-              {isDeleteMode ? "Confirm Delete" : "Delete"}
-            </Button>
-          </div>
+          )}
         </div>
 
-        {/* Documents Table */}
-        <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-          <thead className="bg-gray-200 text-gray-600 uppercase text-sm">
-            <tr>
-              {isDeleteMode && (
-                <th className="py-3 px-6 text-left">Select</th>
-              )}
-              <th className="py-3 px-6 text-left">Document Name</th>
-              <th className="py-3 px-6 text-left">Source</th>
-              <th className="py-3 px-6 text-left">Date Issued</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.map((doc, index) => (
-              <tr
-                key={index}
-                className={`border-b ${index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  }`}
-              >
+        {/* Document Table */}
+        <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
+          <table className="min-w-full border-collapse border border-gray-300 text-sm">
+            <thead className="bg-gradient-to-r from-blue-100 to-blue-200 border-b border-gray-300">
+              <tr>
                 {isDeleteMode && (
-                  <td className="py-3 px-6">
+                  <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
                     <input
                       type="checkbox"
-                      className="w-4 h-4"
-                      checked={selectedDocs.includes(doc.name)}
-                      onChange={() => handleCheckboxChange(doc.name)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDocs(documents.map((doc) => doc.name));
+                        } else {
+                          setSelectedDocs([]);
+                        }
+                      }}
+                      checked={selectedDocs.length === documents.length}
+                      className="accent-blue-600"
                     />
-                  </td>
+                  </th>
                 )}
-                <td className="py-3 px-6">{doc.name}</td>
-                <td className="py-3 px-6">{doc.source}</td>
-                <td className="py-3 px-6">{doc.dateIssued}</td>
+                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                  Document Name
+                </th>
+                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                  Source
+                </th>
+                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                  Date Issued
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {documents.map((doc, index) => (
+                <tr
+                  key={index}
+                  className={`border-b border-gray-200 transition ${index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                    } hover:bg-blue-100`}
+                >
+                  {isDeleteMode && (
+                    <td className="py-4 px-6">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4"
+                        checked={selectedDocs.includes(doc.name)}
+                        onChange={() => handleCheckboxChange(doc.name)}
+                      />
+                    </td>
+                  )}
+                  <td className="py-4 px-6 font-medium text-gray-800">{doc.name}</td>
+                  <td className="py-4 px-6 text-gray-700">{doc.source}</td>
+                  <td className="py-4 px-6 text-gray-700">{doc.dateIssued}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        
+        {/* Add Document Section */}
         {currentSection === "add" && (
           <div className="mt-8">
             <h2 className="text-xl font-bold mb-4">Add New Document</h2>
@@ -124,10 +169,20 @@ const AdminDocumentsPage = () => {
               className="mb-4"
             />
             <Upload>
-              <Button icon={<UploadOutlined />}>Upload Document</Button>
+              <Button
+                icon={<UploadOutlined />}
+                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+              >
+                Upload Document
+              </Button>
             </Upload>
             <div className="mt-4">
-              <Button type="primary">Save Document</Button>
+              <Button
+                type="primary"
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition"
+              >
+                Save Document
+              </Button>
             </div>
           </div>
         )}

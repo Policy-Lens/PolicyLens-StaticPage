@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Layout } from "antd";
-import Sidebar from "./Sidebar"; 
+import Sidebar from "./Sidebar";
 
 const { Content } = Layout;
 
 const SettingsPage = () => {
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [profileDetails, setProfileDetails] = useState({
         name: "",
         email: "",
@@ -34,11 +35,14 @@ const SettingsPage = () => {
     return (
         <Layout style={{ minHeight: "100vh" }}>
             {/* Sidebar */}
-            <Sidebar />
+            <Sidebar onToggle={setIsSidebarCollapsed} />
 
             {/* Main Content */}
             <Layout>
-                <Content className="p-6 bg-gray-100">
+                <Content
+                    className="p-6 bg-gray-100 transition-all duration-300"
+                    style={{ marginLeft: isSidebarCollapsed ? "80px" : "240px" }}
+                >
                     <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
                         <h1 className="text-2xl font-semibold mb-6 text-gray-800">Settings</h1>
 

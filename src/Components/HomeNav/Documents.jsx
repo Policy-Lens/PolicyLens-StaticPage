@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Layout } from "antd";
-import Sidebar from "./Sidebar"; 
+import Sidebar from "./Sidebar";
 
 const { Content } = Layout;
 
@@ -23,12 +23,13 @@ const DocumentsPage = () => {
         },
     ]);
 
-    const [isDeleteMode, setDeleteMode] = useState(false);
+    const [isActionMode, setIsActionMode] = useState(false);
     const [selectedDocs, setSelectedDocs] = useState([]);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-    const toggleDeleteMode = () => {
-        setDeleteMode(!isDeleteMode);
-        setSelectedDocs([]); 
+    const toggleActionMode = () => {
+        setIsActionMode(!isActionMode);
+        setSelectedDocs([]);
     };
 
     const handleCheckboxChange = (docName) => {
@@ -43,16 +44,22 @@ const DocumentsPage = () => {
         setDocuments((prev) =>
             prev.filter((doc) => !selectedDocs.includes(doc.name))
         );
-        toggleDeleteMode(); 
+        toggleActionMode();
     };
 
     return (
-        <Layout style={{ minHeight: "100vh" }}>
+        <Layout style={{ minHeight: "100vh", display: "flex" }}>
             {/* Sidebar */}
-            <Sidebar />
+            <Sidebar onToggle={setIsSidebarCollapsed} />
 
             {/* Main Content */}
-            <Layout style={{ marginLeft: "220px" }}> {/* Added marginLeft for sidebar width */}
+            <Layout
+                style={{
+                    marginLeft: isSidebarCollapsed ? "80px" : "220px",
+                    width: `calc(100% - ${isSidebarCollapsed ? "80px" : "220px"})`,
+                    transition: "all 0.3s ease",
+                }}
+            >
                 <Content className="p-8 bg-gray-50">
                     {/* Header */}
                     <div className="flex justify-between items-center mb-6">
@@ -60,57 +67,92 @@ const DocumentsPage = () => {
                             Documents
                         </h1>
                         <div className="flex gap-4">
-                            <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                                Add Document
-                            </button>
                             <button
-                                className={`${isDeleteMode ? "bg-red-500 text-white" : "bg-gray-500 text-white"
-                                    } px-4 py-2 rounded-lg hover:bg-gray-600 hover:text-white transition`}
-                                onClick={isDeleteMode ? handleDelete : toggleDeleteMode}
+                                className={`px-4 py-2 rounded-lg font-medium shadow-md transition ${isActionMode
+                                    ? "bg-gray-500 text-white"
+                                    : "bg-blue-500 text-white"
+                                    }`}
+                                onClick={toggleActionMode}
                             >
-                                {isDeleteMode ? "Confirm Delete" : "Delete"}
+                                {isActionMode ? "Cancel" : "Edit"}
                             </button>
+                            {isActionMode && (
+                                <>
+                                    <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                                        Add Document
+                                    </button>
+                                    <button
+                                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                                        onClick={handleDelete}
+                                    >
+                                        Delete
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 
                     {/* Documents Table */}
-                    <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                        <thead className="bg-gray-200 text-gray-600 uppercase text-sm">
-                            <tr>
-                                {isDeleteMode && (
-                                    <th className="py-3 px-6 text-left">Select</th>
-                                )}
-                                <th className="py-3 px-6 text-left">Document Name</th>
-                                <th className="py-3 px-6 text-left">Source</th>
-                                <th className="py-3 px-6 text-left">Date Issued</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {documents.map((doc, index) => (
-                                <tr
-                                    key={index}
-                                    className={`border-b ${index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                                        }`}
-                                >
-                                    {isDeleteMode && (
-                                        <td className="py-3 px-6">
+                    <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
+                        <table className="min-w-full border-collapse border border-gray-200 text-sm">
+                            <thead className="bg-gradient-to-r from-blue-100 to-blue-200 border-b border-gray-300">
+                                <tr>
+                                    {isActionMode && (
+                                        <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
                                             <input
                                                 type="checkbox"
-                                                className="w-4 h-4"
-                                                checked={selectedDocs.includes(doc.name)}
-                                                onChange={() =>
-                                                    handleCheckboxChange(doc.name)
-                                                }
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedDocs(documents.map((doc) => doc.name));
+                                                    } else {
+                                                        setSelectedDocs([]);
+                                                    }
+                                                }}
+                                                checked={selectedDocs.length === documents.length}
+                                                className="accent-blue-600"
                                             />
-                                        </td>
+                                        </th>
                                     )}
-                                    <td className="py-3 px-6">{doc.name}</td>
-                                    <td className="py-3 px-6">{doc.source}</td>
-                                    <td className="py-3 px-6">{doc.dateIssued}</td>
+                                    <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                                        Document Name
+                                    </th>
+                                    <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                                        Source
+                                    </th>
+                                    <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                                        Date Issued
+                                    </th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {documents.map((doc, index) => (
+                                    <tr
+                                        key={index}
+                                        className={`border-b border-gray-200 transition ${index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                                            } hover:bg-blue-100`}
+                                    >
+                                        {isActionMode && (
+                                            <td className="py-4 px-6 text-left">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedDocs.includes(doc.name)}
+                                                    onChange={() =>
+                                                        handleCheckboxChange(doc.name)
+                                                    }
+                                                    className="accent-blue-600"
+                                                />
+                                            </td>
+                                        )}
+                                        <td className="py-4 px-6 font-medium text-gray-900">
+                                            {doc.name}
+                                        </td>
+                                        <td className="py-4 px-6 text-gray-700">{doc.source}</td>
+                                        <td className="py-4 px-6 text-gray-700">{doc.dateIssued}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </Content>
             </Layout>
         </Layout>
