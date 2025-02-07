@@ -1,29 +1,30 @@
 import { useState } from "react";
 import {
-    HomeOutlined,
-    ProjectOutlined,
-    BankOutlined,
-    TeamOutlined,
-    FileTextOutlined,
-    MessageOutlined,
-    SettingOutlined,
-    MenuFoldOutlined,
-    MenuUnfoldOutlined,
-} from "@ant-design/icons";
+    Home,
+    FolderKanban,
+    Building,
+    Users,
+    FileText,
+    MessageSquare,
+    Settings,
+    Menu,
+    MenuSquare,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { Tooltip } from "antd"; 
 
 const Sidebar = ({ onToggle }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
 
     const menuItems = [
-        { key: "dashboard", icon: <HomeOutlined />, label: "Dashboard", path: "/" },
-        { key: "projects", icon: <ProjectOutlined />, label: "Projects", path: "/projects" },
-        { key: "company", icon: <BankOutlined />, label: "Company", path: "/company" },
-        { key: "auditors", icon: <TeamOutlined />, label: "Auditors", path: "/auditors" },
-        { key: "documents", icon: <FileTextOutlined />, label: "Documents", path: "/documents" },
-        { key: "messages", icon: <MessageOutlined />, label: "Messages", path: "/messaging" },
-        { key: "settings", icon: <SettingOutlined />, label: "Settings", path: "/settings" },
+        { key: "dashboard", icon: <Home size={20} />, label: "Dashboard", path: "/" },
+        { key: "projects", icon: <FolderKanban size={20} />, label: "Projects", path: "/projects" },
+        { key: "company", icon: <Building size={20} />, label: "Company", path: "/company" },
+        { key: "auditors", icon: <Users size={20} />, label: "Auditors", path: "/auditors" },
+        { key: "documents", icon: <FileText size={20} />, label: "Documents", path: "/documents" },
+        { key: "messages", icon: <MessageSquare size={20} />, label: "Messages", path: "/messaging" },
+        { key: "settings", icon: <Settings size={20} />, label: "Settings", path: "/settings" },
     ];
 
     const handleToggle = () => {
@@ -33,9 +34,9 @@ const Sidebar = ({ onToggle }) => {
 
     return (
         <div style={{ display: "flex" }}>
-            {/* Sidebar */}
+            {/* Sidebar Container */}
             <div
-                className={`h-screen bg-white shadow-md transition-all duration-300`}
+                className="h-screen bg-white shadow-md transition-all duration-300"
                 style={{
                     width: collapsed ? "80px" : "220px",
                     position: "fixed",
@@ -46,46 +47,54 @@ const Sidebar = ({ onToggle }) => {
             >
                 {/* Sidebar Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-                    {/* Home Button */}
                     <Link to="/" className="flex items-center gap-4">
-                        <span className="text-xl text-gray-600">
-                            <HomeOutlined />
+                        <span className="text-xl text-blue-600">
+                            <Home size={22} />
                         </span>
-                        {!collapsed && <span className="text-lg font-semibold text-gray-800">Home</span>}
+                        {!collapsed && (
+                            <span className="text-lg font-semibold text-blue-800">Home</span>
+                        )}
                     </Link>
-
-                    {/* Toggle Button */}
-                    <div
-                        className="cursor-pointer"
-                        onClick={handleToggle}
-                    >
-                        <span className="text-xl text-gray-600">
-                            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                    <div className="cursor-pointer" onClick={handleToggle}>
+                        <span className="text-xl text-blue-600">
+                            {collapsed ? <MenuSquare size={22} /> : <Menu size={22} />}
                         </span>
                     </div>
                 </div>
 
                 {/* Menu Items */}
                 <ul className="mt-4">
-                    {menuItems.map((item) => (
-                        <li
-                            key={item.key}
-                            className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${location.pathname === item.path
-                                    ? "bg-blue-600 text-white"
-                                    : "text-gray-700 hover:bg-gray-100"
-                                }`}
-                        >
-                            <Link to={item.path} className="flex items-center w-full">
-                                <span className="text-xl">{item.icon}</span>
-                                {!collapsed && (
-                                    <span className="ml-3 text-sm font-medium">{item.label}</span>
-                                )}
-                            </Link>
-                        </li>
-                    ))}
+                    {menuItems.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        const menuItem = (
+                            <li
+                                key={item.key}
+                                className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${isActive
+                                        ? "bg-blue-600 text-white"
+                                        : "text-blue-700 hover:bg-blue-50"
+                                    }`}
+                            >
+                                <Link to={item.path} className="flex items-center w-full">
+                                    <span className="text-xl">{item.icon}</span>
+                                    {!collapsed && (
+                                        <span className="ml-3 text-sm font-medium">
+                                            {item.label}
+                                        </span>
+                                    )}
+                                </Link>
+                            </li>
+                        );
+
+                        return collapsed ? (
+                            <Tooltip key={item.key} title={item.label} placement="right">
+                                {menuItem}
+                            </Tooltip>
+                        ) : (
+                            menuItem
+                        );
+                    })}
                 </ul>
             </div>
-
         </div>
     );
 };

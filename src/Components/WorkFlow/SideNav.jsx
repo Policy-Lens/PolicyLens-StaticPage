@@ -1,14 +1,14 @@
 import React, { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  HomeOutlined,
-  DashboardOutlined,
-  TeamOutlined,
-  EyeOutlined,
-  FileTextOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-} from "@ant-design/icons";
+  Home,
+  LayoutDashboard,
+  Users,
+  Eye,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 const SideNav = ({ collapsed, setCollapsed }) => {
   const [activeItem, setActiveItem] = React.useState("");
@@ -31,139 +31,99 @@ const SideNav = ({ collapsed, setCollapsed }) => {
     }
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (collapsed) {
-      document.body.classList.add("sidenav-collapsed");
-    } else {
-      document.body.classList.remove("sidenav-collapsed");
-    }
-
-    return () => {
-      document.body.classList.remove("sidenav-collapsed");
-    };
-  }, [collapsed]);
-
   return (
     <div
-      className={`bg-gray-50 shadow-md fixed top-0 left-0 h-screen transition-all duration-300 ${collapsed ? "w-16" : "w-56"
+      className={`bg-white shadow-lg fixed top-0 left-0 h-screen transition-all duration-300 border-r ${collapsed ? "w-16" : "w-56"
         }`}
     >
       {/* Sidebar Header */}
-      <div className="flex items-center justify-between px-2 py-4 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-4 border-b">
         {/* Home Button */}
-        <Link to="/" className="flex items-center gap-4">
-          <span className="text-xl text-gray-600">
-            <HomeOutlined />
-          </span>
-          {!collapsed && (
-            <span className="text-lg font-semibold text-gray-700">Home</span>
-          )}
+        <Link to="/" className="flex items-center gap-3 text-blue-600">
+          <Home size={20} />
+          {!collapsed && <span className="font-semibold text-base">Home</span>}
         </Link>
 
         {/* Collapse Button */}
         <div
-          className="cursor-pointer text-xl text-gray-600"
+          className="cursor-pointer text-blue-600"
           onClick={() => setCollapsed(!collapsed)}
         >
-          {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </div>
       </div>
 
       {/* Sidebar Menu */}
-      <div className="mt-4 flex flex-col">
+      <div className="mt-6 flex flex-col">
         <Link to="/projectinfo">
           <div
-            className={`flex items-center px-2 py-3 cursor-pointer transition-all duration-200 rounded-md ${activeItem === "plc"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500"
-              } ${collapsed ? "justify-center" : "gap-4"}`}
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${activeItem === "plc"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              } ${collapsed ? "justify-center" : "gap-3"}`}
           >
-            <span className="text-xl">
-              <HomeOutlined />
-            </span>
-            {!collapsed && (
-              <span className="text-sm md:text-base">Project Lifecycle</span>
-            )}
+            <LayoutDashboard size={22} />
+            {!collapsed && <span className="text-base font-normal">Project Lifecycle</span>}
           </div>
         </Link>
 
         <Link to="/projects/auditorsworkspace">
           <div
-            className={`flex items-center px-2 py-3 cursor-pointer transition-all duration-200 rounded-md ${activeItem === "auditorsworkspace"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500"
-              } ${collapsed ? "justify-center" : "gap-4"}`}
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${activeItem === "auditorsworkspace"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              } ${collapsed ? "justify-center" : "gap-3"}`}
           >
-            <span className="text-xl">
-              <TeamOutlined />
-            </span>
-            {!collapsed && (
-              <span className="text-sm md:text-base">Auditor Workspace</span>
-            )}
+            <Users size={22} />
+            {!collapsed && <span className="text-base font-normal">Auditor Workspace</span>}
           </div>
         </Link>
 
         <Link to="/projects/dashboard">
           <div
-            className={`flex items-center px-2 py-3 cursor-pointer transition-all duration-200 rounded-md ${activeItem === "dashboard"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500"
-              } ${collapsed ? "justify-center" : "gap-4"}`}
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${activeItem === "dashboard"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              } ${collapsed ? "justify-center" : "gap-3"}`}
           >
-            <span className="text-xl">
-              <DashboardOutlined />
-            </span>
-            {!collapsed && (
-              <span className="text-sm md:text-base">Project Dashboard</span>
-            )}
+            <LayoutDashboard size={22} />
+            {!collapsed && <span className="text-base font-normal">Project Dashboard</span>}
           </div>
         </Link>
 
         <Link to="/projects/team">
           <div
-            className={`flex items-center px-2 py-3 cursor-pointer transition-all duration-200 rounded-md ${activeItem === "team"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500"
-              } ${collapsed ? "justify-center" : "gap-4"}`}
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${activeItem === "team"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              } ${collapsed ? "justify-center" : "gap-3"}`}
           >
-            <span className="text-xl">
-              <TeamOutlined />
-            </span>
-            {!collapsed && (
-              <span className="text-sm md:text-base">Project Team</span>
-            )}
+            <Users size={22} />
+            {!collapsed && <span className="text-base font-normal">Project Team</span>}
           </div>
         </Link>
 
         <Link to="/projects/preview">
           <div
-            className={`flex items-center px-2 py-3 cursor-pointer transition-all duration-200 rounded-md ${activeItem === "preview"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500"
-              } ${collapsed ? "justify-center" : "gap-4"}`}
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${activeItem === "preview"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              } ${collapsed ? "justify-center" : "gap-3"}`}
           >
-            <span className="text-xl">
-              <EyeOutlined />
-            </span>
-            {!collapsed && (
-              <span className="text-sm md:text-base">Preview</span>
-            )}
+            <Eye size={22} />
+            {!collapsed && <span className="text-base font-normal">Preview</span>}
           </div>
         </Link>
 
         <Link to="/projects/documents">
           <div
-            className={`flex items-center px-2 py-3 cursor-pointer transition-all duration-200 rounded-md ${activeItem === "documents"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500"
-              } ${collapsed ? "justify-center" : "gap-4"}`}
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${activeItem === "documents"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              } ${collapsed ? "justify-center" : "gap-3"}`}
           >
-            <span className="text-xl">
-              <FileTextOutlined />
-            </span>
-            {!collapsed && (
-              <span className="text-sm md:text-base">Project Documents</span>
-            )}
+            <FileText size={22} />
+            {!collapsed && <span className="text-base font-normal">Project Documents</span>}
           </div>
         </Link>
       </div>
