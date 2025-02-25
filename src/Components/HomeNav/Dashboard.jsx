@@ -1,9 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../AuthContext";
 import { BarChart3, CheckCircle, ClipboardList, Clock, Hourglass, MessageCircle, CalendarDays } from "lucide-react";
 import Sidebar from "./Sidebar";
 
 const DashboardPage = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { user, loading } = useContext(AuthContext);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!loading && !user) {
+            navigate("/"); // Redirect to login if not authenticated
+        }
+    }, [user, loading, navigate]);
+
+    if (loading) return <p>Loading...</p>;
 
     const auditStats = [
         { title: "Pending Audits", count: 12, color: "bg-blue-500", icon: <Clock className="text-white w-8 h-8" /> },

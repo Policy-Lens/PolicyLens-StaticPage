@@ -14,11 +14,22 @@ import SettingsPage from "./Components/HomeNav/Settings";
 import MessagingPage from "./Components/HomeNav/Messaging";
 import Projects from "./Components/AdminView/Projects";
 import AuditorWorkspace from "./Components/WorkFlow/AuditorsWorkspace"
+import { LogIn } from "lucide-react";
+import LoginPage from "./Components/login";
+import { AuthProvider } from "./AuthContext";
 
 const router = createBrowserRouter( [
   {
     path:"/",
-    element:<DashboardPage/>,
+    element:<LoginPage/>,
+  },
+  {
+    path: "/Dashboard",
+    element: <DashboardPage />
+  },
+  {
+    path: "/register",
+    element: <LoginPage />
   },
   {
     path: "/auditors",
@@ -77,9 +88,9 @@ const router = createBrowserRouter( [
 
 const AppLayout = () => {
   return (
-    <div>
+      <AuthProvider> {/* Wrap the entire app with AuthProvider */}
         <RouterProvider router={router} />
-    </div>
+      </AuthProvider>
   );
 };
 
