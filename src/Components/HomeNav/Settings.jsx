@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Layout } from "antd";
 import Sidebar from "./Sidebar";
+import { apiRequest } from "../../utils/api";
+import { AuthContext } from "../../AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const { Content } = Layout;
 
@@ -15,6 +18,18 @@ const SettingsPage = () => {
         newPassword: "",
         confirmPassword: "",
     });
+    const { user, loading,checkLogin } = useContext(AuthContext);
+    const navigate = useNavigate()
+    useEffect(()=>{
+        const verifyLogin = async () => {
+            const isLoggedIn = await checkLogin();
+            if (!isLoggedIn) {
+                navigate("/"); // Redirect to the dashboard if logged in
+            }
+        };
+
+        verifyLogin();
+    },[])
 
     const handleProfileChange = (e) => {
         setProfileDetails({ ...profileDetails, [e.target.name]: e.target.value });
@@ -28,8 +43,15 @@ const SettingsPage = () => {
         console.log("Profile details saved:", profileDetails);
     };
 
-    const updatePassword = () => {
+    const updatePassword = async() => {
         console.log("Password updated:", passwords);
+        if(passwords.currentPassword===passwords.newPassword || passwords.newPassword!==passwords.confirmPassword){
+            console.log('your new password is same as current password or new password and confirm password are different');
+            return;
+        }
+        const res = await apiRequest('POST','/api/auth/password/reset/',{"old_password":passwords.currentPassword,"new_password":passwords.newPassword},true)
+        console.log(res);
+        
     };
 
     return (

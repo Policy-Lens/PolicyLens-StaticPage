@@ -6,14 +6,22 @@ import Sidebar from "./Sidebar";
 
 const DashboardPage = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const { user, loading } = useContext(AuthContext);
+    const { user, loading,checkLogin } = useContext(AuthContext);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!loading && !user) {
-            navigate("/"); // Redirect to login if not authenticated
-        }
-    }, [user, loading, navigate]);
+        // if (!loading && !user) {
+        //     navigate("/"); // Redirect to login if not authenticated
+        // }
+        const verifyLogin = async () => {
+            const isLoggedIn = await checkLogin();
+            if (!isLoggedIn) {
+                navigate("/"); // Redirect to the dashboard if logged in
+            }
+        };
+
+        verifyLogin();
+    }, []);
 
     if (loading) return <p>Loading...</p>;
 
