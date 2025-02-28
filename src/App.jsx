@@ -1,5 +1,4 @@
 import "./App.css";
-import Home from "./Components/AdminView/Projects";
 import { createBrowserRouter,RouterProvider } from "react-router-dom";
 import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper"
 import AdminDashboard from "./Components/AdminView/AdminDashboard"
@@ -14,7 +13,6 @@ import SettingsPage from "./Components/HomeNav/Settings";
 import MessagingPage from "./Components/HomeNav/Messaging";
 import Projects from "./Components/AdminView/Projects";
 import AuditorWorkspace from "./Components/WorkFlow/AuditorsWorkspace"
-import { LogIn } from "lucide-react";
 import LoginPage from "./Components/login";
 import { AuthProvider } from "./AuthContext";
 

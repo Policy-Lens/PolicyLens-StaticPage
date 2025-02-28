@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const role = Cookies.get("role"); // Read role from cookies
     if (role) {
-      setUser({ role }); // Store role in state
+      setUser({ role }); 
     }
   }, []);
 
