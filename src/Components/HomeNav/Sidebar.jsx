@@ -18,7 +18,7 @@ const Sidebar = ({ onToggle }) => {
     const location = useLocation();
 
     const menuItems = [
-        { key: "dashboard", icon: <Home size={20} />, label: "Dashboard", path: "/" },
+        { key: "dashboard", icon: <Home size={20} />, label: "Dashboard", path: "/dashboard" },
         { key: "projects", icon: <FolderKanban size={20} />, label: "Projects", path: "/projects" },
         { key: "company", icon: <Building size={20} />, label: "Company", path: "/company" },
         { key: "auditors", icon: <Users size={20} />, label: "Auditors", path: "/auditors" },

@@ -1,47 +1,59 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useContext, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../HomeNav/Sidebar";
+import { apiRequest } from "../../utils/api";
+import { AuthContext } from "../../AuthContext";
 
 const Projects = () => {
   const [activeItem, setActiveItem] = useState("projects");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const cards = [
-    {
-      companyName: "Company A",
-      projectName: "Project A",
-      createdDate: "25/11/2024",
-      auditStatus: "Assigned",
-      status: "Reviewed",
-      logo: "https://via.placeholder.com/100x100.png?text=Logo+A",
-      auditor: "John Smith",
-    },
-    {
-      companyName: "Company B",
-      projectName: "Project B",
-      createdDate: "20/11/2024",
-      auditStatus: "Not Assigned",
-      status: "Needs Revision",
-      logo: "https://via.placeholder.com/100x100.png?text=Logo+B",
-      auditor: null,
-    },
-    {
-      companyName: "Company C",
-      projectName: "Project C",
-      createdDate: "15/11/2024",
-      auditStatus: "Assigned",
-      status: "Approved",
-      logo: "https://via.placeholder.com/100x100.png?text=Logo+C",
-      auditor: "Emily Davis",
-    },
-  ];
+  const [cards, setCards] = useState([]);
+  const navigate = useNavigate();
+  const { checkLogin } = useContext(AuthContext);
+  const getProjects = async () => {
+    try {
+      const res = await apiRequest("GET", "/api/project/list/", null, true);
+      console.log(res);
+      if (res.status == 200) {
+        setCards(res.data);
+      }
+    } catch (error) {
+      if (error.message === "Session expired. Please log in again.") {
+        navigate("/");
+      }
+      console.log(error);
+      
+    }
+  };
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  }
+  useEffect(() => {
+    // const verifyLogin = async () => {
+    //   const isLoggedIn = await checkLogin();
+    //   if (!isLoggedIn) {
+    //     navigate("/"); // Redirect to login
+    //   }
+    // };
+
+    // verifyLogin();
+    getProjects();
+  }, []);
 
   return (
     <div className="flex min-h-screen">
       <Sidebar onToggle={setIsSidebarCollapsed} />
       <div
-        className={`flex-1 p-0 bg-gray-100 transition-all ${isSidebarCollapsed ? "ml-16" : "ml-[220px]"}`}
-        style={{ width: isSidebarCollapsed ? "calc(100% - 4rem)" : "calc(100% - 15rem)" }}
+        className={`flex-1 p-0 bg-gray-100 transition-all ${
+          isSidebarCollapsed ? "ml-16" : "ml-[220px]"
+        }`}
+        style={{
+          width: isSidebarCollapsed
+            ? "calc(100% - 4rem)"
+            : "calc(100% - 15rem)",
+        }}
       >
         <div className="px-8 py-6">
           <div className="flex justify-between items-center">
@@ -64,28 +76,29 @@ const Projects = () => {
                   <div className="flex items-center space-x-3">
                     <img
                       src={card.logo}
-                      alt={`${card.companyName} Logo`}
+                      alt={`${card?.companyName} Logo`}
                       className="w-12 h-12 rounded-full"
                     />
                     <div>
                       <h2 className="text-lg font-semibold text-gray-800">
-                        {card.companyName}
+                        {card.company.name}
                       </h2>
-                      <h3 className="text-sm text-gray-500">
-                        {card.projectName}
-                      </h3>
+                      <h3 className="text-sm text-gray-500">{card.name}</h3>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4">
                   <p className="text-sm text-gray-500">
-                    <span className="font-semibold text-gray-700">Created Date:</span> {card.createdDate}
+                    <span className="font-semibold text-gray-700">
+                      Created Date :
+                    </span>{" "}
+                    {formatDate(card.created_at)}
                   </p>
-                  <p className="text-sm text-gray-500 mt-2">
+                  {/* <p className="text-sm text-gray-500 mt-2">
                     <span className="font-semibold text-gray-700">Audit Status:</span> {card.auditStatus}
-                  </p>
+                  </p> */}
                 </div>
-                <div className="mt-4 flex justify-between items-center">
+                {/* <div className="mt-4 flex justify-between items-center">
                   <p className="text-sm font-medium">
                     Status: <span
                       className={`px-2 py-1 rounded-full text-white ${card.status === "Reviewed"
@@ -103,7 +116,7 @@ const Projects = () => {
                       Assign Auditor
                     </button>
                   )}
-                </div>
+                </div> */}
               </Link>
             ))}
           </div>
