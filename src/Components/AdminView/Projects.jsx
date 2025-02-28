@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../HomeNav/Sidebar";
 import { apiRequest } from "../../utils/api";
 import { AuthContext } from "../../AuthContext";
-import { useContext } from "react";
 
 const Projects = () => {
   const [activeItem, setActiveItem] = useState("projects");
