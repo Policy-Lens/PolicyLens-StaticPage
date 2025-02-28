@@ -3,14 +3,26 @@ import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../HomeNav/Sidebar";
 import { apiRequest } from "../../utils/api";
 import { AuthContext } from "../../AuthContext";
+import { useContext } from "react";
 
 const Projects = () => {
   const [activeItem, setActiveItem] = useState("projects");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+const [isModalOpen, setIsModalOpen] = useState(false);
+const [projectName, setProjectName] = useState("");
+const [selectedCompany, setSelectedCompany] = useState("Company A");
+
+const companies = ["Company A", "Company B", "Company C", "Company D"];
+
+const handleCreateProject = () => {
+  alert("Company created");
+  setIsModalOpen(false);
+};
+
 
   const [cards, setCards] = useState([]);
   const navigate = useNavigate();
-  const { checkLogin } = useContext(AuthContext);
+  const { checkLogin,user } = useContext(AuthContext);
   const getProjects = async () => {
     try {
       const res = await apiRequest("GET", "/api/project/list/", null, true);
@@ -60,9 +72,14 @@ const Projects = () => {
             <h1 className="text-2xl font-bold">
               {activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
             </h1>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700">
-              + Create Project
-            </button>
+            {user?.role === "consultant" && (
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+                onClick={() => setIsModalOpen(true)}
+              >
+                + Create Project
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -122,6 +139,32 @@ const Projects = () => {
           </div>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-xl font-bold mb-4">Create Project</h2>
+            <input
+              type="text"
+              placeholder="Project Name"
+              className="w-full border border-gray-300 p-2 rounded-md mb-4"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+            />
+            <select
+              className="w-full border border-gray-300 p-2 rounded-md mb-4"
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+            >
+              {companies.map((company, index) => (
+                <option key={index} value={company}>{company}</option>
+              ))}
+            </select>
+            <button className="w-full bg-blue-600 text-white py-2 rounded-md mb-2" onClick={handleCreateProject}>Create</button>
+            <button className="w-full bg-gray-400 text-white py-2 rounded-md" onClick={() => setIsModalOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

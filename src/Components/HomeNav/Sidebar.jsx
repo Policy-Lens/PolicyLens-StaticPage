@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import {
     Home,
     FolderKanban,
@@ -9,13 +9,17 @@ import {
     Settings,
     Menu,
     MenuSquare,
+    LogOut,
+    UserCircle,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { Tooltip } from "antd"; 
+import { Tooltip } from "antd";
+import { AuthContext } from "../../AuthContext"; // Import AuthContext
 
 const Sidebar = ({ onToggle }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
+    const { user, handleLogout } = useContext(AuthContext); // Get user role and logout function
 
     const menuItems = [
         { key: "dashboard", icon: <Home size={20} />, label: "Dashboard", path: "/dashboard" },
@@ -36,7 +40,7 @@ const Sidebar = ({ onToggle }) => {
         <div style={{ display: "flex" }}>
             {/* Sidebar Container */}
             <div
-                className="h-screen bg-white shadow-md transition-all duration-300"
+                className="h-screen bg-white shadow-md flex flex-col justify-between transition-all duration-300"
                 style={{
                     width: collapsed ? "80px" : "220px",
                     position: "fixed",
@@ -63,23 +67,19 @@ const Sidebar = ({ onToggle }) => {
                 </div>
 
                 {/* Menu Items */}
-                <ul className="mt-4">
+                <ul className="mt-4 flex-1">
                     {menuItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         const menuItem = (
                             <li
                                 key={item.key}
-                                className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${isActive
-                                        ? "bg-blue-600 text-white"
-                                        : "text-blue-700 hover:bg-blue-50"
+                                className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${isActive ? "bg-blue-600 text-white" : "text-blue-700 hover:bg-blue-50"
                                     }`}
                             >
                                 <Link to={item.path} className="flex items-center w-full">
                                     <span className="text-xl">{item.icon}</span>
                                     {!collapsed && (
-                                        <span className="ml-3 text-sm font-medium">
-                                            {item.label}
-                                        </span>
+                                        <span className="ml-3 text-sm font-medium">{item.label}</span>
                                     )}
                                 </Link>
                             </li>
@@ -94,6 +94,29 @@ const Sidebar = ({ onToggle }) => {
                         );
                     })}
                 </ul>
+
+                {/* User Profile & Logout */}
+                <div className="border-t border-gray-200 p-4">
+                    {/* User Profile */}
+                    <div className="flex items-center gap-3 mb-4">
+                        <UserCircle size={36} className="text-blue-600" />
+                        {!collapsed && (
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">{user?.name || "User"}</p>
+                                <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Logout Button */}
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-3 text-red-600 border border-red-600 rounded-md hover:bg-red-600 hover:text-white transition-all duration-200"
+                    >
+                        <LogOut size={20} />
+                        {!collapsed && <span className="ml-3 text-sm font-medium">Logout</span>}
+                    </button>
+                </div>
             </div>
         </div>
     );

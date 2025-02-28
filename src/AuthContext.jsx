@@ -30,6 +30,13 @@ export const AuthProvider = ({ children }) => {
     // checkAuth();
   }, []);
 
+  useEffect(() => {
+    const role = Cookies.get("role"); // Read role from cookies
+    if (role) {
+      setUser({ role }); 
+    }
+  }, []);
+
   const handleLogout = () => {
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
