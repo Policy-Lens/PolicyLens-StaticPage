@@ -5,6 +5,7 @@ import Cookies from "js-cookie";
 // import {checkLogin} from '../AuthContext'
 import { AuthContext } from "../AuthContext";
 import { apiRequest } from "../utils/api";
+import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const LoginPage = () => {
   const { checkLogin, setUser } = useContext(AuthContext);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
+  const [isEyeOpen, setIsEyeOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -135,13 +137,26 @@ const LoginPage = () => {
             <label className="block text-sm font-medium text-gray-700">
               Password
             </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div className="relative w-full">
+              <input
+                type={isEyeOpen ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="mt-1 block w-full p-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+                onClick={() => setIsEyeOpen(!isEyeOpen)}
+              >
+                {isEyeOpen ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
             {errors.password && (
               <p className="text-red-500 text-xs mt-1">{errors.password}</p>
             )}
