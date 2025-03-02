@@ -1,10 +1,10 @@
 import "./App.css";
-import { createBrowserRouter,RouterProvider } from "react-router-dom";
-import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper"
-import AdminDashboard from "./Components/AdminView/AdminDashboard"
-import ProjectTeam from "./Components/AdminView/ProjectTeam"
-import AdminPreview from "./Components/AdminView/AdminPreview"
-import AdminDocument from "./Components/AdminView/AdminDocument"
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper";
+import AdminDashboard from "./Components/AdminView/AdminDashboard";
+import ProjectTeam from "./Components/AdminView/ProjectTeam";
+import AdminPreview from "./Components/AdminView/AdminPreview";
+import AdminDocument from "./Components/AdminView/AdminDocument";
 import AuditorsPage from "./Components/HomeNav/Auditors";
 import CompaniesPage from "./Components/HomeNav/Company";
 import DashboardPage from "./Components/HomeNav/Dashboard";
@@ -12,22 +12,22 @@ import DocumentsPage from "./Components/HomeNav/Documents";
 import SettingsPage from "./Components/HomeNav/Settings";
 import MessagingPage from "./Components/HomeNav/Messaging";
 import Projects from "./Components/AdminView/Projects";
-import AuditorWorkspace from "./Components/WorkFlow/AuditorsWorkspace"
+import AuditorWorkspace from "./Components/WorkFlow/AuditorsWorkspace";
 import LoginPage from "./Components/login";
 import { AuthProvider } from "./AuthContext";
-
-const router = createBrowserRouter( [
+import { ProjectProvider } from "./Context/ProjectContext";
+const router = createBrowserRouter([
   {
-    path:"/",
-    element:<LoginPage/>,
+    path: "/",
+    element: <LoginPage />,
   },
   {
     path: "/Dashboard",
-    element: <DashboardPage />
+    element: <DashboardPage />,
   },
   {
     path: "/register",
-    element: <LoginPage />
+    element: <LoginPage />,
   },
   {
     path: "/auditors",
@@ -54,43 +54,44 @@ const router = createBrowserRouter( [
     element: <SettingsPage />,
   },
   {
-    path:"/projects",
-    element:<Projects/>,
+    path: "/projects",
+    element: <Projects />,
   },
   {
-    path:"/projects/dashboard",
-    element:<AdminDashboard/>,
+    path: "/projects/dashboard",
+    element: <AdminDashboard />,
   },
   {
-    path:"/projects/documents",
-    element:<AdminDocument/>
+    path: "/projects/documents",
+    element: <AdminDocument />,
   },
   {
     path: "/projects/Team",
-    element: <ProjectTeam />
+    element: <ProjectTeam />,
   },
   {
     path: "/projects/preview",
-    element: <AdminPreview />
+    element: <AdminPreview />,
   },
   {
     path: "/projectinfo",
     element: <CarouselHorizontalStepper />,
   },
   {
-    path:"projects/auditorsworkspace",
-    element:<AuditorWorkspace/>
-  }, 
-]
- )
+    path: "projects/auditorsworkspace",
+    element: <AuditorWorkspace />,
+  },
+]);
 
 const AppLayout = () => {
   return (
-      <AuthProvider> {/* Wrap the entire app with AuthProvider */}
+      <AuthProvider>
+    <ProjectProvider>
+        {/* Wrap the entire app with AuthProvider */}
         <RouterProvider router={router} />
+    </ProjectProvider>
       </AuthProvider>
   );
 };
-
 
 export default AppLayout;

@@ -3,19 +3,32 @@ import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../HomeNav/Sidebar";
 import { apiRequest } from "../../utils/api";
 import { AuthContext } from "../../AuthContext";
+import { ProjectContext } from "../../Context/ProjectContext";
 
 const Projects = () => {
   const [activeItem, setActiveItem] = useState("projects");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 const [isModalOpen, setIsModalOpen] = useState(false);
 const [projectName, setProjectName] = useState("");
-const [selectedCompany, setSelectedCompany] = useState("Company A");
+const [selectedCompany, setSelectedCompany] = useState('');
 
-const companies = ["Company A", "Company B", "Company C", "Company D"];
+const [companies,setCompanies] = useState([]);
 
-const handleCreateProject = () => {
-  alert("Company created");
-  setIsModalOpen(false);
+const {setProject} = useContext(ProjectContext)
+
+const handleCreateProject = async() => {
+  const res = await apiRequest("POST", "/api/project/create/",{name:projectName,company_id:selectedCompany},true);
+  if(res.status==201){
+    console.log(res.data.message);
+    setIsModalOpen(false);
+  }
+  else{
+    setIsModalOpen(false);
+    alert('Something went wrong')
+    return
+  }
+  
+  getProjects()
 };
 
 
@@ -37,6 +50,15 @@ const handleCreateProject = () => {
       
     }
   };
+
+  const getCompanies=async()=>{
+    const res = await apiRequest('GET','/api/auth/companies/',null,true)
+    console.log(res);
+    if (res.status==200){
+      setCompanies(res.data)
+    }
+    setSelectedCompany(res.data[0].id)
+  }
   function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString();
@@ -74,7 +96,7 @@ const handleCreateProject = () => {
             {user?.role === "consultant" && (
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {setIsModalOpen(true); getCompanies();}}
               >
                 + Create Project
               </button>
@@ -85,6 +107,7 @@ const handleCreateProject = () => {
             {cards.map((card, index) => (
               <Link
                 to="/projectinfo"
+                onClick={()=>{setProject(card)}}
                 key={index}
                 className="bg-white shadow-md border border-gray-300 rounded-lg p-4 hover:shadow-lg"
               >
@@ -156,7 +179,7 @@ const handleCreateProject = () => {
               onChange={(e) => setSelectedCompany(e.target.value)}
             >
               {companies.map((company, index) => (
-                <option key={index} value={company}>{company}</option>
+                <option key={index} value={company.id}>{company.name}</option>
               ))}
             </select>
             <button className="w-full bg-blue-600 text-white py-2 rounded-md mb-2" onClick={handleCreateProject}>Create</button>
