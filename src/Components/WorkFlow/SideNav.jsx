@@ -39,7 +39,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
       {/* Sidebar Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b">
         {/* Home Button */}
-        <Link to="/" className="flex items-center gap-3 text-blue-600">
+        <Link to="/dashboard" className="flex items-center gap-3 text-blue-600">
           <Home size={20} />
           {!collapsed && <span className="font-semibold text-base">Home</span>}
         </Link>

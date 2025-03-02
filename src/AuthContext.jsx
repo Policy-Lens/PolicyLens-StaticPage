@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
   const handleLogout = () => {
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
+    Cookies.remove("role");
   };
 
   const checkLogin = async () => {
@@ -87,7 +88,7 @@ export const AuthProvider = ({ children }) => {
   // }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, checkLogin }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, checkLogin,handleLogout }}>
       {children}
     </AuthContext.Provider>
   );

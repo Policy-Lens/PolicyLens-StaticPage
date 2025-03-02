@@ -12,7 +12,7 @@ import {
     LogOut,
     UserCircle,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "antd";
 import { AuthContext } from "../../AuthContext"; // Import AuthContext
 
@@ -20,7 +20,7 @@ const Sidebar = ({ onToggle }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
     const { user, handleLogout } = useContext(AuthContext); // Get user role and logout function
-
+    const navigate = useNavigate();
     const menuItems = [
         { key: "dashboard", icon: <Home size={20} />, label: "Dashboard", path: "/dashboard" },
         { key: "projects", icon: <FolderKanban size={20} />, label: "Projects", path: "/projects" },
@@ -51,7 +51,7 @@ const Sidebar = ({ onToggle }) => {
             >
                 {/* Sidebar Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-                    <Link to="/" className="flex items-center gap-4">
+                    <Link to="/dashboard" className="flex items-center gap-4">
                         <span className="text-xl text-blue-600">
                             <Home size={22} />
                         </span>
@@ -110,7 +110,7 @@ const Sidebar = ({ onToggle }) => {
 
                     {/* Logout Button */}
                     <button
-                        onClick={handleLogout}
+                        onClick={()=>{handleLogout();navigate('/')}}
                         className="flex items-center w-full px-4 py-3 text-red-600 border border-red-600 rounded-md hover:bg-red-600 hover:text-white transition-all duration-200"
                     >
                         <LogOut size={20} />
