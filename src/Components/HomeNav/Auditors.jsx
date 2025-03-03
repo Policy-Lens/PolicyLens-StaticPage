@@ -1,48 +1,30 @@
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
+import { apiRequest } from "../../utils/api";
+import { AuthContext } from "../../AuthContext";
 
 const AuditorsPage = () => {
-    const [auditors, setAuditors] = useState([
-        {
-            name: "John Smith",
-            role: "Lead Auditor",
-            projectsCompleted: 15,
-            contact: "john.smith@example.com",
-            status: "Active",
-        },
-        {
-            name: "Emily Davis",
-            role: "Assistant Auditor",
-            projectsCompleted: 8,
-            contact: "emily.davis@example.com",
-            status: "On Leave",
-        },
-        {
-            name: "Michael Brown",
-            role: "Senior Auditor",
-            projectsCompleted: 20,
-            contact: "michael.brown@example.com",
-            status: "Active",
-        },
-        {
-            name: "Sophia Wilson",
-            role: "Auditor Intern",
-            projectsCompleted: 3,
-            contact: "sophia.wilson@example.com",
-            status: "Training",
-        },
-        {
-            name: "David Lee",
-            role: "Quality Control Auditor",
-            projectsCompleted: 12,
-            contact: "david.lee@example.com",
-            status: "Active",
-        },
-    ]);
+    const [auditors, setAuditors] = useState([]);
 
     const [selectedAuditors, setSelectedAuditors] = useState([]);
     const [isActionMode, setIsActionMode] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [loading,setLoading] = useState();
+    const {user} = useContext(AuthContext)
+    const getAuditors = async () => {
+      setLoading(true);
+      const res = await apiRequest("GET", "/api/auth/users/?role=auditor", null, true);
+      // console.log(res);
+      if (res.status == 200) {
+        setAuditors(res.data);
+      }
+      setLoading(false);
+    };
+
+    useEffect(() => {
+      getAuditors();
+    }, []);
+
 
     const toggleActionMode = () => {
         setIsActionMode(!isActionMode);
@@ -72,7 +54,7 @@ const AuditorsPage = () => {
             <div className={`flex-1 p-8 bg-gray-100 transition-all ${isSidebarCollapsed ? 'ml-16' : 'ml-[240px]'}`} style={{ width: isSidebarCollapsed ? 'calc(100% - 4rem)' : 'calc(100% - 15rem)' }}>
                 <h1 className="text-2xl font-bold text-gray-800 mb-6">Auditors</h1>
 
-                <div className="flex justify-end gap-4 mb-4">
+                {user.role==='admin'?<div className="flex justify-end gap-4 mb-4">
                     {isActionMode ? (
                         <>
                             <button
@@ -98,7 +80,7 @@ const AuditorsPage = () => {
                             Edit
                         </button>
                     )}
-                </div>
+                </div>:""}
 
                 <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
                     <table className="min-w-full border-collapse border border-gray-200 text-sm">
@@ -126,15 +108,15 @@ const AuditorsPage = () => {
                                 <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
                                     Role
                                 </th>
-                                <th className="py-4 px-6 text-center font-semibold text-blue-800 uppercase">
+                                {/* <th className="py-4 px-6 text-center font-semibold text-blue-800 uppercase">
                                     Projects Completed
-                                </th>
+                                </th> */}
                                 <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                    Contact
+                                    Email
                                 </th>
-                                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
+                                {/* <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
                                     Status
-                                </th>
+                                </th> */}
                             </tr>
                         </thead>
                         <tbody>
@@ -156,18 +138,18 @@ const AuditorsPage = () => {
                                     )}
                                     <td className="py-4 px-6 font-medium text-gray-900">{auditor.name}</td>
                                     <td className="py-4 px-6 text-gray-700">{auditor.role}</td>
-                                    <td className="py-4 px-6 text-center text-gray-700">
+                                    {/* <td className="py-4 px-6 text-center text-gray-700">
                                         {auditor.projectsCompleted}
-                                    </td>
+                                    </td> */}
                                     <td className="py-4 px-6 text-gray-700">
                                         <a
-                                            href={`mailto:${auditor.contact}`}
+                                            href={`mailto:${auditor.email}`}
                                             className="text-blue-600 hover:underline"
                                         >
-                                            {auditor.contact}
+                                            {auditor.email}
                                         </a>
                                     </td>
-                                    <td className="py-4 px-6">
+                                    {/* <td className="py-4 px-6">
                                         <span
                                             className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 
                                         ${auditor.status === "Active"
@@ -179,7 +161,7 @@ const AuditorsPage = () => {
                                         >
                                             {auditor.status}
                                         </span>
-                                    </td>
+                                    </td> */}
                                 </tr>
                             ))}
                         </tbody>

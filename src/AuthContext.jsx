@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
         // } else {
         //     setUser(null);
         // }
+        
       } catch (error) {
         console.error("Auth check failed:", error);
         setUser(null);
@@ -31,10 +32,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const role = Cookies.get("role"); // Read role from cookies
-    if (role) {
-      setUser({ role }); 
-    }
+    // const role = Cookies.get("role"); // Read role from cookies
+    // if (role) {
+    //   setUser({ role }); 
+    // }
+    // checkLogin()
   }, []);
 
   const handleLogout = () => {
@@ -48,7 +50,7 @@ export const AuthProvider = ({ children }) => {
 
     setLoading(true);
     const access = Cookies.get("accessToken");
-    console.log("Access Token:", access);
+    // console.log("Access Token:", access);
 
     try {
       if (access) {
@@ -58,12 +60,15 @@ export const AuthProvider = ({ children }) => {
           null,
           true
         );
-
-        console.log("API Response:", res); // Debugging
+        if(res.status==200){
+          // console.log(res)
+          setUser(res.data.user)
+        }
+        // console.log("API Response:", res); // Debugging
 
         if (res && res.detail !== "Token is invalid or expired") {
           // Adjust this check based on what your backend returns when the token is invalid
-          console.log("Token is valid");
+          // console.log("Token is valid");
           setLoading(false);
           return true;
         }

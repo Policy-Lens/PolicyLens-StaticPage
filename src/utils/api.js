@@ -25,10 +25,10 @@ const apiRequest = async (method, endpoint, body = null, requiresAuth = false) =
         if (body) {
             config.data = body;
         }
-        console.log(config);
+        // console.log(config);
 
         const response = await axios(config);
-        console.log(response.status==200)
+        // console.log(response.status==200)
         return response;
     } catch (error) {
         if (error.response?.status === 401 && requiresAuth) {
