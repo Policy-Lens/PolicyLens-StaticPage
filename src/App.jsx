@@ -16,18 +16,19 @@ import AuditorWorkspace from "./Components/WorkFlow/AuditorsWorkspace";
 import LoginPage from "./Components/login";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
+import AdminLayout from "./Components/AdminView/AdminLayout";
 const router = createBrowserRouter([
   {
     path: "/",
     element: <LoginPage />,
   },
   {
-    path: "/Dashboard",
-    element: <DashboardPage />,
-  },
-  {
     path: "/register",
     element: <LoginPage />,
+  },
+  {
+    path: "/Dashboard",
+    element: <DashboardPage />,
   },
   {
     path: "/auditors",
@@ -58,39 +59,46 @@ const router = createBrowserRouter([
     element: <Projects />,
   },
   {
-    path: "/projects/dashboard",
-    element: <AdminDashboard />,
-  },
-  {
-    path: "/projects/documents",
-    element: <AdminDocument />,
-  },
-  {
-    path: "/projects/Team",
-    element: <ProjectTeam />,
-  },
-  {
-    path: "/projects/preview",
-    element: <AdminPreview />,
-  },
-  {
-    path: "/projectinfo",
-    element: <CarouselHorizontalStepper />,
-  },
-  {
-    path: "projects/auditorsworkspace",
-    element: <AuditorWorkspace />,
-  },
+    path: "project/:projectid",
+    element: <AdminLayout />,
+    children: [
+      {
+        path: "plc",
+        element: <CarouselHorizontalStepper />
+      },
+      {
+        path: "admindashboard",
+        element: <AdminDashboard />
+      },
+      {
+        path: "admindocuments",
+        element: <AdminDocument />
+      },
+      {
+        path: "adminpreview",
+        element: <AdminPreview />
+      },
+      {
+        path: "projectteam",
+        element: <ProjectTeam />
+      },
+      {
+        path: "auditorworkspace",
+        element: <AuditorWorkspace />
+      },
+    ]
+  }
+
 ]);
 
 const AppLayout = () => {
   return (
-      <AuthProvider>
-    <ProjectProvider>
+    <AuthProvider>
+      <ProjectProvider>
         {/* Wrap the entire app with AuthProvider */}
         <RouterProvider router={router} />
-    </ProjectProvider>
-      </AuthProvider>
+      </ProjectProvider>
+    </AuthProvider>
   );
 };
 

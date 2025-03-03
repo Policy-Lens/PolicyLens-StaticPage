@@ -106,7 +106,7 @@ const handleCreateProject = async() => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {cards.map((card, index) => (
               <Link
-                to="/projectinfo"
+                to={`/project/${card.id}`}
                 onClick={()=>{setProject(card)}}
                 key={index}
                 className="bg-white shadow-md border border-gray-300 rounded-lg p-4 hover:shadow-lg"

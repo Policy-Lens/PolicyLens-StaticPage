@@ -31,9 +31,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-blue-50 text-gray-800">
-      {/* Sidebar */}
-      <SideNav onToggle={setIsSidebarCollapsed} />
-
       {/* Main Content */}
       <div
         className="transition-all duration-300 p-8"
