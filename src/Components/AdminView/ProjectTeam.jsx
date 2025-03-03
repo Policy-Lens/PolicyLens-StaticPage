@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import SideNav from "../WorkFlow/SideNav";
 import { apiRequest } from "../../utils/api";
 import { ProjectContext } from "../../Context/ProjectContext";
+import { useParams } from "react-router-dom";
 
 const ProjectTeamPage = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -11,8 +12,9 @@ const ProjectTeamPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
+  const [selectedMember,setSelectedMember] = useState();
   const [addedMembers, setAddedMembers] = useState([]);
-
+  const {projectid} = useParams()
   const roles = ["Consultant", "Auditor", "Manager"]; // Example roles
 
   const toggleEdit = () => {
@@ -20,7 +22,7 @@ const ProjectTeamPage = () => {
   };
 
   const getMembers = async () => {
-    const res = await apiRequest("GET", `/api/project/${project.id}/members/`, null, true);
+    const res = await apiRequest("GET", `/api/project/${projectid}/members/`, null, true);
     if (res.status === 200) {
       setMembers(res.data);
     }
@@ -28,7 +30,7 @@ const ProjectTeamPage = () => {
 
   const handleAddMember = async () => {
     if (!newMemberName || !selectedRole) return;
-    const res = await apiRequest("POST", `/api/project/${project.id}/members/`, {
+    const res = await apiRequest("POST", `/api/project/${projectid}/members/`, {
       name: newMemberName,
       role: selectedRole
     }, true);

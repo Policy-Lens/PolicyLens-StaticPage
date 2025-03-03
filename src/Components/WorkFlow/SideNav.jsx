@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Home,
   LayoutDashboard,
@@ -12,7 +12,7 @@ import {
 
 const SideNav = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
-
+  const {projectid} = useParams()
   return (
     <div
       className={`bg-white shadow-lg fixed top-0 left-0 h-screen transition-all duration-300 border-r ${collapsed ? "w-16" : "w-56"
@@ -43,7 +43,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         <div
           className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
             }`}
-          onClick={() => navigate("/projects/1/plc")}
+          onClick={() => navigate(`/project/${projectid}/`)}
         >
           <LayoutDashboard size={22} />
           {!collapsed && <span className="text-base font-normal">Project Lifecycle</span>}
@@ -52,7 +52,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         <div
           className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
             }`}
-          onClick={() => navigate("/projects/1/auditorworkspace")}
+          onClick={() => navigate(`/project/${projectid}/auditorworkspace`)}
         >
           <Users size={22} />
           {!collapsed && <span className="text-base font-normal">Auditor Workspace</span>}
@@ -61,7 +61,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         <div
           className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
             }`}
-          onClick={() => navigate("/projects/1/admindashboard")}
+          onClick={() => navigate(`/project/${projectid}/admindashboard`)}
         >
           <LayoutDashboard size={22} />
           {!collapsed && <span className="text-base font-normal">Project Dashboard</span>}
@@ -70,7 +70,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         <div
           className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
             }`}
-          onClick={() => navigate("/projects/1/projectteam")}
+          onClick={() => navigate(`/project/${projectid}/projectteam`)}
         >
           <Users size={22} />
           {!collapsed && <span className="text-base font-normal">Project Team</span>}
@@ -79,7 +79,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         <div
           className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
             }`}
-          onClick={() => navigate("/projects/1/adminpreview")}
+          onClick={() => navigate(`/project/${projectid}/adminpreview`)}
         >
           <Eye size={22} />
           {!collapsed && <span className="text-base font-normal">Preview</span>}
@@ -88,7 +88,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         <div
           className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
             }`}
-          onClick={() => navigate("/projects/1/admindocuments")}
+          onClick={() => navigate(`/project/${projectid}/admindocuments`)}
         >
           <FileText size={22} />
           {!collapsed && <span className="text-base font-normal">Project Documents</span>}

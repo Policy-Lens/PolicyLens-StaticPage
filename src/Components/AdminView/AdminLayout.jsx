@@ -1,8 +1,22 @@
 import SideNav from '../WorkFlow/SideNav';
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
+import { AuthContext } from '../../AuthContext';
 
 const AdminLayout = () => {
+    const {checkLogin} = useContext(AuthContext)
+    useEffect(() => {
+        const verifyLogin = async () => {
+          const isLoggedIn = await checkLogin();
+          if (!isLoggedIn) {
+            navigate("/"); 
+          }
+        };
+    
+        verifyLogin();
+
+      }, []);
+
     return (
         <div className="flex h-screen w-full">
             {/* Sidebar */}

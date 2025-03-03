@@ -63,8 +63,9 @@ const router = createBrowserRouter([
     element: <AdminLayout />,
     children: [
       {
-        path: "plc",
-        element: <CarouselHorizontalStepper />
+        // path: "plc",
+        index:true,
+        element: <CarouselHorizontalStepper />,
       },
       {
         path: "admindashboard",
