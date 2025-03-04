@@ -12,10 +12,15 @@ const ProjectTeamPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
-  const [selectedMember,setSelectedMember] = useState();
+  const [selectedMember, setSelectedMember] = useState();
   const [addedMembers, setAddedMembers] = useState([]);
-  const {projectid} = useParams()
+  const { projectid } = useParams()
   const roles = ["Consultant", "Auditor", "Manager"]; // Example roles
+
+  const memberOptions = [
+  { id: 3, email: "a1@example.com", name: "a1", role: "auditor", contact: null },
+  { id: 4, email: "a2@example.com", name: "a2", role: "auditor", contact: null }
+];
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
@@ -35,12 +40,12 @@ const ProjectTeamPage = () => {
       role: selectedRole
     }, true);
 
+   
     const removeMember = (index) => {
       setAddedMembers(addedMembers.filter((_, i) => i !== index));
     };
 
-
-
+  
     if (res.status === 201) {
       setMembers([...members, res.data]);
       setIsModalOpen(false);
@@ -49,7 +54,12 @@ const ProjectTeamPage = () => {
     }
   };
 
-  
+  const handleFinishAdding = () => {
+    console.log("Final members list:", addedMembers);
+    setIsModalOpen(false); // Close the modal after finalizing
+  };
+
+
   useEffect(() => {
     getMembers();
   }, []);
@@ -126,47 +136,90 @@ const ProjectTeamPage = () => {
           </div>
         </div>
       )} */}
+    
+
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl font-bold mb-4">Add Members</h2>
-            <input
-              type="text"
-              placeholder="Enter Member Name"
-              className="w-full border border-gray-300 p-2 rounded-md mb-4"
+          <div className="bg-white p-6 rounded-2xl shadow-xl w-[500px]">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Add Members</h2>
+
+            {/* Role Selection */}
+            <select
+              className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+            >
+              <option value="">Select Role</option>
+              <option value="admin">Admin</option>
+              <option value="consultant">Consultant</option>
+              <option value="auditor">Auditor</option>
+              <option value="company">Company</option>
+            </select>
+
+            {/* Name Selection */}
+            <select
+              className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               value={selectedMember}
               onChange={(e) => setSelectedMember(e.target.value)}
-            />
+              disabled={!selectedRole}
+            >
+              <option value="">Select Name</option>
+              <option value="a1">a1</option>
+              <option value="a2">a2</option>
+            </select>
+
+            {/* Add Member Button */}
             <button
-              className="w-full bg-green-600 text-white py-2 rounded-md mb-2"
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition shadow-md"
               onClick={handleAddMember}
+              disabled={!selectedMember || !selectedRole}
             >
               + Add Member
             </button>
-            {addedMembers.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Added Members:</h3>
-                <ul>
-                  {addedMembers.map((member, index) => (
-                    <li key={index} className="flex justify-between items-center p-2 border-b">
-                      {member}
-                      <button
-                        className="text-red-600 hover:text-red-800"
-                        onClick={() => removeMember(index)}
-                      >
-                        Remove
-                      </button>
+
+            {/* Done Adding Members Button */}
+            <button
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition mt-4 shadow-md"
+              onClick={() => {
+                console.log("Final List of Added Members:", members);
+                handleFinishAdding();
+              }}
+            >
+              Done Adding Members
+            </button>
+
+            {/* Close Button */}
+            <button
+              className="w-full bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition mt-2 shadow-md"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Close
+            </button>
+
+            {/* List of Added Members */}
+            {members.length > 0 && (
+              <div className="border border-gray-300 p-4 rounded-lg bg-gray-100 mt-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">Added Members</h3>
+                <ul className="space-y-2">
+                  {members.map((member, index) => (
+                    <li
+                      key={index}
+                      className="flex justify-between items-center p-2 bg-white shadow-sm rounded-lg border border-gray-200"
+                    >
+                      <span className="font-medium text-gray-800">{member.name}</span>
+                      <span className="text-gray-500 text-sm">{member.role}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-            <button className="w-full bg-gray-400 text-white py-2 rounded-md" onClick={() => setIsModalOpen(false)}>
-              Close
-            </button>
           </div>
         </div>
       )}
+
+
+
+
     </div>
   );
 };

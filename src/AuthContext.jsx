@@ -1,5 +1,4 @@
 import { createContext, useState, useEffect } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { apiRequest } from "./utils/api";
 
