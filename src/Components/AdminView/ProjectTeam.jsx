@@ -3,6 +3,7 @@ import SideNav from "../WorkFlow/SideNav";
 import { apiRequest } from "../../utils/api";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
+import { Pointer } from "lucide-react";
 
 const ProjectTeamPage = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -12,53 +13,148 @@ const ProjectTeamPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
-  const [selectedMember, setSelectedMember] = useState();
+  const [selectedUser, setSelectedUser] = useState();
   const [addedMembers, setAddedMembers] = useState([]);
-  const { projectid } = useParams()
+  const { projectid } = useParams();
   const roles = ["Consultant", "Auditor", "Manager"]; // Example roles
+  const [users, setUsers] = useState([
+    {
+      id: 3,
+      email: "mailto:a1@example.com",
+      name: "a1",
+      role: "auditor",
+      contact: null,
+    },
+    {
+      id: 4,
+      email: "mailto:a2@example.com",
+      name: "a2",
+      role: "auditor",
+      contact: null,
+    },
+  ]);
+  const [admins, setAdmins] = useState([]);
+  const [consultants, setConsultants] = useState([]);
+  const [auditors, setAuditors] = useState([]);
 
   const memberOptions = [
-  { id: 3, email: "a1@example.com", name: "a1", role: "auditor", contact: null },
-  { id: 4, email: "a2@example.com", name: "a2", role: "auditor", contact: null }
-];
+    {
+      id: 3,
+      email: "a1@example.com",
+      name: "a1",
+      role: "auditor",
+      contact: null,
+    },
+    {
+      id: 4,
+      email: "a2@example.com",
+      name: "a2",
+      role: "auditor",
+      contact: null,
+    },
+  ];
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
   };
 
   const getMembers = async () => {
-    const res = await apiRequest("GET", `/api/project/${projectid}/members/`, null, true);
+    const res = await apiRequest(
+      "GET",
+      `/api/project/${projectid}/members/`,
+      null,
+      true
+    );
     if (res.status === 200) {
       setMembers(res.data);
+      console.log(res.data);
     }
   };
 
   const handleAddMember = async () => {
-    if (!newMemberName || !selectedRole) return;
-    const res = await apiRequest("POST", `/api/project/${projectid}/members/`, {
-      name: newMemberName,
-      role: selectedRole
-    }, true);
+    if (!selectedUser || !selectedRole) return;
 
-   
-    const removeMember = (index) => {
-      setAddedMembers(addedMembers.filter((_, i) => i !== index));
-    };
-
-  
-    if (res.status === 201) {
-      setMembers([...members, res.data]);
-      setIsModalOpen(false);
-      setNewMemberName("");
-      setSelectedRole("");
+    const user = JSON.parse(selectedUser);
+    user.project_role = selectedRole;
+    if (members.some((member) => member.id === user.id)) {
+      alert("Already a member in this project");
+      return;
+    }
+    switch (selectedRole) {
+      case "admin":
+        // Check if a user with the same id already exists
+        if (
+          !admins.some((admin) => admin.id === user.id) &&
+          !consultants.some((consultant) => consultant.id === user.id)
+        ) {
+          setAdmins([...admins, user]);
+        } else {
+          alert("already added this member");
+        }
+        break;
+      case "consultant":
+        if (
+          !consultants.some((consultant) => consultant.id === user.id) &&
+          !admins.some((admin) => admin.id === user.id)
+        ) {
+          setConsultants([...consultants, user]);
+        } else {
+          alert("already added this member");
+        }
+        break;
+      case "auditor":
+        if (!auditors.some((auditor) => auditor.id === user.id)) {
+          setAuditors([...auditors, user]);
+        } else {
+          alert("already added this member");
+        }
+        break;
+      default:
+        break;
     }
   };
 
   const handleFinishAdding = () => {
-    console.log("Final members list:", addedMembers);
+    console.log(
+      "Final members list:",
+      admins.map((admin) => admin.id),
+      consultants.map((consultant) => consultant.id),
+      auditors.map((auditor) => auditor.id)
+    );
+    const res = apiRequest(
+      "POST",
+      `/api/project/${projectid}/add-members/`,
+      {
+        admins: admins.map((admin) => admin.id),
+        consultants: consultants.map((consultant) => consultant.id),
+        auditors: auditors.map((auditor) => auditor.id),
+      },
+      true
+    );
+    if (res.status == 200) {
+      getMembers();
+    }
+    setAdmins([]);
+    setConsultants([]);
+    setAuditors([]);
+    setUsers([]);
     setIsModalOpen(false); // Close the modal after finalizing
   };
 
+  const getUsers = async (e) => {
+    const role = e.target.value;
+    if (role === "") return;
+    const res = await apiRequest(
+      "GET",
+      `/api/auth/users/?role=${role === "admin" ? "consultant" : role}`,
+      null,
+      true
+    );
+    console.log(res);
+    if (res.status == 200) {
+      setUsers(res.data);
+    }
+  };
 
   useEffect(() => {
     getMembers();
@@ -68,7 +164,11 @@ const ProjectTeamPage = () => {
     <div className="flex min-h-screen">
       <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <div className={`p-10 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-56"} flex-1`}>
+      <div
+        className={`p-10 bg-gray-100 transition-all duration-300 ${
+          collapsed ? "ml-16" : "ml-56"
+        } flex-1`}
+      >
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Project Team</h1>
         <div className="bg-white p-4 rounded-lg shadow-xl w-full flex flex-col justify-between border border-gray-200 hover:shadow-2xl transition-shadow">
           <div className="flex justify-between items-center">
@@ -77,12 +177,18 @@ const ProjectTeamPage = () => {
             </h2>
             <div className="flex gap-4">
               {!isEditing ? (
-                <button onClick={toggleEdit} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
+                <button
+                  onClick={toggleEdit}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+                >
                   Edit
                 </button>
               ) : (
                 <>
-                  <button onClick={() => setIsModalOpen(true)} className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition">
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition"
+                  >
                     Add Member
                   </button>
                   <button className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">
@@ -95,10 +201,19 @@ const ProjectTeamPage = () => {
 
           <div className="flex flex-col gap-3">
             {members.map((member, idx) => (
-              <div key={idx} className="flex justify-between items-center p-2 rounded-md shadow-sm hover:shadow-md transition-shadow">
-                <span className="text-base font-medium text-gray-800">{member.name}</span>
-                <span className="text-base font-medium text-gray-800">{member.email}</span>
-                <span className="text-sm font-semibold text-gray-600">{member.project_role}</span>
+              <div
+                key={idx}
+                className="flex justify-between items-center p-2 rounded-md shadow-sm hover:shadow-md transition-shadow"
+              >
+                <span className="text-base font-medium text-gray-800">
+                  {member.name}
+                </span>
+                <span className="text-base font-medium text-gray-800">
+                  {member.email}
+                </span>
+                <span className="text-sm font-semibold text-gray-600">
+                  {member.project_role}
+                </span>
               </div>
             ))}
           </div>
@@ -136,78 +251,179 @@ const ProjectTeamPage = () => {
           </div>
         </div>
       )} */}
-    
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
           <div className="bg-white p-6 rounded-2xl shadow-xl w-[500px]">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Add Members</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+              Add Members
+            </h2>
 
             {/* Role Selection */}
             <select
               className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
+              onChange={(e) => {
+                setSelectedRole(e.target.value);
+                setSelectedUser("");
+                getUsers(e);
+              }}
             >
               <option value="">Select Role</option>
               <option value="admin">Admin</option>
               <option value="consultant">Consultant</option>
               <option value="auditor">Auditor</option>
-              <option value="company">Company</option>
+              {/* <option value="company">Company</option> */}
             </select>
 
             {/* Name Selection */}
             <select
               className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              value={selectedMember}
-              onChange={(e) => setSelectedMember(e.target.value)}
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
               disabled={!selectedRole}
             >
               <option value="">Select Name</option>
-              <option value="a1">a1</option>
-              <option value="a2">a2</option>
+              {users.map((user) => (
+                <option value={JSON.stringify(user)} key={user.id}>
+                  {user.name} - {user.email}
+                </option>
+              ))}
             </select>
 
             {/* Add Member Button */}
             <button
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition shadow-md"
               onClick={handleAddMember}
-              disabled={!selectedMember || !selectedRole}
+              disabled={!selectedUser || !selectedRole}
             >
               + Add Member
             </button>
 
             {/* Done Adding Members Button */}
-            <button
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition mt-4 shadow-md"
-              onClick={() => {
-                console.log("Final List of Added Members:", members);
-                handleFinishAdding();
-              }}
-            >
-              Done Adding Members
-            </button>
+            <div>
+              <button
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition mt-4 shadow-md"
+                onClick={() => {
+                  console.log("Final List of Added Members:", members);
+                  handleFinishAdding();
+                }}
+              >
+                Done Adding Members
+              </button>
 
-            {/* Close Button */}
-            <button
-              className="w-full bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition mt-2 shadow-md"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Close
-            </button>
+              {/* Close Button */}
+              <button
+                className="w-full bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition mt-2 shadow-md"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedRole('')
+                  setAdmins([]);
+                  setConsultants([]);
+                  setAuditors([]);
+                  setUsers([]);
+                }}
+              >
+                Close
+              </button>
+            </div>
 
             {/* List of Added Members */}
-            {members.length > 0 && (
+            {admins.length > 0 && (
               <div className="border border-gray-300 p-4 rounded-lg bg-gray-100 mt-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Added Members</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                  Added Admins
+                </h3>
                 <ul className="space-y-2">
-                  {members.map((member, index) => (
+                  {admins.map((member, index) => (
                     <li
                       key={index}
                       className="flex justify-between items-center p-2 bg-white shadow-sm rounded-lg border border-gray-200"
                     >
-                      <span className="font-medium text-gray-800">{member.name}</span>
-                      <span className="text-gray-500 text-sm">{member.role}</span>
+                      <span className="font-medium text-gray-800">
+                        {member.name}
+                      </span>
+                      <span className="text-gray-500 text-sm">
+                        {member.email}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setAdmins(
+                            admins.filter((admin) => admin.id !== member.id)
+                          );
+                        }}
+                        className="text-red-400 text-md"
+                      >
+                        <b>X</b>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {consultants.length > 0 && (
+              <div className="border border-gray-300 p-4 rounded-lg bg-gray-100 mt-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                  Added Consultants
+                </h3>
+                <ul className="space-y-2">
+                  {consultants.map((member, index) => (
+                    <li
+                      key={index}
+                      className="flex justify-between items-center p-2 bg-white shadow-sm rounded-lg border border-gray-200"
+                    >
+                      <span className="font-medium text-gray-800">
+                        {member.name}
+                      </span>
+                      <span className="text-gray-500 text-sm">
+                        {member.email}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setConsultants(
+                            consultants.filter(
+                              (consultant) => consultant.id !== member.id
+                            )
+                          );
+                        }}
+                        className="text-red-400 text-md"
+                      >
+                        <b>X</b>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {auditors.length > 0 && (
+              <div className="border border-gray-300 p-4 rounded-lg bg-gray-100 mt-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                  Added Auditors
+                </h3>
+                <ul className="space-y-2">
+                  {auditors.map((member, index) => (
+                    <li
+                      key={index}
+                      className="flex justify-between items-center p-2 bg-white shadow-sm rounded-lg border border-gray-200"
+                    >
+                      <span className="font-medium text-gray-800">
+                        {member.name}
+                      </span>
+                      <span className="text-gray-500 text-sm">
+                        {member.email}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setAuditors(
+                            auditors.filter(
+                              (auditor) => auditor.id !== member.id
+                            )
+                          );
+                        }}
+                        className="text-red-400 text-md"
+                      >
+                        <b>X</b>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -216,10 +432,6 @@ const ProjectTeamPage = () => {
           </div>
         </div>
       )}
-
-
-
-
     </div>
   );
 };
