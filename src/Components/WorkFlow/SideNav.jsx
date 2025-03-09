@@ -12,88 +12,86 @@ import {
 
 const SideNav = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
-  const {projectid} = useParams()
+  const { projectid } = useParams();
+
+  const menuItems = [
+    { label: "Project Lifecycle", icon: <LayoutDashboard size={20} />, path: `/project/${projectid}/` },
+    { label: "Auditor Workspace", icon: <Users size={20} />, path: `/project/${projectid}/auditorworkspace` },
+    { label: "Project Dashboard", icon: <LayoutDashboard size={20} />, path: `/project/${projectid}/admindashboard` },
+    { label: "Project Team", icon: <Users size={20} />, path: `/project/${projectid}/projectteam` },
+    { label: "Preview", icon: <Eye size={20} />, path: `/project/${projectid}/adminpreview` },
+    { label: "Project Documents", icon: <FileText size={20} />, path: `/project/${projectid}/admindocuments` },
+  ];
+
   return (
     <div
-      className={`bg-white shadow-lg fixed top-0 left-0 h-screen transition-all duration-300 border-r ${collapsed ? "w-16" : "w-56"
-        }`}
+      className={`bg-white border-r border-gray-200 fixed top-0 left-0 h-screen shadow-lg 
+        transition-all duration-300 ease-in-out 
+        ${collapsed ? "w-16" : "w-56"}
+        flex flex-col`}
     >
       {/* Sidebar Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b">
+      <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
         {/* Home Button */}
         <div
-          className="flex items-center gap-3 text-blue-600 cursor-pointer"
+          className="flex items-center gap-3 text-blue-600 cursor-pointer hover:text-blue-800 transition group"
           onClick={() => navigate("/dashboard")}
         >
-          <Home size={20} />
-          {!collapsed && <span className="font-semibold text-base">Home</span>}
+          <Home size={20} className="shrink-0 text-black group-hover:text-blue-700 transition" />
+          {!collapsed && (
+            <span className="font-bold text-base whitespace-nowrap tracking-tight text-black">
+              Home
+            </span>
+          )}
         </div>
 
         {/* Collapse Button */}
         <div
-          className="cursor-pointer text-blue-600"
+          className="cursor-pointer text-black hover:text-blue-600 transition rounded-full p-2 hover:bg-blue-50"
           onClick={() => setCollapsed(!collapsed)}
         >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          {collapsed ? (
+            <ChevronRight size={20} className="shrink-0" />
+          ) : (
+            <ChevronLeft size={20} className="shrink-0" />
+          )}
         </div>
       </div>
 
       {/* Sidebar Menu */}
-      <div className="mt-6 flex flex-col">
-        <div
-          className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
-            }`}
-          onClick={() => navigate(`/project/${projectid}/`)}
-        >
-          <LayoutDashboard size={22} />
-          {!collapsed && <span className="text-base font-normal">Project Lifecycle</span>}
-        </div>
+      <nav className="mt-4 flex flex-col space-y-2 px-3 overflow-y-auto flex-grow">
+        {menuItems.map((item, index) => (
+          <div
+            key={index}
+            className={`flex items-center px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group
+              ${collapsed ? "justify-center" : "gap-3"} 
+              text-black hover:bg-blue-100/50 
+              active:scale-95 relative overflow-hidden`}
+            onClick={() => navigate(item.path)}
+          >
+            {/* Subtle background effect */}
+            <div className="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
 
-        <div
-          className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
-            }`}
-          onClick={() => navigate(`/project/${projectid}/auditorworkspace`)}
-        >
-          <Users size={22} />
-          {!collapsed && <span className="text-base font-normal">Auditor Workspace</span>}
-        </div>
+            <span className={`shrink-0 ${!collapsed ? 'group-hover:translate-x-1 transition' : ''}`}>
+              {React.cloneElement(item.icon, {
+                className: 'text-black group-hover:text-blue-700 transition'
+              })}
+            </span>
+            {!collapsed && (
+              <span className="text-base font-medium whitespace-nowrap text-black group-hover:text-blue-900 transition">
+                {item.label}
+              </span>
+            )}
+          </div>
+        ))}
+      </nav>
 
-        <div
-          className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
-            }`}
-          onClick={() => navigate(`/project/${projectid}/admindashboard`)}
-        >
-          <LayoutDashboard size={22} />
-          {!collapsed && <span className="text-base font-normal">Project Dashboard</span>}
+      {/* Optional: Footer */}
+      {!collapsed && (
+        <div className="border-t border-gray-200 p-4 text-center text-xs text-black/70">
+          © 2024 Project Management
         </div>
-
-        <div
-          className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
-            }`}
-          onClick={() => navigate(`/project/${projectid}/projectteam`)}
-        >
-          <Users size={22} />
-          {!collapsed && <span className="text-base font-normal">Project Team</span>}
-        </div>
-
-        <div
-          className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
-            }`}
-          onClick={() => navigate(`/project/${projectid}/adminpreview`)}
-        >
-          <Eye size={22} />
-          {!collapsed && <span className="text-base font-normal">Preview</span>}
-        </div>
-
-        <div
-          className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${collapsed ? "justify-center" : "gap-3"
-            }`}
-          onClick={() => navigate(`/project/${projectid}/admindocuments`)}
-        >
-          <FileText size={22} />
-          {!collapsed && <span className="text-base font-normal">Project Documents</span>}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@ const { Panel } = Collapse;
 const DiscussingPolicies = () => {
   const [fileLists, setFileLists] = useState({});
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddDataModalVisible, setIsAddDataModalVisible] = useState(false);
   const consultants = ["Consultant A", "Consultant B", "Consultant C"];
 
   const handleFileChange = (panelKey, { fileList }) => {
@@ -26,8 +27,8 @@ const DiscussingPolicies = () => {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleFileChange(panelKey, info)}
-          beforeUpload={() => false} 
-          showUploadList={false} 
+          beforeUpload={() => false}
+          showUploadList={false}
           multiple
         >
           <button
@@ -43,13 +44,26 @@ const DiscussingPolicies = () => {
 
   return (
     <div className="p-6 bg-gray-50 flex-grow relative">
-      <h1 className="text-2xl font-bold text-gray-800 mb-10">Policy Lens</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">Policy Lens</h1>
 
-      {/* Discussing Policies Section */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Draft Policies</h2>
+      <div className="flex justify-between items-center mb-4">
+        <Button type="primary">Share the Docs</Button>
+        <div className="flex flex-col space-y-2">
+          <Button type="primary" onClick={() => setIsAddDataModalVisible(true)}>
+            Add Data
+          </Button>
+          <Button type="default" onClick={() => setIsModalVisible(true)}>
+            Assign Task
+          </Button>
+        </div>
+      </div>
 
-        {/* Collapse Accordion for Description Box */}
+      <Modal
+        title="Add Data"
+        visible={isAddDataModalVisible}
+        onCancel={() => setIsAddDataModalVisible(false)}
+        footer={null}
+      >
         <Collapse defaultActiveKey={["1"]}>
           <Panel header="Enter details for the draft policies" key="1">
             {renderLargeInputWithAttachButton(
@@ -58,20 +72,8 @@ const DiscussingPolicies = () => {
             )}
           </Panel>
         </Collapse>
+      </Modal>
 
-        <Button type="primary" className="mt-4">
-          Share the Docs
-        </Button>
-      </div>
-
-      {/* Assign Task Button positioned in the bottom-right corner */}
-      <div className="absolute bottom-6 right-8">
-        <Button type="default" onClick={() => setIsModalVisible(true)}>
-          Assign Task
-        </Button>
-      </div>
-
-      {/* Modal for Assign Task */}
       <Modal
         title="Assign Task"
         visible={isModalVisible}

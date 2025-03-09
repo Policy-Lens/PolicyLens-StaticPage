@@ -150,13 +150,10 @@ const PreviewPage = () => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
-
+  
       {/* Main Content */}
       <div
-        className={`flex-1 p-6 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-60"
-          }`}
+        className="flex-1 p-6 bg-gray-100 transition-all duration-300 "
       >
         <h1 className="text-2xl font-bold text-center mb-8">
           Preview of Completed Tasks

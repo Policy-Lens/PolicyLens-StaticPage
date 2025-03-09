@@ -35,12 +35,10 @@ const AuditorWorkspace = () => {
     ];
 
     return (
-        <div className="flex h-screen font-sans bg-gray-100">
-            {/*SideNav*/}
-            <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
-
+        <div className="flex h-screen font-sans pl-6 bg-gray-100">
+          
             {/* Main Content */}
-            <div className={`flex-1 pl-0 pb-8 pt-0 bg-gray-100 text-gray-800 mr-3 ${collapsed ? "ml-20" : "ml-60"}`}>
+            <div className="flex-1 pl-0 pb-8 pt-0 bg-gray-100 text-gray-800 mr-3">
                 {showManualReport ? (
                     <ManualReport
                         selectedControls={selectedControls} 

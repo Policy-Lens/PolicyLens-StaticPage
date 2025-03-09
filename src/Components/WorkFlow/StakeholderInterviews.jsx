@@ -10,6 +10,7 @@ const StakeholderInterviews = () => {
   const [fileLists, setFileLists] = useState({});
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTeamMembers, setSelectedTeamMembers] = useState([]);
+  const [isAddDataModalVisible, setIsAddDataModalVisible] = useState(false);
 
   const consultants = ["Consultant A", "Consultant B", "Consultant C"];
 
@@ -28,8 +29,8 @@ const StakeholderInterviews = () => {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleFileChange(panelKey, info)}
-          beforeUpload={() => false} 
-          showUploadList={false} 
+          beforeUpload={() => false}
+          showUploadList={false}
           multiple
         >
           <button
@@ -51,27 +52,48 @@ const StakeholderInterviews = () => {
     setIsModalVisible(false);
   };
 
+  const handleAddData = () => {
+    setIsAddDataModalVisible(true);
+  };
+
+  const handleAddDataModalClose = () => {
+    setIsAddDataModalVisible(false);
+  };
+
   return (
     <div className="relative p-6 rounded-md bg-white">
       <h2 className="text-xl font-bold mb-4">Conduct Interviews</h2>
-      <Button type="primary" onClick={() => console.log("Meeting Scheduled")}>
-        Schedule Meeting
-      </Button>
 
-      <h2 className="text-xl font-bold mb-4 mt-6">
-        Request Evidence and Policies
-      </h2>
-      <Collapse className="mb-4">
-        <Panel header="Request evidence and policies from stakeholders" key="2">
-          {renderLargeInputWithAttachButton(
-            "stakeholderEvidence",
-            "Request evidence and policies from stakeholders"
-          )}
-        </Panel>
-      </Collapse>
+      <div className="flex justify-between items-center mb-4">
+        <Button type="primary" onClick={() => console.log("Meeting Scheduled")}>
+          Schedule Meeting
+        </Button>
+        <Button type="primary" onClick={handleAddData}>Add Data</Button>
+      </div>
+
+      {/* Add Data Modal */}
+      <Modal
+        title="Request Evidence and Policies"
+        visible={isAddDataModalVisible}
+        onCancel={handleAddDataModalClose}
+        footer={[
+          <Button key="continue" type="primary" onClick={handleAddDataModalClose}>
+            Continue
+          </Button>,
+        ]}
+      >
+        <Collapse className="mb-4">
+          <Panel header="Request evidence and policies from stakeholders" key="2">
+            {renderLargeInputWithAttachButton(
+              "stakeholderEvidence",
+              "Request evidence and policies from stakeholders"
+            )}
+          </Panel>
+        </Collapse>
+      </Modal>
 
       {/* Assign Task Button */}
-      <div className="absolute bottom--8 right-4">
+      <div className="flex justify-end mt-4">
         <Button type="default" onClick={handleAssignTask}>
           Assign Task
         </Button>

@@ -51,14 +51,10 @@ const AdminDocumentsPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* SideNav */}
-      <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
-
+    <div className="flex min-h-screen p-0">
       {/* Main Content */}
       <div
-        className={`flex-grow p-8 bg-gray-50 transition-all duration-300 ${collapsed ? "ml-16" : "ml-60"
-          }`}
+        className="flex-grow p-8 bg-gray-50 transition-all duration-300 "
       >
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Project Documents</h1>
 

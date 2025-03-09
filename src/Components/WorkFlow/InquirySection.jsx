@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Collapse, Input, Upload } from "antd";
+import { Modal, Input, Upload, Button } from "antd";
 import { PaperClipOutlined } from "@ant-design/icons";
 
 const { TextArea } = Input;
-const { Panel } = Collapse;
 
-function InquirySection({ onContinue }) {
+function InquirySection({ isVisible, onClose }) {
   const [fileLists, setFileLists] = useState({});
 
   const handleUploadChange = (panelKey, { fileList }) => {
@@ -23,8 +22,8 @@ function InquirySection({ onContinue }) {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleUploadChange(panelKey, info)}
-          beforeUpload={() => false} 
-          showUploadList={false} 
+          beforeUpload={() => false}
+          showUploadList={false}
           multiple
         >
           <button
@@ -48,8 +47,8 @@ function InquirySection({ onContinue }) {
         <Upload
           fileList={fileLists[panelKey] || []}
           onChange={(info) => handleUploadChange(panelKey, info)}
-          beforeUpload={() => false} 
-          showUploadList={false} 
+          beforeUpload={() => false}
+          showUploadList={false}
           multiple
         >
           <button
@@ -64,33 +63,33 @@ function InquirySection({ onContinue }) {
   );
 
   return (
+    <Modal visible={isVisible} onCancel={onClose} footer={null} width={600}>
+      <h2 className="text-xl font-bold text-gray-800 mb-4">Inquiry Section</h2>
+      <div className="space-y-4">
+        <div>{renderLargeInputWithAttachButton("scope", "Enter the scope of the project")}</div>
+        <div>{renderSmallInputWithAttachButton("timeline", "Add timeline details")}</div>
+        <div>{renderSmallInputWithAttachButton("budget", "Enter budget")}</div>
+        <div>{renderSmallInputWithAttachButton("availability", "Enter availability details")}</div>
+        <div>{renderLargeInputWithAttachButton("draftProposal", "Upload draft proposal")}</div>
+      </div>
+    </Modal>
+  );
+}
+
+function InquiryPage() {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  return (
     <div className="p-4">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Inquiry</h2>
-      <Collapse accordion className="space-y-4">
-        <Panel header="Scope" key="1">
-          {renderLargeInputWithAttachButton("scope", "Enter the scope of the project")}
-        </Panel>
-        <Panel header="Timeline" key="2">
-          {renderSmallInputWithAttachButton("timeline", "Add timeline details")}
-        </Panel>
-        <Panel header="Budget" key="3">
-          {renderSmallInputWithAttachButton("budget", "Enter budget")}
-        </Panel>
-        <Panel header="Availability" key="4">
-          {renderSmallInputWithAttachButton("availability", "Enter availability details")}
-        </Panel>
-        <Panel header="Draft Proposal" key="5">
-          {renderLargeInputWithAttachButton("draftProposal", "Upload draft proposal")}
-        </Panel>
-      </Collapse>
-      <button
-        className="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none"
-        onClick={() => onContinue && onContinue()}
-      >
-        Continue
-      </button>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">Inquiry Section</h2>
+        <Button type="primary" onClick={() => setIsModalVisible(true)}>
+          Add Data
+        </Button>
+      </div>
+      <InquirySection isVisible={isModalVisible} onClose={() => setIsModalVisible(false)} />
     </div>
   );
 }
 
-export default InquirySection;
+export default InquiryPage;

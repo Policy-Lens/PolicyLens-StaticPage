@@ -1,85 +1,147 @@
 import React, { useState } from "react";
 import { Button, Modal, Select, DatePicker, Input } from "antd";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { Worker, Viewer, ScrollMode } from "@react-pdf-viewer/core";
+import { pageNavigationPlugin } from "@react-pdf-viewer/page-navigation";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import "@react-pdf-viewer/page-navigation/lib/styles/index.css";
 
 const { Option } = Select;
 
 const ReportPresentation = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedTeamMembers, setSelectedTeamMembers] = useState([]);
-
-  const consultants = ["Consultant A", "Consultant B", "Consultant C"];
-
+  const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
+  const [isPdfModalVisible, setIsPdfModalVisible] = useState(false);
+  
+  // Define auditors array
+  const auditors = ["Auditor A", "Auditor B", "Auditor C", "Auditor D"];
+  
+  // PDF viewer plugin setup
+  const pageNavigationPluginInstance = pageNavigationPlugin();
+  const { jumpToNextPage, jumpToPreviousPage, CurrentPageLabel, NumberOfPages } =
+    pageNavigationPluginInstance;
+  
   const handleAssignTask = () => {
-    setIsModalVisible(true);
+    setIsTaskModalVisible(true);
   };
-
-  const handleModalClose = () => {
-    setIsModalVisible(false);
+  
+  const handleTaskModalClose = () => {
+    setIsTaskModalVisible(false);
   };
-
+  
+  const handleViewPdf = () => {
+    setIsPdfModalVisible(true);
+  };
+  
+  const handlePdfModalClose = () => {
+    setIsPdfModalVisible(false);
+  };
+  
   return (
     <div className="relative">
       <h2 className="text-xl font-bold mb-4">Present AS-IS Report</h2>
       <div className="bg-white p-6 border rounded mb-4">
-        <h3 className="text-lg font-semibold mb-2">Analysis Report</h3>
-        <h4 className="text-md font-semibold mb-2">Overview</h4>
-        <p>
-          The AS-IS analysis identifies current operational inefficiencies, gaps
-          in policy alignment, and opportunities for improvement. The report
-          includes qualitative and quantitative data collected through stakeholder
-          interviews and document analysis.
-        </p>
-        <h4 className="text-md font-semibold mb-2 mt-4">Key Findings</h4>
-        <ul className="list-disc pl-6 mb-4">
-          <li>75% of departmental policies lack standardization across teams.</li>
-        </ul>
+        <div className="flex justify-center">
+          <Button type="primary" onClick={handleViewPdf}>
+            View PDF Report
+          </Button>
+        </div>
       </div>
-      <Button type="primary">Send Detailed Report to Company</Button>
-
+      
       {/* Assign Task Button */}
       <div className="absolute bottom-0 right-4">
         <Button type="default" onClick={handleAssignTask}>
           Assign Task
         </Button>
       </div>
-
-      {/* Assign Task Modal */}
+      
+      {/* PDF Viewer Modal */}
+      <Modal
+        title="AS-IS Report PDF"
+        open={isPdfModalVisible}
+        onCancel={handlePdfModalClose}
+        width={900}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 0, height: "80vh" }}
+        footer={[
+          <Button key="close" type="primary" onClick={handlePdfModalClose}>
+            Close
+          </Button>
+        ]}
+      >
+        <div className="h-full flex flex-col items-center justify-center relative">
+          {/* Use the exact same worker URL as in ManualReport */}
+          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.0.279/build/pdf.worker.min.js">
+            <Viewer
+              fileUrl={"/Document1.pdf"}
+              plugins={[pageNavigationPluginInstance]}
+              scrollMode={ScrollMode.Page}
+            />
+          </Worker>
+          <button
+            type="button"
+            onClick={jumpToPreviousPage}
+            className="absolute left-10 top-1/2 transform -translate-y-1/2 text-xl font-bold hover:text-blue-500"
+          >
+            <LeftOutlined />
+          </button>
+          <button
+            type="button"
+            onClick={jumpToNextPage}
+            className="absolute right-10 top-1/2 transform -translate-y-1/2 text-xl font-bold hover:text-blue-500"
+          >
+            <RightOutlined />
+          </button>
+          <div className="flex items-center gap-4 mt-1 absolute bottom-4">
+            <span className="text-xs font-bold bg-white px-2 py-1 rounded">
+              Page <CurrentPageLabel /> of <NumberOfPages />
+            </span>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* Modal for Assign Task */}
       <Modal
         title="Assign Task"
-        visible={isModalVisible}
-        onCancel={handleModalClose}
+        open={isTaskModalVisible}
+        onCancel={handleTaskModalClose}
         footer={null}
       >
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Team Members</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Select Auditors
+          </label>
           <Select
             mode="multiple"
-            placeholder="Select team members"
-            value={selectedTeamMembers}
-            onChange={setSelectedTeamMembers}
-            style={{ width: "100%" }}
+            placeholder="Select auditors"
+            className="w-full"
           >
-            {consultants.map((consultant) => (
-              <Option key={consultant} value={consultant}>
-                {consultant}
+            {auditors.map((auditor) => (
+              <Option key={auditor} value={auditor}>
+                {auditor}
               </Option>
             ))}
           </Select>
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Team Deadline</label>
-          <DatePicker style={{ width: "100%" }} />
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Task Deadline
+          </label>
+          <DatePicker className="w-full" />
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Task Description</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Task Description
+          </label>
           <Input placeholder="Enter task description" />
         </div>
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Task References</label>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Task References
+          </label>
           <Input placeholder="Add reference URLs" />
         </div>
-        <div className="text-center">
-          <Button type="primary" onClick={handleModalClose}>
+        <div className="flex justify-center">
+          <Button type="primary" onClick={handleTaskModalClose}>
             Assign
           </Button>
         </div>

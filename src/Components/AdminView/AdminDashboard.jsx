@@ -33,11 +33,7 @@ const AdminDashboard = () => {
     <div className="flex min-h-screen bg-blue-50 text-gray-800">
       {/* Main Content */}
       <div
-        className="transition-all duration-300 p-8"
-        style={{
-          marginLeft: isSidebarCollapsed ? "80px" : "220px",
-          flex: 1,
-        }}
+        className="flex-1 transition-all duration-300 p-8 "
       >
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-extrabold text-blue-900 mb-6">Admin Dashboard</h1>
