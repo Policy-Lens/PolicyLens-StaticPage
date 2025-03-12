@@ -81,12 +81,54 @@ function InquiryPage() {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Inquiry Section</h2>
         <Button type="primary" onClick={() => setIsModalVisible(true)}>
           Add Data
         </Button>
       </div>
+
+      {/* Display Saved Information */}
+      <div className="bg-gray-50 p-6 rounded-lg space-y-3 mb-6">
+        <h3 className="text-lg font-semibold text-gray-700">Saved Information</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h4 className="font-medium text-gray-700">Scope</h4>
+            <p className="text-sm text-gray-600 mt-2">Text: updated 2</p>
+            <div className="text-xs text-gray-500 mt-2">
+              Saved by: User 8
+              <span className="mx-2">•</span>
+              Saved at: March 8, 2025, 20:55:41 UTC
+            </div>
+            <div className="mt-3">
+              <p className="text-xs font-medium text-gray-600 mb-1">Attached Documents:</p>
+              <ul className="text-xs text-gray-500 list-disc pl-4">
+                <li>gaurav_aadhar_uEy7TKu.pdf</li>
+                <li>gaurav_btech_NLmAjfB.pdf</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h4 className="font-medium text-gray-700">Timeline</h4>
+            <p className="text-sm text-gray-600 mt-2">Text: updated 2</p>
+            <div className="text-xs text-gray-500 mt-2">
+              Saved by: User 8
+              <span className="mx-2">•</span>
+              Saved at: March 8, 2025, 20:55:31 UTC
+            </div>
+            <div className="mt-3">
+              <p className="text-xs font-medium text-gray-600 mb-1">Attached Documents:</p>
+              <ul className="text-xs text-gray-500 list-disc pl-4">
+                <li>gaurav_aadhar_gFnz7mP.pdf</li>
+                <li>gaurav_btech_qmYeG3t.pdf</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <InquirySection isVisible={isModalVisible} onClose={() => setIsModalVisible(false)} />
     </div>
   );

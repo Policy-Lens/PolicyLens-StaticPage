@@ -27,6 +27,10 @@ const ImplementPolicies = () => {
     setIsAssignTaskModalVisible(false);
   };
 
+  const jsonData = [{ "id": 7, "step": 27, "field_name": "Service Requirements", "text_data": "This is the Implement Policies page description", "sequence_no": 2, "saved_by": 8, "saved_at": "2025-03-08T20:34:26.107907Z", "documents": [{ "id": 3, "file": "/media/projects/16/documents/gaurav_aadhar_fiCPtp5.pdf", "tag": "", "created_at": "2025-03-08T20:34:26.119905Z" }, { "id": 4, "file": "/media/projects/16/documents/gaurav_btech_4UvmJ0j.pdf", "tag": "", "created_at": "2025-03-08T20:34:26.126904Z" }] }];
+
+  const { text_data, documents, saved_by, saved_at } = jsonData[0];
+
   return (
     <div className="p-16 pt-10 bg-gray-50 flex-grow relative">
       <h1 className="text-2xl font-bold text-gray-800 mb-5">Policy Lens</h1>
@@ -90,6 +94,21 @@ const ImplementPolicies = () => {
           <Button type="primary" onClick={closeAssignTaskModal}>Assign</Button>
         </div>
       </Modal>
+
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold text-gray-800">Implement Policies Details</h3>
+        <p className="text-sm text-gray-600 mb-2">{text_data}</p>
+        <h4 className="text-md font-semibold text-gray-800">Documents:</h4>
+        <ul className="list-disc list-inside mb-2">
+          {documents.map((doc, index) => (
+            <li key={index} className="text-sm text-gray-600">
+              {doc.file.split('/').pop()}
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm text-gray-600">Saved by: {saved_by}</p>
+        <p className="text-sm text-gray-600">Saved at: {new Date(saved_at).toLocaleString()}</p>
+      </div>
     </div>
   );
 };

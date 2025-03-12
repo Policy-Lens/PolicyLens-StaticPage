@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button, Modal, Input, Upload, message } from "antd";
-import { PaperClipOutlined } from "@ant-design/icons";
+import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 
 const { TextArea } = Input;
 
@@ -8,6 +8,33 @@ function ServiceRequirements() {
   const [fileList, setFileList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [description, setDescription] = useState("");
+
+  // Mock data from the provided JSON
+  const serviceRequirementsData = [
+    {
+      "id": 7,
+      "step": 27,
+      "field_name": "Service Requirements",
+      "text_data": "This is the service requirement description",
+      "sequence_no": 2,
+      "saved_by": 8,
+      "saved_at": "2025-03-08T20:34:26.107907Z",
+      "documents": [
+        {
+          "id": 3,
+          "file": "/media/projects/16/documents/gaurav_aadhar_fiCPtp5.pdf",
+          "tag": "",
+          "created_at": "2025-03-08T20:34:26.119905Z"
+        },
+        {
+          "id": 4,
+          "file": "/media/projects/16/documents/gaurav_btech_4UvmJ0j.pdf",
+          "tag": "",
+          "created_at": "2025-03-08T20:34:26.126904Z"
+        }
+      ]
+    }
+  ];
 
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList(newFileList);
@@ -26,6 +53,17 @@ function ServiceRequirements() {
     setFileList([]);
   };
 
+  // Helper function to extract filename from path
+  const getFileName = (filePath) => {
+    return filePath.split('/').pop();
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -37,6 +75,36 @@ function ServiceRequirements() {
           Add Data
         </Button>
       </div>
+
+      {/* Display the service requirements data */}
+      {serviceRequirementsData.map((item) => (
+        <div key={item.id} className="bg-white rounded-lg p-4 mb-4">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Description</h3>
+            <p className="text-gray-600">{item.text_data}</p>
+          </div>
+
+          {item.documents.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">Documents</h3>
+              <ul className="space-y-2">
+                {item.documents.map((doc) => (
+                  <li key={doc.id} className="flex items-center">
+                    <FileTextOutlined className="text-blue-500 mr-2" />
+                    <span className="text-gray-600">{getFileName(doc.file)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="text-sm text-gray-500 mt-2">
+            <p>Saved by: User {item.saved_by}</p>
+            <p>Saved at: {formatDate(item.saved_at)}</p>
+          </div>
+        </div>
+      ))}
+
       <Modal
         title="Add Service Requirements"
         visible={isModalOpen}
