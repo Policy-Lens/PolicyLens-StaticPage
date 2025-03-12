@@ -36,21 +36,11 @@ const steps = [
   { title: "Stakeholder Interviews", content: <StakeholderInterviews /> },
   { title: "Data Analysis", content: <DataAnalysis /> },
   { title: "Report Presentation", content: <ReportPresentation /> },
-  { title: "Brainstorm Solution", content: <BrainstormSolution /> },
   { title: "Planning Section", content: <Planning /> },
   { title: "Discussing Policies", content: <DiscussingPolicies /> },
-  { title: "Finalize Policies", content: <FinalizePolicies /> },
-  { title: "Finalize The Policies", content: <FinalizeThePolicies /> },
   { title: "Discuss Implementation", content: <DiscussImplementation /> },
   { title: "Implement Policies", content: <ImplementPolicies /> },
-  { title: "Support Page", content: <Support /> },
   { title: "Ext. Audit Process", content: <ExternalAuditProcess /> },
-  { title: "Audit Decision", content: <AuditDecisionPage /> },
-  { title: "Accessing Audit Needs", content: <AcessingAuditNeeds /> },
-  { title: "Planning Audit", content: <PlanningAudit /> },
-  { title: "Execution Section", content: <ExecutionPage /> },
-  { title: "Evaluation Section", content: <EvaluationPage /> },
-  { title: "Certification Section", content: <CertificationPage /> },
 ];
 
 const CarouselHorizontalStepper = () => {
@@ -186,7 +176,7 @@ const CarouselHorizontalStepper = () => {
     <div className="flex h-screen">
       <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col">
         {/* New Navigation Tabs */}
-        <div className="flex justify-center mb-4 space-x-4">
+        <div className="flex justify-start mb-4 space-x-4">
           {tabs.map((tab) => (
             <button
               key={tab}
