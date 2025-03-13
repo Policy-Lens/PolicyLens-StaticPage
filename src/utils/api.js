@@ -5,9 +5,7 @@ const BASE_URL = "http://localhost:8000";
 
 const apiRequest = async (method, endpoint, body = null, requiresAuth = false) => {
     try {
-        const headers = {
-            "Content-Type": "application/json",
-        };
+        const headers = {};
 
         if (requiresAuth) {
             const accessToken = Cookies.get("accessToken");
@@ -23,12 +21,16 @@ const apiRequest = async (method, endpoint, body = null, requiresAuth = false) =
         };
 
         if (body) {
-            config.data = body;
+            if (body instanceof FormData) {
+                config.data = body;
+                // Do not set Content-Type header, let FormData handle it
+            } else {
+                config.data = body;
+                headers["Content-Type"] = "application/json";
+            }
         }
-        // console.log(config);
 
         const response = await axios(config);
-        // console.log(response.status==200)
         return response;
     } catch (error) {
         if (error.response?.status === 401 && requiresAuth) {

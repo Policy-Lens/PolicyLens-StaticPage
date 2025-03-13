@@ -1,56 +1,62 @@
-import React, { useState } from "react";
+import React, { useState,useContext,useEffect } from "react";
 import { Button, Modal, Input, Upload, message } from "antd";
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
-
+import { ProjectContext } from "../../Context/ProjectContext";
+import { useParams } from "react-router-dom";
 const { TextArea } = Input;
 
 function ServiceRequirements() {
   const [fileList, setFileList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [description, setDescription] = useState("");
-
-  // Mock data from the provided JSON
-  const serviceRequirementsData = [
-    {
-      "id": 7,
-      "step": 27,
-      "field_name": "Service Requirements",
-      "text_data": "This is the service requirement description",
-      "sequence_no": 2,
-      "saved_by": 8,
-      "saved_at": "2025-03-08T20:34:26.107907Z",
-      "documents": [
-        {
-          "id": 3,
-          "file": "/media/projects/16/documents/gaurav_aadhar_fiCPtp5.pdf",
-          "tag": "",
-          "created_at": "2025-03-08T20:34:26.119905Z"
-        },
-        {
-          "id": 4,
-          "file": "/media/projects/16/documents/gaurav_btech_4UvmJ0j.pdf",
-          "tag": "",
-          "created_at": "2025-03-08T20:34:26.126904Z"
-        }
-      ]
-    }
-  ];
-
+  const [isAssignedUser,setIsAssignedUser] = useState(false);
+  const {projectid} = useParams();
+  const { addStepData,getStepData, getStepId ,projectRole,checkStepAuth} = useContext(ProjectContext);
+  const [serviceRequirementsData, setServiceRequirementsData] = useState([]);
+  const [stepId, setStepId] = useState(null);
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList(newFileList);
   };
 
-  const handleSubmit = () => {
+  const checkAssignedUser = async() =>{
+    const isAuthorized = await checkStepAuth(stepId);
+    console.log(isAuthorized);
+    setIsAssignedUser(isAuthorized);
+  }
+
+  const handleSubmit = async () => {
     if (!description.trim()) {
-      message.warning("Please provide a description.");
-      return;
+        message.warning("Please provide a description.");
+        return;
     }
-    console.log("Description:", description);
-    console.log("Uploaded Files:", fileList);
-    message.success("Service requirements submitted successfully!");
+
+    // Create a FormData object
+    const formData = new FormData();
+    formData.append("field_name", "Service Requirements");
+    formData.append("text_data", description);
+
+    // Append files to FormData
+    fileList.forEach((file, index) => {
+        formData.append(`files`, file);
+    });
+
+    try {
+        const response = await addStepData(stepId, formData);
+        if(response.status==201){
+            message.success("Service requirements submitted successfully!");
+        }
+        else{
+            message.error("Failed to submit service requirements.");
+        }
+    } catch (error) {
+        message.error("Failed to submit service requirements.");
+        console.error(error);
+    }
+
     setIsModalOpen(false);
     setDescription("");
     setFileList([]);
+    getStepData(stepId)
   };
 
   // Helper function to extract filename from path
@@ -63,17 +69,34 @@ function ServiceRequirements() {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
+  const get_step_id = async() =>{
+    const step_id = await getStepId(projectid,1);
+    setStepId(step_id);
+    console.log(step_id)
+    get_step_data(step_id);
+    checkAssignedUser();
+  }
+
+  const get_step_data = async(step_id) =>{
+    const stepData = await getStepData(step_id);
+    console.log(stepData);
+    setServiceRequirementsData(stepData);
+  }
+
+  useEffect(() => {
+    get_step_id();
+  }, []);
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-800">Service Requirements</h2>
-        <Button
+        {(projectRole.includes("admin") || isAssignedUser) && <Button
           className="bg-blue-500 text-white font-semibold py-1 px-4 rounded-lg hover:bg-blue-600 focus:outline-none"
           onClick={() => setIsModalOpen(true)}
         >
           Add Data
-        </Button>
+        </Button>}
       </div>
 
       {/* Display the service requirements data */}
@@ -99,15 +122,15 @@ function ServiceRequirements() {
           )}
 
           <div className="text-sm text-gray-500 mt-2">
-            <p>Saved by: User {item.saved_by}</p>
-            <p>Saved at: {formatDate(item.saved_at)}</p>
+            <p><b>Saved by:</b> {item.saved_by.name} - {item.saved_by.email}</p>
+            <p><b>Saved at:</b> {formatDate(item.saved_at)}</p>
           </div>
         </div>
       ))}
 
       <Modal
         title="Add Service Requirements"
-        visible={isModalOpen}
+        open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         onOk={handleSubmit}
         width={600}

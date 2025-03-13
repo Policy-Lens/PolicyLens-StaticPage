@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Home,
@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { ProjectContext } from "../../Context/ProjectContext";
 
 const SideNav = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
@@ -23,6 +24,12 @@ const SideNav = ({ collapsed, setCollapsed }) => {
     { label: "Project Documents", icon: <FileText size={20} />, path: `/project/${projectid}/admindocuments` },
   ];
 
+  const {getProjectRole} = useContext(ProjectContext)
+  useEffect(()=>{
+    getProjectRole(projectid)
+    console.log('sidenav');
+    
+  },[])
   return (
     <div
       className={`bg-white border-r border-gray-200 fixed top-0 left-0 h-screen shadow-lg 

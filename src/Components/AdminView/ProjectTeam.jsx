@@ -114,14 +114,14 @@ const ProjectTeamPage = () => {
     }
   };
 
-  const handleFinishAdding = () => {
+  const handleFinishAdding = async() => {
     console.log(
       "Final members list:",
       admins.map((admin) => admin.id),
       consultants.map((consultant) => consultant.id),
       auditors.map((auditor) => auditor.id)
     );
-    const res = apiRequest(
+    const res = await apiRequest(
       "POST",
       `/api/project/${projectid}/add-members/`,
       {
