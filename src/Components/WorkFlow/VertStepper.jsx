@@ -31,11 +31,11 @@ const steps = [
   { title: "Service Requirements", content: <ServiceRequirements /> },
   { title: "Inquiry Section", content: <InquirySection /> },
   { title: "Finalize Contract", content: <FinalizeContract /> },
-  { title: "Kickoff Meetings", content: <KickoffMeetings /> },
+  // { title: "Kickoff Meetings", content: <KickoffMeetings /> },
   { title: "Gap Analysis", content: <GapAnalysis /> },
   { title: "Stakeholder Interviews", content: <StakeholderInterviews /> },
   { title: "Data Analysis", content: <DataAnalysis /> },
-  { title: "Report Presentation", content: <ReportPresentation /> },
+  // { title: "Report Presentation", content: <ReportPresentation /> },
   { title: "Planning Section", content: <Planning /> },
   { title: "Discussing Policies", content: <DiscussingPolicies /> },
   { title: "Discuss Implementation", content: <DiscussImplementation /> },
@@ -268,7 +268,7 @@ const CarouselHorizontalStepper = () => {
                 key={index}
                 className="min-w-full px-8 py-6 flex justify-center items-center h-full"
               >
-                <div className="w-full h-3/4 max-w-4xl bg-white rounded-lg shadow-md p-8 overflow-auto">
+                <div className="w-full h-full max-w-4xl bg-white rounded-lg shadow-md overflow-auto">
                   {step.content}
                 </div>
               </div>
@@ -293,6 +293,26 @@ const CarouselHorizontalStepper = () => {
           >
             Next <ChevronRight size={16} className="ml-1" />
           </button>
+        </div>
+
+        {/* Add keyboard event listener effect */}
+        <div style={{ display: 'none' }}>
+          {useEffect(() => {
+            const handleKeyDown = (event) => {
+              if (event.key === 'ArrowLeft') {
+                handlePrev();
+              } else if (event.key === 'ArrowRight') {
+                handleNext();
+              }
+            };
+            
+            window.addEventListener('keydown', handleKeyDown);
+            
+            // Clean up event listener on component unmount
+            return () => {
+              window.removeEventListener('keydown', handleKeyDown);
+            };
+          }, [currentStep, isTransitioning])}
         </div>
       </div>
     </div>

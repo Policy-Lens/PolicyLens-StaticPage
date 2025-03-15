@@ -60,7 +60,7 @@ export const ProjectProvider = ({ children }) => {
 
   const assignStep = async(step_id,data) =>{
     const res = await apiRequest('POST',`/api/plc/step-assignment/${step_id}/create/`,data,true);
-    if(res.status==200){
+    if(res.status==201){
       return true
     }
     else{
@@ -71,11 +71,23 @@ export const ProjectProvider = ({ children }) => {
 
   const getStepAssignment = async(step_id) =>{
     const res = await apiRequest('GET',`/api/plc/step-assignment/${step_id}/`,null,true);
-    return res.data
+    return res
   }
+  const getMembers = async (projectid) => {
+    const res = await apiRequest(
+      "GET",
+      `/api/project/${projectid}/members/`,
+      null,
+      true
+    );
+    if (res.status === 200) {
+      return res.data
+    }
+  };
+
 
   return (
-    <ProjectContext.Provider value={{ projectRole, project, setProject,getProjectRole,getStepId,checkStepAuth,getStepData,addStepData,assignStep,getStepAssignment }}>
+    <ProjectContext.Provider value={{ projectRole, project, setProject,getProjectRole,getStepId,checkStepAuth,getStepData,addStepData,assignStep,getStepAssignment,getMembers }}>
       {children}
     </ProjectContext.Provider>
   );
