@@ -25,11 +25,11 @@ function ImplementPolicies() {
   // User and project context state variables
   const [isAssignedUser, setIsAssignedUser] = useState(false);
   const { projectid } = useParams();
-  const { 
-    addStepData, 
-    getStepData, 
-    getStepId, 
-    projectRole, 
+  const {
+    addStepData,
+    getStepData,
+    getStepId,
+    projectRole,
     checkStepAuth,
     getMembers,
     assignStep,
@@ -174,17 +174,17 @@ function ImplementPolicies() {
 
     try {
       const result = await assignStep(stepId, assignmentData);
-      
+
       if (result) {
         message.success("Task assigned successfully!");
         setIsAssignTaskVisible(false);
-        
+
         // Reset form fields
         setSelectedTeamMembers([]);
         setTaskDescription("");
         setTaskDeadline(null);
         setTaskReferences("");
-        
+
         // Refresh task assignment data
         await getTaskAssignment(stepId);
       } else {
@@ -223,164 +223,223 @@ function ImplementPolicies() {
     get_step_id();
   }, []);
 
+  // Add getViewerUrl helper function
+  const getViewerUrl = (filePath) => {
+    const extension = filePath.split('.').pop().toLowerCase();
+
+    if (extension === 'pdf') {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+    }
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
+      return `http://localhost:8000${filePath}`;
+    }
+
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+  };
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Implement Policies</h2>
+    <div className="bg-gray-50 min-h-full p-6">
+      {/* Simple header with no background */}
+      <div className="mb-8 flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-800">Implement Policies</h2>
         <div className="flex gap-2">
           {projectRole.includes("admin") && !taskAssignment && (
-            <Button type="default" onClick={() => {get_members(); setIsAssignTaskVisible(true);}}>
+            <Button type="default" onClick={() => { get_members(); setIsAssignTaskVisible(true); }}>
               Assign Task
             </Button>
           )}
           {(projectRole.includes("admin") || isAssignedUser) && (
-            <Button type="primary" onClick={handleAddData} className="bg-blue-500">
+            <Button
+              type="primary"
+              onClick={handleAddData}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               {implementPoliciesData.length > 0 ? "Update Data" : "Add Data"}
             </Button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Main Content - Takes up 2/3 of the space */}
-        <div className="col-span-2">
-          {implementPoliciesData.length > 0 && (
-            <>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Feedback Details</h3>
-              
-              <div className="border border-gray-200 rounded-lg shadow-sm p-6">
-                {implementPoliciesData.map((item, index) => (
-                  <div key={item.id} className={index !== 0 ? "mt-8 pt-8 border-t border-gray-200" : ""}>
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="text-lg font-semibold">{item.field_name}</h4>
-                      <p className="text-sm text-gray-500">{formatDate(item.saved_at)}</p>
+      {implementPoliciesData.length > 0 ? (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {/* Main content */}
+          <div className="p-6">
+            {/* Header with metadata */}
+            <div className="flex flex-wrap justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">Implementation Information</h3>
+                {implementPoliciesData[0].saved_at && (
+                  <div className="flex items-center mt-1">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
                     </div>
-                    
-                    <p className="text-gray-600 mb-4">{item.text_data}</p>
+                    <span className="text-xs text-gray-500">Last updated {formatDate(implementPoliciesData[0].saved_at)}</span>
+                  </div>
+                )}
+              </div>
 
+              {/* User info with avatar */}
+              {implementPoliciesData[0].saved_by && (
+                <div className="flex items-center bg-gray-50 px-3 py-1 rounded-lg">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
+                      {implementPoliciesData[0].saved_by.name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-sm font-medium text-gray-800">{implementPoliciesData[0].saved_by.name}</p>
+                    <p className="text-xs text-gray-500">{implementPoliciesData[0].saved_by.email}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Implementation data with documents on the right */}
+            <div className="space-y-4 mb-6">
+              {implementPoliciesData.map((item) => (
+                <div key={item.id} className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-500 uppercase">{item.field_name}</h4>
+                  </div>
+                  <div className="flex flex-col md:flex-row">
+                    <div className="px-4 py-3 flex-grow">
+                      <p className="text-gray-700">{item.text_data}</p>
+                    </div>
+
+                    {/* Documents for this item */}
                     {item.documents && item.documents.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="text-base font-medium mb-2">Documents</h5>
-                        <div className="space-y-1">
+                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
+                        <h5 className="text-xs font-medium text-gray-500 mb-2">ATTACHED FILES</h5>
+                        <div className="space-y-2">
                           {item.documents.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <FileTextOutlined className="text-blue-500 mr-2" />
-                                <span className="text-gray-600">{getFileName(doc.file)}</span>
+                            <div key={doc.id} className="flex items-center">
+                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
+                                <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
-                              <a 
-                                href={`http://localhost:8000${doc.file}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-500 hover:text-blue-700"
-                              >
-                                View File
-                              </a>
+                              <div className="overflow-hidden flex-grow">
+                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
+                                <a
+                                  href={getViewerUrl(doc.file)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  View
+                                </a>
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
-
-                    <div className="text-sm text-gray-500">
-                      <p>Saved by: {item.saved_by.name} - {item.saved_by.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {implementPoliciesData.length === 0 && (
-            <div className="text-center text-gray-500 my-10">
-              <p>No feedback data available.</p>
-              <p>Click "Add Data" to get started.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Task Assignment Section - Takes up 1/3 of the space */}
-        <div className="col-span-1">
-          {taskAssignment && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Task Assignment</h3>
-              <div className="border border-gray-200 rounded-lg shadow-sm p-4">
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-medium text-gray-700">Assignment Details</h4>
-                    <p className="text-xs text-gray-500">{formatDate(taskAssignment.assigned_at)}</p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">Assigned To:</p>
-                      <ul className="list-disc list-inside mt-2">
-                        {taskAssignment.assigned_to.map((user) => (
-                          <li key={user.id} className="text-sm text-gray-600">
-                            {user.name} - {user.email}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">Deadline:</p>
-                      <p className="text-sm text-gray-600 mt-1">{formatDate(taskAssignment.deadline)}</p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">Description:</p>
-                      <p className="text-sm text-gray-600 mt-1">{taskAssignment.description}</p>
-                    </div>
-                    
-                    {taskAssignment.references && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">References:</p>
-                        <p className="text-sm text-gray-600 mt-1">{taskAssignment.references}</p>
-                      </div>
-                    )}
-
-                    <div className="pt-2 border-t border-gray-200">
-                      <p className="text-xs text-gray-500"><b>Status:</b> {taskAssignment.status}</p>
-                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-md p-10 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Implementation Data</h3>
+            <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+              Start implementing policies by adding your implementation details and progress.
+            </p>
+            <Button
+              onClick={handleAddData}
+              type="primary"
+              size="large"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add Data
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Task Assignment section */}
+      {taskAssignment && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Task Assignment</h3>
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="mb-4">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium text-gray-700">Assignment Details</h4>
+                <p className="text-xs text-gray-500">{formatDate(taskAssignment.assigned_at)}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Assigned To:</p>
+                  <ul className="list-disc list-inside mt-2">
+                    {taskAssignment.assigned_to.map((user) => (
+                      <li key={user.id} className="text-sm text-gray-600">
+                        {user.name} - {user.email}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Deadline:</p>
+                  <p className="text-sm text-gray-600 mt-2">{formatDate(taskAssignment.deadline)}</p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700">Description:</p>
+                <p className="text-sm text-gray-600 mt-2">{taskAssignment.description}</p>
+              </div>
+
+              {taskAssignment.references && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700">References:</p>
+                  <p className="text-sm text-gray-600 mt-2">{taskAssignment.references}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="text-xs text-gray-500 mt-2">
+              <p><b>Status:</b> {taskAssignment.status}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data Modal */}
       <Modal
         title={implementPoliciesData.length > 0 ? "Update Feedback" : "Add Feedback"}
         open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          // Don't reset the form data here, it will be handled in handleAddData
-        }}
+        onCancel={() => setIsModalVisible(false)}
         footer={[
           <Button key="save" type="primary" onClick={handleSubmit} className="bg-blue-500">
             Save
           </Button>,
         ]}
-        width={600}
       >
         <div className="mb-4">
-          <h4 className="text-sm font-semibold mb-2">Feedback</h4>
           <TextArea
-            rows={4}
+            rows={6}
             placeholder="Enter your feedback"
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
-            className="w-full"
           />
         </div>
-        
+
         {/* Existing Files */}
         {oldFilesNeeded.length > 0 && (
-          <div className="mb-4">
-            <h4 className="text-sm font-semibold mb-2">Existing Files</h4>
+          <div className="mt-4 mb-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Files</h4>
             <div className="space-y-2">
               {oldFilesNeeded.map((fileUrl) => (
                 <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -389,7 +448,7 @@ function ImplementPolicies() {
                     <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
                   </div>
                   <div className="flex items-center">
-                    <a 
+                    <a
                       href={`http://localhost:8000${fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -397,9 +456,9 @@ function ImplementPolicies() {
                     >
                       View File
                     </a>
-                    <Button 
-                      type="text" 
-                      danger 
+                    <Button
+                      type="text"
+                      danger
                       onClick={() => handleRemoveFile(fileUrl)}
                     >
                       Remove
@@ -410,11 +469,11 @@ function ImplementPolicies() {
             </div>
           </div>
         )}
-        
+
         {/* Removed Files */}
         {removedOldFiles.length > 0 && (
           <div className="mb-4">
-            <h4 className="text-sm font-semibold mb-2">Removed Files</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Removed Files</h4>
             <div className="space-y-2">
               {removedOldFiles.map((fileUrl) => (
                 <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -422,8 +481,8 @@ function ImplementPolicies() {
                     <FileTextOutlined className="text-red-500 mr-2" />
                     <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
                   </div>
-                  <Button 
-                    type="text" 
+                  <Button
+                    type="text"
                     onClick={() => handleRestoreFile(fileUrl)}
                   >
                     Restore
@@ -433,23 +492,17 @@ function ImplementPolicies() {
             </div>
           </div>
         )}
-        
+
         {/* Add New Files */}
-        <div>
-          <h4 className="text-sm font-semibold mb-2">Upload New Files</h4>
+        <div className="mt-3">
           <Upload
             fileList={fileList}
             onChange={handleUploadChange}
             beforeUpload={() => false}
-            multiple
             showUploadList={true}
+            multiple
           >
-            <Button
-              icon={<PaperClipOutlined />}
-              className="bg-gray-100 hover:bg-gray-200"
-            >
-              Attach Files
-            </Button>
+            <Button icon={<PaperClipOutlined />}>Attach New Files</Button>
           </Upload>
         </div>
       </Modal>
@@ -483,24 +536,24 @@ function ImplementPolicies() {
         </div>
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Team Deadline</label>
-          <DatePicker 
-            style={{ width: "100%" }} 
+          <DatePicker
+            style={{ width: "100%" }}
             value={taskDeadline}
             onChange={setTaskDeadline}
           />
         </div>
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Task Description</label>
-          <Input 
-            placeholder="Enter task description" 
+          <Input
+            placeholder="Enter task description"
             value={taskDescription}
             onChange={(e) => setTaskDescription(e.target.value)}
           />
         </div>
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">Task References</label>
-          <Input 
-            placeholder="Add reference URLs" 
+          <Input
+            placeholder="Add reference URLs"
             value={taskReferences}
             onChange={(e) => setTaskReferences(e.target.value)}
           />

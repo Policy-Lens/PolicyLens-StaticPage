@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import SideNav from "./SideNav";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate, useParams } from "react-router-dom";
 import ServiceRequirements from "./ServiceRequirements";
 import GapAnalysis from "./GapAnalysis";
 import StakeholderInterviews from "./StakeholderInterviews";
@@ -25,7 +25,7 @@ import EvaluationPage from "./EvaluationPage";
 import CertificationPage from "./Certification";
 import KickoffMeetings from "./KickoffMeetings";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Calendar, HelpCircle, FileText, Shield, CheckCircle } from "lucide-react";
+import { Calendar, HelpCircle, FileText, Shield, CheckCircle, Database } from "lucide-react";
 
 const steps = [
   { title: "Service Requirements", content: <ServiceRequirements /> },
@@ -50,13 +50,15 @@ const CarouselHorizontalStepper = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [activeTab, setActiveTab] = useState("Workflow");
+  const navigate = useNavigate();
+  const { projectid } = useParams();
 
- 
   const tabIcons = {
     Workflow: <CheckCircle size={16} />,
     Calendar: <Calendar size={16} />,
     Support: <HelpCircle size={16} />,
     Questionnaire: <FileText size={16} />,
+    "Evidence Data": <Database size={16} />,
     Policies: <Shield size={16} />,
   };
 
@@ -165,7 +167,20 @@ const CarouselHorizontalStepper = () => {
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
-    // Find the first step in the selected phase
+
+    // Navigate to specific pages for Questionnaire, Calendar, and Evidence Data tabs
+    if (tab === "Questionnaire") {
+      navigate(`/project/${projectid}/questionnaire`);
+      return;
+    } else if (tab === "Calendar") {
+      navigate(`/project/${projectid}/calender`);
+      return;
+    } else if (tab === "Evidence Data") {
+      navigate(`/project/${projectid}/evidence`);
+      return;
+    }
+
+    // For other tabs, keep the existing carousel behavior
     const phase = phases.find(p => p.name === tab);
     if (phase && phase.steps.length > 0) {
       setCurrentStep(phase.steps[0]);
@@ -258,7 +273,7 @@ const CarouselHorizontalStepper = () => {
         </div>
 
         {/* Step Content - Dynamic Sizing */}
-        <div className="flex-grow relative overflow-hidden bg-gray-50 rounded-lg shadow-md">
+        <div className="flex-grow relative overflow-hidden bg-white rounded-lg shadow-md">
           <div
             className={`flex transition-transform duration-500 h-full ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
             style={{ transform: `translateX(-${currentStep * 100}%)` }}
@@ -266,9 +281,9 @@ const CarouselHorizontalStepper = () => {
             {steps.map((step, index) => (
               <div
                 key={index}
-                className="min-w-full px-8 py-6 flex justify-center items-center h-full"
+                className="min-w-full h-full overflow-auto"
               >
-                <div className="w-full h-full max-w-4xl bg-white rounded-lg shadow-md overflow-auto">
+                <div className="px-6 py-4 mx-auto max-w-5xl h-full">
                   {step.content}
                 </div>
               </div>
@@ -305,9 +320,9 @@ const CarouselHorizontalStepper = () => {
                 handleNext();
               }
             };
-            
+
             window.addEventListener('keydown', handleKeyDown);
-            
+
             // Clean up event listener on component unmount
             return () => {
               window.removeEventListener('keydown', handleKeyDown);

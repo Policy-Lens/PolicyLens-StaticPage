@@ -14,6 +14,9 @@ import MessagingPage from "./Components/HomeNav/Messaging";
 import Projects from "./Components/AdminView/Projects";
 import AuditorWorkspace from "./Components/WorkFlow/AuditorsWorkspace";
 import LoginPage from "./Components/login";
+import Questionnaire from "./Components/AdminView/ProjectTabs/Questionnaire";
+import MeetingCalendar from "./Components/AdminView/ProjectTabs/Calender";
+import EvidenceData from "./Components/AdminView/ProjectTabs/EvidenceData";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
@@ -59,12 +62,20 @@ const router = createBrowserRouter([
     element: <Projects />,
   },
   {
+    path: "/ques",
+    element: <Questionnaire />,
+  },
+  {
+    path: "/calender",
+    element: <MeetingCalendar />,
+  },
+  {
     path: "project/:projectid",
     element: <AdminLayout />,
     children: [
       {
         // path: "plc",
-        index:true,
+        index: true,
         element: <CarouselHorizontalStepper />,
       },
       {
@@ -87,6 +98,18 @@ const router = createBrowserRouter([
         path: "auditorworkspace",
         element: <AuditorWorkspace />
       },
+      {
+        path: "questionnaire",
+        element: <Questionnaire />
+      },
+      {
+        path: "evidence",
+        element: <EvidenceData />
+      },
+      {
+        path: "calender",
+        element: <MeetingCalendar />
+      }
     ]
   }
 
