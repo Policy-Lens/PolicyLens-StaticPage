@@ -63,4 +63,4 @@ const handleTokenRefresh = async (method, endpoint, body) => {
     }
 };
 
-export { apiRequest };
+export { apiRequest, BASE_URL };
