@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, MoreHorizontal, Download, Eye, Trash2, X, FileText, Plus } from 'lucide-react';
 
-
 const EvidenceData = () => {
     const [selectedEvidences, setSelectedEvidences] = useState([]);
     const [selectedControls, setSelectedControls] = useState([]);
