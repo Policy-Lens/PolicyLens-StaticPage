@@ -5,6 +5,8 @@ const EvidenceData = () => {
     const [selectedEvidences, setSelectedEvidences] = useState([]);
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
     const [sortOption, setSortOption] = useState('recent');
+    const [activeTab, setActiveTab] = useState('evidence'); // 'evidence' or 'plc'
+    const [selectedPLCItems, setSelectedPLCItems] = useState([]);
 
     // Toggle the filter dropdown
     const toggleFilterDropdown = () => {
@@ -20,12 +22,31 @@ const EvidenceData = () => {
         }
     };
 
+    // Toggle selection of a PLC item
+    const togglePLCItemSelection = (itemId) => {
+        if (selectedPLCItems.includes(itemId)) {
+            setSelectedPLCItems(selectedPLCItems.filter(id => id !== itemId));
+        } else {
+            setSelectedPLCItems([...selectedPLCItems, itemId]);
+        }
+    };
+
     // Toggle select all evidences
     const toggleSelectAll = () => {
-        if (selectedEvidences.length === evidenceData.length) {
-            setSelectedEvidences([]);
+        if (activeTab === 'evidence') {
+            if (selectedEvidences.length === evidenceData.length) {
+                setSelectedEvidences([]);
+            } else {
+                setSelectedEvidences(evidenceData.map(evidence => evidence.id));
+            }
         } else {
-            setSelectedEvidences(evidenceData.map(evidence => evidence.id));
+            // Get all document IDs from PLC data
+            const allDocIds = plcData.flatMap(item => item.documents.map(doc => doc.id));
+            if (selectedPLCItems.length === allDocIds.length) {
+                setSelectedPLCItems([]);
+            } else {
+                setSelectedPLCItems(allDocIds);
+            }
         }
     };
 
@@ -88,7 +109,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/5.1/information_security_policy.pdf",
             description: "Information Security Policy Document",
             uploaded_at: "2025-03-15T22:37:51.981718Z",
-            uploaded_by: "Rajesh Kumar"
+            uploaded_by: "Vikram Sharma"
         },
         {
             id: 2,
@@ -97,7 +118,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/5.1/security_management_overview.docx",
             description: "Security Management Overview",
             uploaded_at: "2025-03-14T18:22:30.123456Z",
-            uploaded_by: "Priya Sharma"
+            uploaded_by: "Priya Patel"
         },
         {
             id: 3,
@@ -106,7 +127,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/5.2/roles_and_responsibilities.xlsx",
             description: "Security Roles Matrix",
             uploaded_at: "2025-03-12T14:15:40.987654Z",
-            uploaded_by: "Vikram Singh"
+            uploaded_by: "Rajesh Kumar"
         },
         {
             id: 4,
@@ -115,7 +136,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/5.2/security_org_chart.png",
             description: "Security Organization Chart",
             uploaded_at: "2025-03-10T09:45:22.456789Z",
-            uploaded_by: "Ananya Patel"
+            uploaded_by: "Anika Reddy"
         },
         {
             id: 5,
@@ -124,7 +145,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/5.3/duty_segregation_guidelines.pdf",
             description: "Duty Segregation Guidelines",
             uploaded_at: "2025-03-09T11:33:18.789012Z",
-            uploaded_by: "Arjun Reddy"
+            uploaded_by: "Sanjay Gupta"
         },
         {
             id: 6,
@@ -133,7 +154,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/5.3/conflict_matrix.xlsx",
             description: "Conflict of Interest Matrix",
             uploaded_at: "2025-03-08T16:20:05.345678Z",
-            uploaded_by: "Deepika Malhotra"
+            uploaded_by: "Meera Iyer"
         },
         {
             id: 7,
@@ -142,7 +163,7 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/6.1/access_control_policy.pdf",
             description: "Access Control Policy Document",
             uploaded_at: "2025-03-07T13:10:50.901234Z",
-            uploaded_by: "Rahul Verma"
+            uploaded_by: "Arjun Singh"
         },
         {
             id: 8,
@@ -151,27 +172,126 @@ const EvidenceData = () => {
             file: "/media/questionnaire/19/6.2/access_management_procedures.docx",
             description: "Access Management Procedures",
             uploaded_at: "2025-03-05T10:05:33.567890Z",
-            uploaded_by: "Neha Gupta"
+            uploaded_by: "Neha Joshi"
         }
     ];
+
+    // PLC data
+    const plcData = [
+        {
+            "filed_name": "Service Requirements",
+            "documents": [
+                {
+                    "id": 259,
+                    "file": "/media/plc/19/step_1/gaurav_btech.pdf",
+                    "tag": "",
+                    "created_at": "2025-03-16T19:00:17.085954Z"
+                }
+            ]
+        },
+        {
+            "filed_name": "Draft Proposal",
+            "documents": [
+                {
+                    "id": 261,
+                    "file": "/media/plc/19/step_2/Invoice_2076063565.pdf",
+                    "tag": "",
+                    "created_at": "2025-03-16T19:04:25.488176Z"
+                }
+            ]
+        },
+        {
+            "filed_name": "Scope",
+            "documents": [
+                {
+                    "id": 260,
+                    "file": "/media/plc/19/step_2/PLITS_Backend_API_document.pdf",
+                    "tag": "",
+                    "created_at": "2025-03-16T19:04:09.559352Z"
+                }
+            ]
+        },
+        {
+            "filed_name": "Finalize Contract",
+            "documents": [
+                {
+                    "id": 264,
+                    "file": "/media/plc/19/step_3/Solution_Challenge__Project_Submission.pptx",
+                    "tag": "",
+                    "created_at": "2025-03-16T19:05:59.767159Z"
+                }
+            ]
+        },
+        {
+            "filed_name": "Gap Analysis",
+            "documents": [
+                {
+                    "id": 263,
+                    "file": "/media/plc/19/step_4/Copy_of_Business_cycle_mapping_file-_Internal.xlsx",
+                    "tag": "",
+                    "created_at": "2025-03-16T19:05:21.786044Z"
+                }
+            ]
+        },
+        {
+            "filed_name": "Stakeholder Interview Details",
+            "documents": [
+                {
+                    "id": 265,
+                    "file": "/media/plc/19/step_5/Invoice_2076063565.pdf",
+                    "tag": "",
+                    "created_at": "2025-03-16T20:21:53.112213Z"
+                },
+                {
+                    "id": 266,
+                    "file": "/media/plc/19/step_5/PLITS_Backend_API_document.pdf",
+                    "tag": "",
+                    "created_at": "2025-03-16T20:21:53.119206Z"
+                }
+            ]
+        }
+    ];
+
+    // Get total documents count from PLC data
+    const plcDocumentsCount = plcData.reduce((total, item) => total + item.documents.length, 0);
 
     return (
         <div className="flex flex-col h-screen bg-slate-50">
             {/* Main Content */}
             <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg m-6">
                 <div className="flex flex-col w-full bg-white">
+                    {/* Tabs */}
+                    <div className="flex border-b border-slate-200 px-4 bg-white">
+                        <button
+                            className={`py-4 px-6 font-medium transition-colors ${activeTab === 'evidence' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
+                            onClick={() => setActiveTab('evidence')}
+                        >
+                            Evidence Data
+                        </button>
+                        <button
+                            className={`py-4 px-6 font-medium transition-colors ${activeTab === 'plc' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
+                            onClick={() => setActiveTab('plc')}
+                        >
+                            PLC Data
+                        </button>
+                    </div>
+
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-slate-200 p-4 bg-white sticky top-0 z-10">
                         <div className="flex items-center">
-                            <h2 className="text-lg font-semibold text-slate-800">Evidence Repository</h2>
-                            <div className="ml-3 text-slate-600 font-medium">({evidenceData.length} files)</div>
+                            <h2 className="text-lg font-semibold text-slate-800">
+                                {activeTab === 'evidence' ? 'Evidence Repository' : 'PLC Documents Repository'}
+                            </h2>
+                            <div className="ml-3 text-slate-600 font-medium">
+                                ({activeTab === 'evidence' ? evidenceData.length : plcDocumentsCount} files)
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <div className="relative">
                                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search evidences..."
+                                    placeholder={`Search ${activeTab === 'evidence' ? 'evidences' : 'documents'}...`}
                                     className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
                                 />
                             </div>
@@ -223,90 +343,180 @@ const EvidenceData = () => {
                         </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="flex-1 overflow-auto">
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="w-12 p-4 text-left">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                            checked={selectedEvidences.length === evidenceData.length}
-                                            onChange={toggleSelectAll}
-                                        />
-                                    </th>
-                                    <th className="w-24 p-4 text-left font-semibold text-slate-600">Control #</th>
-                                    <th className="w-48 p-4 text-left font-semibold text-slate-600">Control Name</th>
-                                    <th className="w-64 p-4 text-left font-semibold text-slate-600">File</th>
-                                    <th className="p-4 text-left font-semibold text-slate-600">Description</th>
-                                    <th className="w-40 p-4 text-left font-semibold text-slate-600">Uploaded By</th>
-                                    <th className="w-40 p-4 text-left font-semibold text-slate-600">Date Uploaded</th>
-                                    <th className="w-32 p-4 text-left font-semibold text-slate-600">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {evidenceData.map((evidence) => (
-                                    <tr
-                                        key={evidence.id}
-                                        className="hover:bg-slate-50 border-b border-slate-100 transition-colors"
-                                    >
-                                        <td className="p-4">
+                    {/* Evidence Data Table */}
+                    {activeTab === 'evidence' && (
+                        <div className="flex-1 overflow-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                        <th className="w-12 p-4 text-left">
                                             <input
                                                 type="checkbox"
                                                 className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                checked={selectedEvidences.includes(evidence.id)}
-                                                onChange={() => toggleEvidenceSelection(evidence.id)}
+                                                checked={selectedEvidences.length === evidenceData.length}
+                                                onChange={toggleSelectAll}
                                             />
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="text-indigo-600 font-semibold">{evidence.control_number}</span>
-                                        </td>
-                                        <td className="p-4 text-slate-700 font-medium">
-                                            {evidence.control_name}
-                                        </td>
-                                        <td className="p-4 text-slate-600">
-                                            <div className="flex items-center">
-                                                <div className={`mr-3 text-indigo-500`}>
-                                                    <FileText size={20} />
-                                                </div>
-                                                <span className="text-slate-700 truncate max-w-[180px]" title={getFileName(evidence.file)}>
-                                                    {getFileName(evidence.file)}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-slate-600 truncate max-w-[200px]" title={evidence.description}>
-                                            {evidence.description}
-                                        </td>
-                                        <td className="p-4 text-slate-600">
-                                            {evidence.uploaded_by}
-                                        </td>
-                                        <td className="p-4 text-slate-600">
-                                            {formatDate(evidence.uploaded_at)}
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center space-x-2">
-                                                <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                    <Eye size={18} />
-                                                </button>
-                                                <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                    <Download size={18} />
-                                                </button>
-                                                <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
+                                        </th>
+                                        <th className="w-24 p-4 text-left font-semibold text-slate-600">Control #</th>
+                                        <th className="w-48 p-4 text-left font-semibold text-slate-600">Control Name</th>
+                                        <th className="w-64 p-4 text-left font-semibold text-slate-600">File</th>
+                                        <th className="p-4 text-left font-semibold text-slate-600">Description</th>
+                                        <th className="w-40 p-4 text-left font-semibold text-slate-600">Uploaded By</th>
+                                        <th className="w-40 p-4 text-left font-semibold text-slate-600">Date Uploaded</th>
+                                        <th className="w-32 p-4 text-left font-semibold text-slate-600">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {evidenceData.map((evidence) => (
+                                        <tr
+                                            key={evidence.id}
+                                            className="hover:bg-slate-50 border-b border-slate-100 transition-colors"
+                                        >
+                                            <td className="p-4">
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                    checked={selectedEvidences.includes(evidence.id)}
+                                                    onChange={() => toggleEvidenceSelection(evidence.id)}
+                                                />
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="text-indigo-600 font-semibold">{evidence.control_number}</span>
+                                            </td>
+                                            <td className="p-4 text-slate-700 font-medium">
+                                                {evidence.control_name}
+                                            </td>
+                                            <td className="p-4 text-slate-600">
+                                                <div className="flex items-center">
+                                                    <div className={`mr-3 text-indigo-500`}>
+                                                        <FileText size={20} />
+                                                    </div>
+                                                    <span className="text-slate-700 truncate max-w-[180px]" title={getFileName(evidence.file)}>
+                                                        {getFileName(evidence.file)}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-slate-600 truncate max-w-[200px]" title={evidence.description}>
+                                                {evidence.description}
+                                            </td>
+                                            <td className="p-4 text-slate-600">
+                                                {evidence.uploaded_by}
+                                            </td>
+                                            <td className="p-4 text-slate-600">
+                                                {formatDate(evidence.uploaded_at)}
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center space-x-2">
+                                                    <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                        <Eye size={18} />
+                                                    </button>
+                                                    <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                        <Download size={18} />
+                                                    </button>
+                                                    <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* PLC Data Table */}
+                    {activeTab === 'plc' && (
+                        <div className="flex-1 overflow-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                        <th className="w-12 p-4 text-left">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                checked={selectedPLCItems.length === plcDocumentsCount}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
+                                        <th className="w-24 p-4 text-left font-semibold text-slate-600">Step #</th>
+                                        <th className="w-48 p-4 text-left font-semibold text-slate-600">Phase Name</th>
+                                        <th className="w-64 p-4 text-left font-semibold text-slate-600">File</th>
+                                        <th className="p-4 text-left font-semibold text-slate-600">Description</th>
+                                        <th className="w-40 p-4 text-left font-semibold text-slate-600">Tag</th>
+                                        <th className="w-40 p-4 text-left font-semibold text-slate-600">Date Uploaded</th>
+                                        <th className="w-32 p-4 text-left font-semibold text-slate-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {plcData.flatMap((item, index) =>
+                                        item.documents.map(doc => (
+                                            <tr
+                                                key={doc.id}
+                                                className="hover:bg-slate-50 border-b border-slate-100 transition-colors"
+                                            >
+                                                <td className="p-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                        checked={selectedPLCItems.includes(doc.id)}
+                                                        onChange={() => togglePLCItemSelection(doc.id)}
+                                                    />
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="text-indigo-600 font-semibold">{`Step ${index + 1}`}</span>
+                                                </td>
+                                                <td className="p-4 text-slate-700 font-medium">
+                                                    {item.filed_name}
+                                                </td>
+                                                <td className="p-4 text-slate-600">
+                                                    <div className="flex items-center">
+                                                        <div className={`mr-3 text-indigo-500`}>
+                                                            <FileText size={20} />
+                                                        </div>
+                                                        <span className="text-slate-700 truncate max-w-[180px]" title={getFileName(doc.file)}>
+                                                            {getFileName(doc.file)}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-slate-600 truncate max-w-[200px]" title={item.filed_name}>
+                                                    {`${item.filed_name} Document`}
+                                                </td>
+                                                <td className="p-4 text-slate-600">
+                                                    {doc.tag || 'No Tag'}
+                                                </td>
+                                                <td className="p-4 text-slate-600">
+                                                    {formatDate(doc.created_at)}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center space-x-2">
+                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                            <Eye size={18} />
+                                                        </button>
+                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                            <Download size={18} />
+                                                        </button>
+                                                        <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     {/* Footer with Pagination */}
                     <div className="border-t border-slate-200 p-4 bg-white flex items-center justify-between">
                         <div className="text-sm text-slate-600">
-                            Showing <span className="font-medium">{evidenceData.length}</span> of <span className="font-medium">{evidenceData.length}</span> evidences
+                            Showing <span className="font-medium">
+                                {activeTab === 'evidence' ? evidenceData.length : plcDocumentsCount}
+                            </span> of <span className="font-medium">
+                                {activeTab === 'evidence' ? evidenceData.length : plcDocumentsCount}
+                            </span> {activeTab === 'evidence' ? 'evidences' : 'documents'}
                         </div>
                         <div className="flex items-center space-x-2">
                             <button className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
