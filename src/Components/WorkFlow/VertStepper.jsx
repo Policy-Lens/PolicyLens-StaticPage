@@ -174,6 +174,7 @@ const CarouselHorizontalStepper = () => {
     }
   };
 
+  
   return (
     <div className="flex h-screen">
       <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col">
