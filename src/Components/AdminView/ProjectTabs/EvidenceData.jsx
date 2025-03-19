@@ -4,6 +4,7 @@ import { Search, Filter, MoreHorizontal, Download, Eye, Trash2, X, FileText, Plu
 
 const EvidenceData = () => {
     const [selectedEvidences, setSelectedEvidences] = useState([]);
+    const [selectedControls, setSelectedControls] = useState([]);
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
     const [sortOption, setSortOption] = useState('recent');
     const [activeTab, setActiveTab] = useState('evidence'); // 'evidence' or 'plc'
@@ -14,12 +15,32 @@ const EvidenceData = () => {
         setFilterDropdownOpen(!filterDropdownOpen);
     };
 
-    // Toggle selection of an evidence
-    const toggleEvidenceSelection = (evidenceId) => {
-        if (selectedEvidences.includes(evidenceId)) {
-            setSelectedEvidences(selectedEvidences.filter(id => id !== evidenceId));
+    // Toggle selection of a control and all its files
+    const toggleControlSelection = (controlId) => {
+        if (selectedControls.includes(controlId)) {
+            // Remove control from selected controls
+            setSelectedControls(selectedControls.filter(id => id !== controlId));
+
+            // Remove all files of this control from selectedEvidences
+            const control = evidenceData.find(c => c.id === controlId);
+            const controlFileIds = control.files.map(file => file.id);
+            setSelectedEvidences(selectedEvidences.filter(id => !controlFileIds.includes(id)));
         } else {
-            setSelectedEvidences([...selectedEvidences, evidenceId]);
+            // Add control to selected controls
+            setSelectedControls([...selectedControls, controlId]);
+
+            // Add all files of this control to selectedEvidences
+            const control = evidenceData.find(c => c.id === controlId);
+            const controlFileIds = control.files.map(file => file.id);
+            const newSelectedEvidences = [...selectedEvidences];
+
+            controlFileIds.forEach(fileId => {
+                if (!newSelectedEvidences.includes(fileId)) {
+                    newSelectedEvidences.push(fileId);
+                }
+            });
+
+            setSelectedEvidences(newSelectedEvidences);
         }
     };
 
@@ -35,10 +56,18 @@ const EvidenceData = () => {
     // Toggle select all evidences
     const toggleSelectAll = () => {
         if (activeTab === 'evidence') {
-            if (selectedEvidences.length === evidenceData.length) {
+            // If all controls are selected, clear selection
+            if (selectedControls.length === evidenceData.length) {
+                setSelectedControls([]);
                 setSelectedEvidences([]);
             } else {
-                setSelectedEvidences(evidenceData.map(evidence => evidence.id));
+                // Select all controls and all files
+                setSelectedControls(evidenceData.map(control => control.id));
+
+                const allFileIds = evidenceData.flatMap(control =>
+                    control.files.map(file => file.id)
+                );
+                setSelectedEvidences(allFileIds);
             }
         } else {
             // Get all document IDs from PLC data
@@ -49,6 +78,21 @@ const EvidenceData = () => {
                 setSelectedPLCItems(allDocIds);
             }
         }
+    };
+
+    // Check if all files of a control are selected
+    const isControlFullySelected = (controlId) => {
+        const control = evidenceData.find(c => c.id === controlId);
+        const controlFileIds = control.files.map(file => file.id);
+        return controlFileIds.every(fileId => selectedEvidences.includes(fileId));
+    };
+
+    // Check if some but not all files of a control are selected
+    const isControlPartiallySelected = (controlId) => {
+        const control = evidenceData.find(c => c.id === controlId);
+        const controlFileIds = control.files.map(file => file.id);
+        const selectedCount = controlFileIds.filter(fileId => selectedEvidences.includes(fileId)).length;
+        return selectedCount > 0 && selectedCount < controlFileIds.length;
     };
 
     // Format date for display
@@ -101,79 +145,98 @@ const EvidenceData = () => {
         { id: 'upload-date', label: 'Upload Date' },
     ];
 
-    // Sample evidence data
+    // Sample evidence data - restructured to group by control
     const evidenceData = [
         {
             id: 1,
             control_number: "5.1",
             control_name: "Policies for Information Security",
-            file: "/media/questionnaire/19/5.1/information_security_policy.pdf",
-            description: "Information Security Policy Document",
-            uploaded_at: "2025-03-15T22:37:51.981718Z",
-            uploaded_by: "Vikram Sharma"
+            files: [
+                {
+                    id: 101,
+                    file: "/media/questionnaire/19/5.1/information_security_policy.pdf",
+                    description: "Information Security Policy Document",
+                    uploaded_at: "2025-03-15T22:37:51.981718Z",
+                    uploaded_by: "Vikram Sharma"
+                },
+                {
+                    id: 102,
+                    file: "/media/questionnaire/19/5.1/security_management_overview.docx",
+                    description: "Security Management Overview",
+                    uploaded_at: "2025-03-14T18:22:30.123456Z",
+                    uploaded_by: "Priya Patel"
+                }
+            ]
         },
         {
             id: 2,
-            control_number: "5.1",
-            control_name: "Policies for Information Security",
-            file: "/media/questionnaire/19/5.1/security_management_overview.docx",
-            description: "Security Management Overview",
-            uploaded_at: "2025-03-14T18:22:30.123456Z",
-            uploaded_by: "Priya Patel"
+            control_number: "5.2",
+            control_name: "Information Security Roles and Responsibilities",
+            files: [
+                {
+                    id: 201,
+                    file: "/media/questionnaire/19/5.2/roles_and_responsibilities.xlsx",
+                    description: "Security Roles Matrix",
+                    uploaded_at: "2025-03-12T14:15:40.987654Z",
+                    uploaded_by: "Rajesh Kumar"
+                },
+                {
+                    id: 202,
+                    file: "/media/questionnaire/19/5.2/security_org_chart.png",
+                    description: "Security Organization Chart",
+                    uploaded_at: "2025-03-10T09:45:22.456789Z",
+                    uploaded_by: "Anika Reddy"
+                }
+            ]
         },
         {
             id: 3,
-            control_number: "5.2",
-            control_name: "Information Security Roles and Responsibilities",
-            file: "/media/questionnaire/19/5.2/roles_and_responsibilities.xlsx",
-            description: "Security Roles Matrix",
-            uploaded_at: "2025-03-12T14:15:40.987654Z",
-            uploaded_by: "Rajesh Kumar"
+            control_number: "5.3",
+            control_name: "Segregation of Duties",
+            files: [
+                {
+                    id: 301,
+                    file: "/media/questionnaire/19/5.3/duty_segregation_guidelines.pdf",
+                    description: "Duty Segregation Guidelines",
+                    uploaded_at: "2025-03-09T11:33:18.789012Z",
+                    uploaded_by: "Sanjay Gupta"
+                },
+                {
+                    id: 302,
+                    file: "/media/questionnaire/19/5.3/conflict_matrix.xlsx",
+                    description: "Conflict of Interest Matrix",
+                    uploaded_at: "2025-03-08T16:20:05.345678Z",
+                    uploaded_by: "Meera Iyer"
+                }
+            ]
         },
         {
             id: 4,
-            control_number: "5.2",
-            control_name: "Information Security Roles and Responsibilities",
-            file: "/media/questionnaire/19/5.2/security_org_chart.png",
-            description: "Security Organization Chart",
-            uploaded_at: "2025-03-10T09:45:22.456789Z",
-            uploaded_by: "Anika Reddy"
+            control_number: "6.1",
+            control_name: "Access Control Policy",
+            files: [
+                {
+                    id: 401,
+                    file: "/media/questionnaire/19/6.1/access_control_policy.pdf",
+                    description: "Access Control Policy Document",
+                    uploaded_at: "2025-03-07T13:10:50.901234Z",
+                    uploaded_by: "Arjun Singh"
+                }
+            ]
         },
         {
             id: 5,
-            control_number: "5.3",
-            control_name: "Segregation of Duties",
-            file: "/media/questionnaire/19/5.3/duty_segregation_guidelines.pdf",
-            description: "Duty Segregation Guidelines",
-            uploaded_at: "2025-03-09T11:33:18.789012Z",
-            uploaded_by: "Sanjay Gupta"
-        },
-        {
-            id: 6,
-            control_number: "5.3",
-            control_name: "Segregation of Duties",
-            file: "/media/questionnaire/19/5.3/conflict_matrix.xlsx",
-            description: "Conflict of Interest Matrix",
-            uploaded_at: "2025-03-08T16:20:05.345678Z",
-            uploaded_by: "Meera Iyer"
-        },
-        {
-            id: 7,
-            control_number: "6.1",
-            control_name: "Access Control Policy",
-            file: "/media/questionnaire/19/6.1/access_control_policy.pdf",
-            description: "Access Control Policy Document",
-            uploaded_at: "2025-03-07T13:10:50.901234Z",
-            uploaded_by: "Arjun Singh"
-        },
-        {
-            id: 8,
             control_number: "6.2",
             control_name: "Access Management",
-            file: "/media/questionnaire/19/6.2/access_management_procedures.docx",
-            description: "Access Management Procedures",
-            uploaded_at: "2025-03-05T10:05:33.567890Z",
-            uploaded_by: "Neha Joshi"
+            files: [
+                {
+                    id: 501,
+                    file: "/media/questionnaire/19/6.2/access_management_procedures.docx",
+                    description: "Access Management Procedures",
+                    uploaded_at: "2025-03-05T10:05:33.567890Z",
+                    uploaded_by: "Neha Joshi"
+                }
+            ]
         }
     ];
 
@@ -256,6 +319,9 @@ const EvidenceData = () => {
     // Get total documents count from PLC data
     const plcDocumentsCount = plcData.reduce((total, item) => total + item.documents.length, 0);
 
+    // Get total files count from evidence data
+    const totalEvidenceFiles = evidenceData.reduce((total, control) => total + control.files.length, 0);
+
     return (
         <div className="flex flex-col h-screen bg-slate-50">
             {/* Main Content */}
@@ -284,7 +350,7 @@ const EvidenceData = () => {
                                 {activeTab === 'evidence' ? 'Evidence Repository' : 'PLC Documents Repository'}
                             </h2>
                             <div className="ml-3 text-slate-600 font-medium">
-                                ({activeTab === 'evidence' ? evidenceData.length : plcDocumentsCount} files)
+                                ({activeTab === 'evidence' ? totalEvidenceFiles : plcDocumentsCount} files)
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -354,13 +420,13 @@ const EvidenceData = () => {
                                             <input
                                                 type="checkbox"
                                                 className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                checked={selectedEvidences.length === evidenceData.length}
+                                                checked={selectedControls.length === evidenceData.length}
                                                 onChange={toggleSelectAll}
                                             />
                                         </th>
                                         <th className="w-24 p-4 text-left font-semibold text-slate-600">Control #</th>
                                         <th className="w-48 p-4 text-left font-semibold text-slate-600">Control Name</th>
-                                        <th className="w-64 p-4 text-left font-semibold text-slate-600">File</th>
+                                        <th className="w-64 p-4 text-left font-semibold text-slate-600">Files</th>
                                         <th className="p-4 text-left font-semibold text-slate-600">Description</th>
                                         <th className="w-40 p-4 text-left font-semibold text-slate-600">Uploaded By</th>
                                         <th className="w-40 p-4 text-left font-semibold text-slate-600">Date Uploaded</th>
@@ -368,59 +434,78 @@ const EvidenceData = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {evidenceData.map((evidence) => (
-                                        <tr
-                                            key={evidence.id}
-                                            className="hover:bg-slate-50 border-b border-slate-100 transition-colors"
-                                        >
-                                            <td className="p-4">
-                                                <input
-                                                    type="checkbox"
-                                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                    checked={selectedEvidences.includes(evidence.id)}
-                                                    onChange={() => toggleEvidenceSelection(evidence.id)}
-                                                />
-                                            </td>
-                                            <td className="p-4">
-                                                <span className="text-indigo-600 font-semibold">{evidence.control_number}</span>
-                                            </td>
-                                            <td className="p-4 text-slate-700 font-medium">
-                                                {evidence.control_name}
-                                            </td>
-                                            <td className="p-4 text-slate-600">
-                                                <div className="flex items-center">
-                                                    <div className={`mr-3 text-indigo-500`}>
-                                                        <FileText size={20} />
+                                    {evidenceData.flatMap((control) =>
+                                        control.files.map((file, fileIndex) => (
+                                            <tr
+                                                key={file.id}
+                                                className={`hover:bg-slate-50 border-b border-slate-100 transition-colors ${fileIndex > 0 && fileIndex < control.files.length ? 'bg-slate-50/30' : ''}`}
+                                            >
+                                                {fileIndex === 0 ? (
+                                                    <td className="p-4" rowSpan={control.files.length}>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                                checked={isControlFullySelected(control.id)}
+                                                                ref={el => {
+                                                                    if (el) {
+                                                                        if (isControlPartiallySelected(control.id)) {
+                                                                            el.indeterminate = true;
+                                                                        } else {
+                                                                            el.indeterminate = false;
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                onChange={() => toggleControlSelection(control.id)}
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                ) : null}
+                                                {fileIndex === 0 ? (
+                                                    <td className="p-4" rowSpan={control.files.length}>
+                                                        <span className="text-indigo-600 font-semibold">{control.control_number}</span>
+                                                    </td>
+                                                ) : null}
+                                                {fileIndex === 0 ? (
+                                                    <td className="p-4 text-slate-700 font-medium" rowSpan={control.files.length}>
+                                                        {control.control_name}
+                                                    </td>
+                                                ) : null}
+                                                <td className="p-4 text-slate-600">
+                                                    <div className="flex items-center">
+                                                        <div className={`mr-3 text-indigo-500`}>
+                                                            <FileText size={20} />
+                                                        </div>
+                                                        <span className="text-slate-700 truncate max-w-[180px]" title={getFileName(file.file)}>
+                                                            {getFileName(file.file)}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-slate-700 truncate max-w-[180px]" title={getFileName(evidence.file)}>
-                                                        {getFileName(evidence.file)}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-slate-600 truncate max-w-[200px]" title={evidence.description}>
-                                                {evidence.description}
-                                            </td>
-                                            <td className="p-4 text-slate-600">
-                                                {evidence.uploaded_by}
-                                            </td>
-                                            <td className="p-4 text-slate-600">
-                                                {formatDate(evidence.uploaded_at)}
-                                            </td>
-                                            <td className="p-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                        <Eye size={18} />
-                                                    </button>
-                                                    <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                        <Download size={18} />
-                                                    </button>
-                                                    <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="p-4 text-slate-600 truncate max-w-[200px]" title={file.description}>
+                                                    {file.description}
+                                                </td>
+                                                <td className="p-4 text-slate-600">
+                                                    {file.uploaded_by}
+                                                </td>
+                                                <td className="p-4 text-slate-600">
+                                                    {formatDate(file.uploaded_at)}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center space-x-2">
+                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                            <Eye size={18} />
+                                                        </button>
+                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                            <Download size={18} />
+                                                        </button>
+                                                        <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -514,9 +599,9 @@ const EvidenceData = () => {
                     <div className="border-t border-slate-200 p-4 bg-white flex items-center justify-between">
                         <div className="text-sm text-slate-600">
                             Showing <span className="font-medium">
-                                {activeTab === 'evidence' ? evidenceData.length : plcDocumentsCount}
+                                {activeTab === 'evidence' ? totalEvidenceFiles : plcDocumentsCount}
                             </span> of <span className="font-medium">
-                                {activeTab === 'evidence' ? evidenceData.length : plcDocumentsCount}
+                                {activeTab === 'evidence' ? totalEvidenceFiles : plcDocumentsCount}
                             </span> {activeTab === 'evidence' ? 'evidences' : 'documents'}
                         </div>
                         <div className="flex items-center space-x-2">
