@@ -17,6 +17,7 @@ import LoginPage from "./Components/login";
 import Questionnaire from "./Components/AdminView/ProjectTabs/Questionnaire";
 import MeetingCalendar from "./Components/AdminView/ProjectTabs/Calender";
 import EvidenceData from "./Components/AdminView/ProjectTabs/EvidenceData";
+import Support from "./Components/AdminView/ProjectTabs/Support";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
@@ -109,6 +110,10 @@ const router = createBrowserRouter([
       {
         path: "calender",
         element: <MeetingCalendar />
+      },
+      {
+        path: "support",
+        element: <Support />
       }
     ]
   }
