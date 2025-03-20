@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, Download, Eye, Trash2, X, FileText, Plus } from 'lucide-react';
-
+import { apiRequest, BASE_URL } from '../../../utils/api';
+import { useParams } from 'react-router-dom';
 const EvidenceData = () => {
     const [selectedEvidences, setSelectedEvidences] = useState([]);
     const [selectedControls, setSelectedControls] = useState([]);
@@ -8,6 +9,7 @@ const EvidenceData = () => {
     const [sortOption, setSortOption] = useState('recent');
     const [activeTab, setActiveTab] = useState('evidence'); // 'evidence' or 'plc'
     const [selectedPLCItems, setSelectedPLCItems] = useState([]);
+    const {projectid} = useParams();
 
     // Toggle the filter dropdown
     const toggleFilterDropdown = () => {
@@ -145,175 +147,41 @@ const EvidenceData = () => {
     ];
 
     // Sample evidence data - restructured to group by control
-    const evidenceData = [
-        {
-            id: 1,
-            control_number: "5.1",
-            control_name: "Policies for Information Security",
-            files: [
-                {
-                    id: 101,
-                    file: "/media/questionnaire/19/5.1/information_security_policy.pdf",
-                    description: "Information Security Policy Document",
-                    uploaded_at: "2025-03-15T22:37:51.981718Z",
-                    uploaded_by: "Vikram Sharma"
-                },
-                {
-                    id: 102,
-                    file: "/media/questionnaire/19/5.1/security_management_overview.docx",
-                    description: "Security Management Overview",
-                    uploaded_at: "2025-03-14T18:22:30.123456Z",
-                    uploaded_by: "Priya Patel"
-                }
-            ]
-        },
-        {
-            id: 2,
-            control_number: "5.2",
-            control_name: "Information Security Roles and Responsibilities",
-            files: [
-                {
-                    id: 201,
-                    file: "/media/questionnaire/19/5.2/roles_and_responsibilities.xlsx",
-                    description: "Security Roles Matrix",
-                    uploaded_at: "2025-03-12T14:15:40.987654Z",
-                    uploaded_by: "Rajesh Kumar"
-                },
-                {
-                    id: 202,
-                    file: "/media/questionnaire/19/5.2/security_org_chart.png",
-                    description: "Security Organization Chart",
-                    uploaded_at: "2025-03-10T09:45:22.456789Z",
-                    uploaded_by: "Anika Reddy"
-                }
-            ]
-        },
-        {
-            id: 3,
-            control_number: "5.3",
-            control_name: "Segregation of Duties",
-            files: [
-                {
-                    id: 301,
-                    file: "/media/questionnaire/19/5.3/duty_segregation_guidelines.pdf",
-                    description: "Duty Segregation Guidelines",
-                    uploaded_at: "2025-03-09T11:33:18.789012Z",
-                    uploaded_by: "Sanjay Gupta"
-                },
-                {
-                    id: 302,
-                    file: "/media/questionnaire/19/5.3/conflict_matrix.xlsx",
-                    description: "Conflict of Interest Matrix",
-                    uploaded_at: "2025-03-08T16:20:05.345678Z",
-                    uploaded_by: "Meera Iyer"
-                }
-            ]
-        },
-        {
-            id: 4,
-            control_number: "6.1",
-            control_name: "Access Control Policy",
-            files: [
-                {
-                    id: 401,
-                    file: "/media/questionnaire/19/6.1/access_control_policy.pdf",
-                    description: "Access Control Policy Document",
-                    uploaded_at: "2025-03-07T13:10:50.901234Z",
-                    uploaded_by: "Arjun Singh"
-                }
-            ]
-        },
-        {
-            id: 5,
-            control_number: "6.2",
-            control_name: "Access Management",
-            files: [
-                {
-                    id: 501,
-                    file: "/media/questionnaire/19/6.2/access_management_procedures.docx",
-                    description: "Access Management Procedures",
-                    uploaded_at: "2025-03-05T10:05:33.567890Z",
-                    uploaded_by: "Neha Joshi"
-                }
-            ]
-        }
-    ];
-
+    const [evidenceData,setEvidenceData] = useState([]);
+        
     // PLC data
-    const plcData = [
-        {
-            "filed_name": "Service Requirements",
-            "documents": [
-                {
-                    "id": 259,
-                    "file": "/media/plc/19/step_1/gaurav_btech.pdf",
-                    "tag": "",
-                    "created_at": "2025-03-16T19:00:17.085954Z"
-                }
-            ]
-        },
-        {
-            "filed_name": "Draft Proposal",
-            "documents": [
-                {
-                    "id": 261,
-                    "file": "/media/plc/19/step_2/Invoice_2076063565.pdf",
-                    "tag": "",
-                    "created_at": "2025-03-16T19:04:25.488176Z"
-                }
-            ]
-        },
-        {
-            "filed_name": "Scope",
-            "documents": [
-                {
-                    "id": 260,
-                    "file": "/media/plc/19/step_2/PLITS_Backend_API_document.pdf",
-                    "tag": "",
-                    "created_at": "2025-03-16T19:04:09.559352Z"
-                }
-            ]
-        },
-        {
-            "filed_name": "Finalize Contract",
-            "documents": [
-                {
-                    "id": 264,
-                    "file": "/media/plc/19/step_3/Solution_Challenge__Project_Submission.pptx",
-                    "tag": "",
-                    "created_at": "2025-03-16T19:05:59.767159Z"
-                }
-            ]
-        },
-        {
-            "filed_name": "Gap Analysis",
-            "documents": [
-                {
-                    "id": 263,
-                    "file": "/media/plc/19/step_4/Copy_of_Business_cycle_mapping_file-_Internal.xlsx",
-                    "tag": "",
-                    "created_at": "2025-03-16T19:05:21.786044Z"
-                }
-            ]
-        },
-        {
-            "filed_name": "Stakeholder Interview Details",
-            "documents": [
-                {
-                    "id": 265,
-                    "file": "/media/plc/19/step_5/Invoice_2076063565.pdf",
-                    "tag": "",
-                    "created_at": "2025-03-16T20:21:53.112213Z"
-                },
-                {
-                    "id": 266,
-                    "file": "/media/plc/19/step_5/PLITS_Backend_API_document.pdf",
-                    "tag": "",
-                    "created_at": "2025-03-16T20:21:53.119206Z"
-                }
-            ]
+    const [plcData,setPLCData] = useState([]);
+
+    const getPLCEvidence = async () =>{
+        const res = await apiRequest(
+          "GET",
+          `/api/plc/plc-documents/all-steps/${projectid}/latest/`,
+          null,
+          true
+        );
+        if(res.status === 200){
+            console.log(res.data);
+            setPLCData(res.data);
         }
-    ];
+    }
+
+    const getQuestionnaireEvidence = async () =>{
+        const res = await apiRequest(
+          "GET",
+          `/api/project/${projectid}/questionnaire/evidences/`,
+          null,
+          true
+        );   
+        if(res.status === 200){
+            console.log(res.data);
+            setEvidenceData(res.data);
+        }
+    }
+
+    useEffect(()=>{
+        getPLCEvidence();
+        getQuestionnaireEvidence();
+    },[])
 
     // Get total documents count from PLC data
     const plcDocumentsCount = plcData.reduce((total, item) => total + item.documents.length, 0);
@@ -426,8 +294,6 @@ const EvidenceData = () => {
                                         <th className="w-24 p-4 text-left font-semibold text-slate-600">Control #</th>
                                         <th className="w-48 p-4 text-left font-semibold text-slate-600">Control Name</th>
                                         <th className="w-64 p-4 text-left font-semibold text-slate-600">Files</th>
-                                        <th className="p-4 text-left font-semibold text-slate-600">Description</th>
-                                        <th className="w-40 p-4 text-left font-semibold text-slate-600">Uploaded By</th>
                                         <th className="w-40 p-4 text-left font-semibold text-slate-600">Date Uploaded</th>
                                         <th className="w-32 p-4 text-left font-semibold text-slate-600">Actions</th>
                                     </tr>
@@ -480,25 +346,16 @@ const EvidenceData = () => {
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="p-4 text-slate-600 truncate max-w-[200px]" title={file.description}>
-                                                    {file.description}
-                                                </td>
-                                                <td className="p-4 text-slate-600">
-                                                    {file.uploaded_by}
-                                                </td>
                                                 <td className="p-4 text-slate-600">
                                                     {formatDate(file.uploaded_at)}
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="flex items-center space-x-2">
-                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                        <button 
+                                                            className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100"
+                                                            onClick={() => window.open(`${BASE_URL}/${file.file}`, '_blank')}
+                                                        >
                                                             <Eye size={18} />
-                                                        </button>
-                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                            <Download size={18} />
-                                                        </button>
-                                                        <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                            <Trash2 size={18} />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -575,15 +432,10 @@ const EvidenceData = () => {
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="flex items-center space-x-2">
-                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                                                        <button onClick={() => window.open(`${BASE_URL}/${doc.file}`, '_blank')} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
                                                             <Eye size={18} />
                                                         </button>
-                                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                            <Download size={18} />
-                                                        </button>
-                                                        <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100">
-                                                            <Trash2 size={18} />
-                                                        </button>
+                                                        
                                                     </div>
                                                 </td>
                                             </tr>
