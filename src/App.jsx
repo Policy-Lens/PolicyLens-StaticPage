@@ -18,6 +18,7 @@ import Questionnaire from "./Components/AdminView/ProjectTabs/Questionnaire";
 import MeetingCalendar from "./Components/AdminView/ProjectTabs/Calender";
 import EvidenceData from "./Components/AdminView/ProjectTabs/EvidenceData";
 import Support from "./Components/AdminView/ProjectTabs/Support";
+import MyReports from "./Components/AdminView/ProjectTabs/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
@@ -100,11 +101,11 @@ const router = createBrowserRouter([
         element: <AuditorWorkspace />
       },
       {
-        path: "questionnaire",
+        path: "questionbank",
         element: <Questionnaire />
       },
       {
-        path: "evidence",
+        path: "myevidences",
         element: <EvidenceData />
       },
       {
@@ -112,8 +113,12 @@ const router = createBrowserRouter([
         element: <MeetingCalendar />
       },
       {
-        path: "support",
+        path: "askforhelp",
         element: <Support />
+      },
+      {
+        path: "myreports",
+        element: <MyReports />
       }
     ]
   }

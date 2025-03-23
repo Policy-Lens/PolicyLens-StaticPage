@@ -16,7 +16,7 @@ const DiscussingPolicies = () => {
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDeadline, setTaskDeadline] = useState(null);
   const [taskReferences, setTaskReferences] = useState("");
-  
+
   // State for API data
   const [discussingPoliciesData, setDiscussingPoliciesData] = useState([]);
   const [stepId, setStepId] = useState(null);
@@ -25,15 +25,15 @@ const DiscussingPolicies = () => {
   const [members, setMembers] = useState([]);
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
   const [removedOldFiles, setRemovedOldFiles] = useState([]);
-  
+
   const { projectid } = useParams();
-  const { 
-    addStepData, 
-    getStepData, 
-    getStepId, 
-    checkStepAuth, 
-    projectRole, 
-    assignStep, 
+  const {
+    addStepData,
+    getStepData,
+    getStepId,
+    checkStepAuth,
+    projectRole,
+    assignStep,
     getStepAssignment,
     getMembers
   } = useContext(ProjectContext);
@@ -69,12 +69,12 @@ const DiscussingPolicies = () => {
   const get_step_data = async (step_id) => {
     const stepData = await getStepData(step_id);
     setDiscussingPoliciesData(stepData || []);
-    
+
     // If there's existing data, set it for editing
     if (stepData && stepData.length > 0) {
       const latestData = stepData[0];
       setDiscussingPoliciesText(latestData.text_data);
-      
+
       // Initialize old files from existing documents
       const existingFiles = latestData.documents.map(doc => doc.file);
       setOldFilesNeeded(existingFiles);
@@ -87,7 +87,7 @@ const DiscussingPolicies = () => {
     const isAuthorized = await checkStepAuth(step_id);
     setIsAssignedUser(isAuthorized);
   };
-  
+
   const getTaskAssignment = async (step_id) => {
     try {
       const assignmentData = await getStepAssignment(step_id);
@@ -206,17 +206,17 @@ const DiscussingPolicies = () => {
 
     try {
       const result = await assignStep(stepId, assignmentData);
-      
+
       if (result) {
         message.success("Task assigned successfully!");
         setIsAssignTaskVisible(false);
-        
+
         // Reset form fields
         setSelectedTeamMembers([]);
         setTaskDescription("");
         setTaskDeadline(null);
         setTaskReferences("");
-        
+
         // Refresh task assignment data
         await getTaskAssignment(stepId);
       } else {
@@ -234,7 +234,7 @@ const DiscussingPolicies = () => {
         <h2 className="text-xl font-bold">Discussing Policies</h2>
         <div className="flex gap-2">
           {projectRole.includes("admin") && !taskAssignment && (
-            <Button type="default" onClick={() => {get_members(); handleAssignTask();}}>
+            <Button type="default" onClick={() => { get_members(); handleAssignTask(); }}>
               Assign Task
             </Button>
           )}
@@ -278,7 +278,7 @@ const DiscussingPolicies = () => {
                             <FileTextOutlined className="text-blue-500 mr-2" />
                             <span className="text-sm text-gray-600">{getFileName(doc.file)}</span>
                           </div>
-                          <a 
+                          <a
                             href={`http://localhost:8000${doc.file}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -311,7 +311,7 @@ const DiscussingPolicies = () => {
                 <h4 className="font-medium text-gray-700">Assignment Details</h4>
                 <p className="text-xs text-gray-500">{formatDate(taskAssignment.assigned_at)}</p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Assigned To:</p>
@@ -328,12 +328,12 @@ const DiscussingPolicies = () => {
                   <p className="text-sm text-gray-600 mt-2">{formatDate(taskAssignment.deadline)}</p>
                 </div>
               </div>
-              
+
               <div className="mt-4">
                 <p className="text-sm font-medium text-gray-700">Description:</p>
                 <p className="text-sm text-gray-600 mt-2">{taskAssignment.description}</p>
               </div>
-              
+
               {taskAssignment.references && (
                 <div className="mt-4">
                   <p className="text-sm font-medium text-gray-700">References:</p>
@@ -361,9 +361,9 @@ const DiscussingPolicies = () => {
         ]}
       >
         <div className="mb-4">
-          <TextArea 
-            rows={6} 
-            placeholder="Enter details for the discussing policies" 
+          <TextArea
+            rows={6}
+            placeholder="Enter details for the discussing policies"
             value={discussingPoliciesText}
             onChange={(e) => setDiscussingPoliciesText(e.target.value)}
           />
@@ -381,7 +381,7 @@ const DiscussingPolicies = () => {
                     <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
                   </div>
                   <div className="flex items-center">
-                    <a 
+                    <a
                       href={`http://localhost:8000${fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -389,9 +389,9 @@ const DiscussingPolicies = () => {
                     >
                       View File
                     </a>
-                    <Button 
-                      type="text" 
-                      danger 
+                    <Button
+                      type="text"
+                      danger
                       onClick={() => handleRemoveFile(fileUrl)}
                     >
                       Remove
@@ -414,8 +414,8 @@ const DiscussingPolicies = () => {
                     <FileTextOutlined className="text-red-500 mr-2" />
                     <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
                   </div>
-                  <Button 
-                    type="text" 
+                  <Button
+                    type="text"
                     onClick={() => handleRestoreFile(fileUrl)}
                   >
                     Restore
@@ -469,24 +469,24 @@ const DiscussingPolicies = () => {
         </div>
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Team Deadline</label>
-          <DatePicker 
-            style={{ width: "100%" }} 
+          <DatePicker
+            style={{ width: "100%" }}
             value={taskDeadline}
             onChange={setTaskDeadline}
           />
         </div>
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Task Description</label>
-          <Input 
-            placeholder="Enter task description" 
+          <Input
+            placeholder="Enter task description"
             value={taskDescription}
             onChange={(e) => setTaskDescription(e.target.value)}
           />
         </div>
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">Task References</label>
-          <Input 
-            placeholder="Add reference URLs" 
+          <Input
+            placeholder="Add reference URLs"
             value={taskReferences}
             onChange={(e) => setTaskReferences(e.target.value)}
           />

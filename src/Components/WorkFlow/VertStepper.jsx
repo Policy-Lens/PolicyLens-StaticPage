@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createContext } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
 import ServiceRequirements from "./ServiceRequirements";
 import GapAnalysis from "./GapAnalysis";
@@ -13,6 +13,26 @@ import ImplementPolicies from "./ImplementPolicies";
 import ExternalAuditProcess from "./ExternalAuditProcess";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Calendar, HelpCircle, FileText, Shield, CheckCircle, Database } from "lucide-react";
+import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
+
+// Create a context for loading state
+export const LoadingContext = createContext({
+  isLoading: false,
+  setIsLoading: () => { },
+});
+
+const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
+
+// Loading component
+const LoadingIndicator = () => (
+  <div className="flex justify-center items-center h-full w-full bg-white bg-opacity-80 absolute top-0 left-0 z-10">
+    <div className="text-center">
+      <Spin indicator={antIcon} />
+      <p className="mt-4 text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
 
 const steps = [
   { title: "Service Requirements", content: <ServiceRequirements /> },
@@ -39,37 +59,8 @@ const CarouselHorizontalStepper = () => {
   const [activeTab, setActiveTab] = useState("Workflow");
   const navigate = useNavigate();
   const { projectid } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const tabIcons = {
-    Workflow: <CheckCircle size={16} />,
-    Calendar: <Calendar size={16} />,
-    Support: <HelpCircle size={16} />,
-    Questionnaire: <FileText size={16} />,
-    "Evidence Data": <Database size={16} />,
-    Policies: <Shield size={16} />,
-  };
-
-  // New tabs replacing phases
-  const tabs = [
-    "Workflow",
-    "Calendar",
-    "Support",
-    "Questionnaire",
-    "Evidence Data",
-    "VAPT",
-    "Policies"
-  ];
-
-  // Group steps into phases for better organization
-  const phases = [
-    { name: "Workflow", steps: [0, 1, 2, 3] },
-    { name: "Calendar", steps: [4, 5, 6, 7, 8] },
-    { name: "Support", steps: [9, 10, 11, 12] },
-    { name: "Questionnaire", steps: [13, 14, 15] },
-    { name: "Evidence Data", steps: [16, 17, 18, 19] },
-    { name: "VAPT", steps: [20, 21] },
-    { name: "Policies", steps: [22] },
-  ];
 
   const getCurrentPhase = () => {
     return phases.findIndex(phase =>
@@ -155,17 +146,6 @@ const CarouselHorizontalStepper = () => {
   const handleTabClick = (tab) => {
     setActiveTab(tab);
 
-    // Navigate to specific pages for Questionnaire, Calendar, and Evidence Data tabs
-    if (tab === "Questionnaire") {
-      navigate(`/project/${projectid}/questionnaire`);
-      return;
-    } else if (tab === "Calendar") {
-      navigate(`/project/${projectid}/calender`);
-      return;
-    } else if (tab === "Evidence Data") {
-      navigate(`/project/${projectid}/evidence`);
-      return;
-    }
 
     // For other tabs, keep the existing carousel behavior
     const phase = phases.find(p => p.name === tab);
@@ -174,151 +154,147 @@ const CarouselHorizontalStepper = () => {
     }
   };
 
-  
+
   return (
-    <div className="flex h-screen">
-      <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col">
-        {/* New Navigation Tabs */}
-        <div className="flex justify-start mb-4 space-x-4">
-          {tabs.map((tab) => (
+    <LoadingContext.Provider value={{ isLoading, setIsLoading }}>
+      <div className="flex h-screen">
+        <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col">
+
+          {/* Scrollable Navigation with Arrow Controls */}
+          <div className="relative mb-4">
             <button
-              key={tab}
-              onClick={() => handleTabClick(tab)}
-              className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 
-        ${activeTab === tab ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+              onClick={() => handleScroll('left')}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              disabled={visibleRange.start === 0}
             >
-              {tabIcons[tab] || null}
-              <span>{tab}</span>
+              <ChevronLeft size={20} />
             </button>
-          ))}
-        </div>
 
-        {/* Scrollable Navigation with Arrow Controls */}
-        <div className="relative mb-4">
-          <button
-            onClick={() => handleScroll('left')}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-            disabled={visibleRange.start === 0}
-          >
-            <ChevronLeft size={20} />
-          </button>
+            <div className="overflow-hidden mx-12">
+              <div
+                ref={containerRef}
+                className="flex flex-col items-center"
+              >
+                <div className="flex items-center justify-between space-x-4 px-4 transition-transform duration-300">
+                  {steps.slice(visibleRange.start, visibleRange.end + 1).map((step, visibleIndex) => {
+                    const actualIndex = visibleIndex + visibleRange.start;
+                    const status = getStepStatus(actualIndex);
 
-          <div className="overflow-hidden mx-12">
-            <div
-              ref={containerRef}
-              className="flex flex-col items-center"
-            >
-              <div className="flex items-center justify-between space-x-4 px-4 transition-transform duration-300">
-                {steps.slice(visibleRange.start, visibleRange.end + 1).map((step, visibleIndex) => {
-                  const actualIndex = visibleIndex + visibleRange.start;
-                  const status = getStepStatus(actualIndex);
-
-                  return (
-                    <div
-                      key={actualIndex}
-                      className={`flex flex-col items-center cursor-pointer relative group ${status === "current" ? "text-blue-600 font-semibold" : "text-gray-500"}`}
-                      onClick={() => handleStepClick(actualIndex)}
-                    >
+                    return (
                       <div
-                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 
-                          ${status === "completed"
-                            ? "bg-green-500 text-white"
-                            : status === "current"
-                              ? "bg-blue-500 text-white scale-110"
-                              : "bg-gray-300"
-                          } 
-                          group-hover:scale-110 group-hover:shadow-md`}
+                        key={actualIndex}
+                        className={`flex flex-col items-center cursor-pointer relative group ${status === "current" ? "text-blue-600 font-semibold" : "text-gray-500"}`}
+                        onClick={() => handleStepClick(actualIndex)}
                       >
-                        {actualIndex + 1}
+                        <div
+                          className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 
+                            ${status === "completed"
+                              ? "bg-green-500 text-white"
+                              : status === "current"
+                                ? "bg-blue-500 text-white scale-110"
+                                : "bg-gray-300"
+                            } 
+                            group-hover:scale-110 group-hover:shadow-md`}
+                        >
+                          {isLoading && status === "current" ? (
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            actualIndex + 1
+                          )}
+                        </div>
+                        <span className="mt-2 text-sm text-center w-20 truncate">
+                          {step.title}
+                        </span>
                       </div>
-                      <span className="mt-2 text-sm text-center w-20 truncate">
-                        {step.title}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* Progress Bar */}
-              <div className="w-full h-2 bg-gray-200 rounded-full mt-4">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
-                  style={{
-                    width: `${((currentStep + 1) / steps.length) * 100}%`
-                  }}
-                ></div>
+                {/* Progress Bar */}
+                <div className="w-full h-2 bg-gray-200 rounded-full mt-4">
+                  <div
+                    className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
+                    style={{
+                      width: `${((currentStep + 1) / steps.length) * 100}%`
+                    }}
+                  ></div>
+                </div>
               </div>
+            </div>
+
+            <button
+              onClick={() => handleScroll('right')}
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              disabled={visibleRange.end >= steps.length - 1}
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+
+          {/* Step Content - Dynamic Sizing */}
+          <div className="flex-grow relative overflow-hidden bg-white rounded-lg shadow-md">
+            {isLoading && <LoadingIndicator />}
+            <div
+              className={`flex transition-transform duration-500 h-full ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
+              style={{ transform: `translateX(-${currentStep * 100}%)` }}
+            >
+              {steps.map((step, index) => (
+                <div
+                  key={index}
+                  className="min-w-full h-full overflow-auto"
+                >
+                  <div className="px-6 py-4 mx-auto max-w-5xl h-full">
+                    {step.content}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <button
-            onClick={() => handleScroll('right')}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-            disabled={visibleRange.end >= steps.length - 1}
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center mt-4">
+            <button
+              onClick={handlePrev}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 flex items-center"
+              disabled={currentStep === 0 || isTransitioning || isLoading}
+            >
+              <ChevronLeft size={16} className="mr-1" /> Previous
+            </button>
 
-        {/* Step Content - Dynamic Sizing */}
-        <div className="flex-grow relative overflow-hidden bg-white rounded-lg shadow-md">
-          <div
-            className={`flex transition-transform duration-500 h-full ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
-            style={{ transform: `translateX(-${currentStep * 100}%)` }}
-          >
-            {steps.map((step, index) => (
-              <div
-                key={index}
-                className="min-w-full h-full overflow-auto"
-              >
-                <div className="px-6 py-4 mx-auto max-w-5xl h-full">
-                  {step.content}
-                </div>
-              </div>
-            ))}
+            <button
+              onClick={handleNext}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center"
+              disabled={currentStep === steps.length - 1 || isTransitioning || isLoading}
+            >
+              Next <ChevronRight size={16} className="ml-1" />
+            </button>
+          </div>
+
+          {/* Add keyboard event listener effect */}
+          <div style={{ display: 'none' }}>
+            {useEffect(() => {
+              const handleKeyDown = (event) => {
+                if (event.key === 'ArrowLeft') {
+                  handlePrev();
+                } else if (event.key === 'ArrowRight') {
+                  handleNext();
+                }
+              };
+
+              window.addEventListener('keydown', handleKeyDown);
+
+              // Clean up event listener on component unmount
+              return () => {
+                window.removeEventListener('keydown', handleKeyDown);
+              };
+            }, [currentStep, isTransitioning, isLoading])}
           </div>
         </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={handlePrev}
-            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 flex items-center"
-            disabled={currentStep === 0 || isTransitioning}
-          >
-            <ChevronLeft size={16} className="mr-1" /> Previous
-          </button>
-
-          <button
-            onClick={handleNext}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center"
-            disabled={currentStep === steps.length - 1 || isTransitioning}
-          >
-            Next <ChevronRight size={16} className="ml-1" />
-          </button>
-        </div>
-
-        {/* Add keyboard event listener effect */}
-        <div style={{ display: 'none' }}>
-          {useEffect(() => {
-            const handleKeyDown = (event) => {
-              if (event.key === 'ArrowLeft') {
-                handlePrev();
-              } else if (event.key === 'ArrowRight') {
-                handleNext();
-              }
-            };
-
-            window.addEventListener('keydown', handleKeyDown);
-
-            // Clean up event listener on component unmount
-            return () => {
-              window.removeEventListener('keydown', handleKeyDown);
-            };
-          }, [currentStep, isTransitioning])}
-        </div>
       </div>
-    </div>
+    </LoadingContext.Provider>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Button, Modal, Input, Upload, message } from "antd";
-import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
+import { Button, Modal, Input, Upload, message, Spin } from "antd";
+import { PaperClipOutlined, FileTextOutlined, LoadingOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 const { TextArea } = Input;
@@ -16,6 +16,9 @@ function ServiceRequirements() {
   const [stepId, setStepId] = useState(null);
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
   const [removedOldFiles, setRemovedOldFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
 
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList(newFileList);
@@ -42,6 +45,7 @@ function ServiceRequirements() {
       return;
     }
 
+    setLoading(true);
     const formData = new FormData();
     formData.append("field_name", "Service Requirements");
     formData.append("text_data", description);
@@ -70,6 +74,8 @@ function ServiceRequirements() {
     } catch (error) {
       message.error("Failed to submit service requirements.");
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -104,27 +110,39 @@ function ServiceRequirements() {
   };
 
   const get_step_id = async () => {
-    const step_id = await getStepId(projectid, 1);
-    if (step_id) {
-      setStepId(step_id);
-      await get_step_data(step_id);
-      await checkAssignedUser(step_id);
+    setLoading(true);
+    try {
+      const step_id = await getStepId(projectid, 1);
+      if (step_id) {
+        setStepId(step_id);
+        await get_step_data(step_id);
+        await checkAssignedUser(step_id);
+      }
+    } catch (error) {
+      console.error("Error fetching step ID:", error);
+      message.error("Failed to load service requirements data.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const get_step_data = async (step_id) => {
-    const stepData = await getStepData(step_id);
-    setServiceRequirementsData(stepData || []);
+    try {
+      const stepData = await getStepData(step_id);
+      setServiceRequirementsData(stepData || []);
 
-    // If there's existing data, set it for editing
-    if (stepData && stepData.length > 0) {
-      const latestData = stepData[0];
-      setDescription(latestData.text_data);
+      // If there's existing data, set it for editing
+      if (stepData && stepData.length > 0) {
+        const latestData = stepData[0];
+        setDescription(latestData.text_data);
 
-      // Initialize old files from existing documents
-      const existingFiles = latestData.documents.map(doc => doc.file);
-      setOldFilesNeeded(existingFiles);
-      setRemovedOldFiles([]);
+        // Initialize old files from existing documents
+        const existingFiles = latestData.documents.map(doc => doc.file);
+        setOldFilesNeeded(existingFiles);
+        setRemovedOldFiles([]);
+      }
+    } catch (error) {
+      console.error("Error fetching step data:", error);
     }
   };
 
@@ -142,13 +160,21 @@ function ServiceRequirements() {
             type="primary"
             onClick={() => setIsModalVisible(true)}
             className="bg-blue-600 hover:bg-blue-700"
+            disabled={loading}
           >
             Update Requirements
           </Button>
         )}
       </div>
 
-      {serviceRequirementsData.length > 0 ? (
+      {loading ? (
+        <div className="flex justify-center items-center h-64 bg-white rounded-xl shadow-md p-10">
+          <div className="text-center">
+            <Spin indicator={antIcon} />
+            <p className="mt-4 text-gray-600">Loading service requirements...</p>
+          </div>
+        </div>
+      ) : serviceRequirementsData.length > 0 ? (
         <div className="space-y-8">
           {serviceRequirementsData.map((item, index) => (
             <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden transform transition-all hover:shadow-lg">
@@ -255,6 +281,7 @@ function ServiceRequirements() {
               type="primary"
               size="large"
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={loading}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -287,6 +314,7 @@ function ServiceRequirements() {
               setRemovedOldFiles([]);
             }}
             className="border-gray-300 text-gray-700"
+            disabled={loading}
           >
             Cancel
           </Button>,
@@ -295,6 +323,7 @@ function ServiceRequirements() {
             type="primary"
             onClick={handleSubmit}
             className="bg-blue-600 hover:bg-blue-700"
+            loading={loading}
           >
             {serviceRequirementsData.length > 0 ? "Update" : "Save"}
           </Button>

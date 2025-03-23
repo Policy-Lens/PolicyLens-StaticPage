@@ -186,7 +186,7 @@ const Questionnaire = () => {
       // Check if the file is an Excel file
       if (
         file.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
         file.type === "application/vnd.ms-excel"
       ) {
         setSelectedFile(file);
@@ -440,12 +440,11 @@ const Questionnaire = () => {
   return (
     <div className="flex flex-col h-screen bg-slate-50">
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg m-6">
+      <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg ">
         {/* Questions Panel */}
         <div
-          className={`flex flex-col ${
-            activeQuestion ? "w-3/4" : "w-full"
-          } bg-white border-r border-slate-200`}
+          className={`flex flex-col ${activeQuestion ? "w-3/4" : "w-full"
+            } bg-white border-r border-slate-200`}
         >
           {/* Tabs and Actions */}
           <div className="flex items-center border-b border-slate-200 p-4 bg-white sticky top-0 z-10">
@@ -457,86 +456,6 @@ const Questionnaire = () => {
               ({questions.length} of {questions.length})
             </div>
             <div className="flex ml-auto gap-2">
-              {(projectRole === "admin" || projectRole === "consultant") && (
-                <>
-                  <button
-                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
-                    onClick={openAddQuestionModal}
-                  >
-                    <Plus size={16} className="mr-1.5" />
-                    <span>Ask Question</span>
-                  </button>
-                  <button
-                    className="px-4 py-2.5 border border-slate-200 bg-white rounded-lg flex items-center hover:bg-slate-50 transition-colors shadow-sm text-slate-700"
-                    onClick={() => setIsUploadModalOpen(true)}
-                  >
-                    <FileText size={16} className="mr-1.5 text-indigo-500" />
-                    <span>Upload Excel</span>
-                  </button>
-                </>
-              )}
-
-              {/* Upload Excel Modal */}
-              {isUploadModalOpen && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                  <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                    <div className="mt-3 text-center">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900">
-                          Upload Questions
-                        </h3>
-                        <button
-                          onClick={() => handleCloseUploadModal()}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
-                      <div className="mt-2 px-7 py-3">
-                        <p className="text-sm text-gray-500">
-                          Upload an Excel file containing questions.
-                        </p>
-                        <input
-                          type="file"
-                          accept=".xlsx,.xls"
-                          onChange={(e) => handleFileSelect(e)}
-                          className="mt-4 block w-full text-sm text-gray-500
-                                                        file:mr-4 file:py-2 file:px-4
-                                                        file:rounded-full file:border-0
-                                                        file:text-sm file:font-semibold
-                                                        file:bg-indigo-50 file:text-indigo-700
-                                                        hover:file:bg-indigo-100"
-                        />
-                        {selectedFile && (
-                          <p className="mt-2 text-sm font-medium text-indigo-600">
-                            {selectedFile.name}
-                          </p>
-                        )}
-                        <div className="mt-5 flex justify-end space-x-2">
-                          <button
-                            onClick={() => handleCloseUploadModal()}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleUploadQuestions()}
-                            disabled={!selectedFile}
-                            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
-                              selectedFile
-                                ? "bg-indigo-600 hover:bg-indigo-700"
-                                : "bg-gray-300 cursor-not-allowed"
-                            }`}
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div className="relative">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 <input
@@ -586,6 +505,24 @@ const Questionnaire = () => {
               <button className="p-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
                 <ChevronLeft size={16} />
               </button>
+              {(projectRole === "admin" || projectRole === "consultant") && (
+                <>
+                  <button
+                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
+                    onClick={openAddQuestionModal}
+                  >
+                    <Plus size={16} className="mr-1.5" />
+                    <span>Ask Question</span>
+                  </button>
+                  <button
+                    className="px-4 py-2.5 border border-slate-200 bg-white rounded-lg flex items-center hover:bg-slate-50 transition-colors shadow-sm text-slate-700"
+                    onClick={() => setIsUploadModalOpen(true)}
+                  >
+                    <FileText size={16} className="mr-1.5 text-indigo-500" />
+                    <span>Upload Excel</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -613,11 +550,10 @@ const Questionnaire = () => {
                 {questions.map((question) => (
                   <tr
                     key={question.id}
-                    className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${
-                      activeQuestion?.id === question.id
-                        ? "bg-indigo-50/70"
-                        : ""
-                    }`}
+                    className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${activeQuestion?.id === question.id
+                      ? "bg-indigo-50/70"
+                      : ""
+                      }`}
                     onClick={() => selectQuestion(question)}
                   >
                     <td className="p-4">
@@ -643,64 +579,63 @@ const Questionnaire = () => {
                         <div className="flex items-center ml-2 flex-shrink-0">
                           {(projectRole === "admin" ||
                             projectRole === "consultant") && (
-                            <>
-                              <button
-                                className="text-slate-400 hover:text-indigo-600 transition-colors mr-2"
-                                onClick={(e) =>
-                                  toggleEditDropdown(question.id, e)
-                                }
-                              >
-                                <Edit size={16} />
-                              </button>
-                              {editDropdownOpen === question.id && (
-                                <div className="absolute mt-6 right-24 bg-white border border-slate-200 rounded-lg shadow-xl z-20">
-                                  <div className="py-1">
-                                    <button
-                                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center"
-                                      onClick={(e) =>
-                                        handleEditQuestion(question.id, e)
-                                      }
-                                    >
-                                      <Edit size={14} className="mr-2" />
-                                      Edit
-                                    </button>
-                                    <button
-                                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50 flex items-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setQuestionToDelete(question.id);
-                                        setDeleteConfirmVisible(true);
-                                      }}
-                                    >
-                                      <Trash2 size={14} className="mr-2" />
-                                      Delete
-                                    </button>
+                              <>
+                                <button
+                                  className="text-slate-400 hover:text-indigo-600 transition-colors mr-2"
+                                  onClick={(e) =>
+                                    toggleEditDropdown(question.id, e)
+                                  }
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                {editDropdownOpen === question.id && (
+                                  <div className="absolute mt-6 right-24 bg-white border border-slate-200 rounded-lg shadow-xl z-20">
+                                    <div className="py-1">
+                                      <button
+                                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center"
+                                        onClick={(e) =>
+                                          handleEditQuestion(question.id, e)
+                                        }
+                                      >
+                                        <Edit size={14} className="mr-2" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50 flex items-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setQuestionToDelete(question.id);
+                                          setDeleteConfirmVisible(true);
+                                        }}
+                                      >
+                                        <Trash2 size={14} className="mr-2" />
+                                        Delete
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              <button
-                                className="text-slate-400 hover:text-red-600 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setQuestionToDelete(question.id);
-                                  setDeleteConfirmVisible(true);
-                                }}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
+                                )}
+                                <button
+                                  className="text-slate-400 hover:text-red-600 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setQuestionToDelete(question.id);
+                                    setDeleteConfirmVisible(true);
+                                  }}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </>
+                            )}
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center">
                         <span
-                          className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            question.answer
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
+                          className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-medium ${question.answer
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                            }`}
                         >
                           {question.answer ? "Completed" : "Pending"}
                         </span>
@@ -1433,6 +1368,66 @@ const Questionnaire = () => {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Excel Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Upload Questions
+                </h3>
+                <button
+                  onClick={() => handleCloseUploadModal()}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Upload an Excel file containing questions.
+                </p>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => handleFileSelect(e)}
+                  className="mt-4 block w-full text-sm text-gray-500
+                                                file:mr-4 file:py-2 file:px-4
+                                                file:rounded-full file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-indigo-50 file:text-indigo-700
+                                                hover:file:bg-indigo-100"
+                />
+                {selectedFile && (
+                  <p className="mt-2 text-sm font-medium text-indigo-600">
+                    {selectedFile.name}
+                  </p>
+                )}
+                <div className="mt-5 flex justify-end space-x-2">
+                  <button
+                    onClick={() => handleCloseUploadModal()}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleUploadQuestions()}
+                    disabled={!selectedFile}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${selectedFile
+                        ? "bg-indigo-600 hover:bg-indigo-700"
+                        : "bg-gray-300 cursor-not-allowed"
+                      }`}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

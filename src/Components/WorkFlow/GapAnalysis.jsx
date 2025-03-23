@@ -3,6 +3,7 @@ import { Collapse, Button, Input, Upload, DatePicker, Modal, Select, message } f
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
+import { LoadingContext } from "./VertStepper";
 
 const { Panel } = Collapse;
 const { TextArea } = Input;
@@ -40,42 +41,63 @@ const GapAnalysis = () => {
     getMembers
   } = useContext(ProjectContext);
 
+  // Use the loading context
+  const { isLoading, setIsLoading } = useContext(LoadingContext);
+
   const consultants = ["Consultant 1", "Consultant 2", "Consultant 3"];
   const [members, setMembers] = useState([])
 
   const get_members = async () => {
-    const res = await getMembers(projectid)
-    console.log(res)
-    setMembers(res)
+    try {
+      const res = await getMembers(projectid)
+      console.log(res)
+      setMembers(res)
+    } catch (error) {
+      console.error("Error fetching members:", error);
+      message.error("Failed to load team members");
+    }
   }
 
   // Get step ID, step data, and check authorization
   const get_step_id = async () => {
-    const step_id = await getStepId(projectid, 4);
-    if (step_id) {
-      setStepId(step_id);
-      await get_step_data(step_id);
-      const isAuthorized = await checkStepAuth(step_id);
-      setIsAssignedUser(isAuthorized);
-      if (isAuthorized) {
-        await getTaskAssignment(step_id);
+    setIsLoading(true);
+    try {
+      const step_id = await getStepId(projectid, 4);
+      if (step_id) {
+        setStepId(step_id);
+        await get_step_data(step_id);
+        const isAuthorized = await checkStepAuth(step_id);
+        setIsAssignedUser(isAuthorized);
+        if (isAuthorized) {
+          await getTaskAssignment(step_id);
+        }
+        await get_members();
       }
+    } catch (error) {
+      console.error("Error fetching step ID:", error);
+      message.error("Failed to load gap analysis data");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const get_step_data = async (step_id) => {
-    const stepData = await getStepData(step_id);
-    setGapAnalysisData(stepData || []);
+    try {
+      const stepData = await getStepData(step_id);
+      setGapAnalysisData(stepData || []);
 
-    // If there's existing data, set it for editing
-    if (stepData && stepData.length > 0) {
-      const latestData = stepData[0];
-      setGapAnalysisText(latestData.text_data);
+      // If there's existing data, set it for editing
+      if (stepData && stepData.length > 0) {
+        const latestData = stepData[0];
+        setGapAnalysisText(latestData.text_data);
 
-      // Initialize old files from existing documents
-      const existingFiles = latestData.documents.map(doc => doc.file);
-      setOldFilesNeeded(existingFiles);
-      setRemovedOldFiles([]); // Reset removed files when data is refreshed
+        // Initialize old files from existing documents
+        const existingFiles = latestData.documents.map(doc => doc.file);
+        setOldFilesNeeded(existingFiles);
+        setRemovedOldFiles([]); // Reset removed files when data is refreshed
+      }
+    } catch (error) {
+      console.error("Error fetching step data:", error);
     }
   };
 
@@ -183,21 +205,22 @@ const GapAnalysis = () => {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("field_name", "Gap Analysis");
-    formData.append("text_data", gapAnalysisText);
-
-    // Append old files array as JSON string
-    formData.append("old_files", JSON.stringify(oldFilesNeeded));
-
-    // Append new files
-    if (fileLists["gapAnalysisPlan"]) {
-      fileLists["gapAnalysisPlan"].forEach((file) => {
-        formData.append("files", file.originFileObj || file);
-      });
-    }
-
+    setIsLoading(true);
     try {
+      const formData = new FormData();
+      formData.append("field_name", "Gap Analysis");
+      formData.append("text_data", gapAnalysisText);
+
+      // Append old files array as JSON string
+      formData.append("old_files", JSON.stringify(oldFilesNeeded));
+
+      // Append new files
+      if (fileLists["gapAnalysisPlan"]) {
+        fileLists["gapAnalysisPlan"].forEach((file) => {
+          formData.append("files", file.originFileObj || file);
+        });
+      }
+
       const response = await addStepData(stepId, formData);
       if (response.status === 201) {
         message.success("Gap analysis plan submitted successfully!");
@@ -214,6 +237,8 @@ const GapAnalysis = () => {
     } catch (error) {
       message.error("Failed to submit gap analysis plan.");
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -233,28 +258,27 @@ const GapAnalysis = () => {
       message.warning("Please select a deadline.");
       return;
     }
-    console.log(selectedTeamMembers)
-    const assignmentData = {
-      assigned_to: selectedTeamMembers,
-      description: taskDescription,
-      deadline: taskDeadline.format("YYYY-MM-DD"),
-      references: taskReferences
-    };
 
+    setIsLoading(true);
     try {
+      console.log(selectedTeamMembers);
+      const assignmentData = {
+        assigned_to: selectedTeamMembers,
+        description: taskDescription,
+        deadline: taskDeadline.format("YYYY-MM-DD"),
+        references: taskReferences
+      };
+
       const result = await assignStep(stepId, assignmentData);
 
       if (result) {
         message.success("Task assigned successfully!");
         setIsAssignTaskVisible(false);
-
-        // Reset form fields
+        // Reset task assignment form
         setSelectedTeamMembers([]);
         setTaskDescription("");
         setTaskDeadline(null);
         setTaskReferences("");
-
-        // Refresh task assignment data
         await getTaskAssignment(stepId);
       } else {
         message.error("Failed to assign task.");
@@ -262,6 +286,8 @@ const GapAnalysis = () => {
     } catch (error) {
       message.error("Failed to assign task.");
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

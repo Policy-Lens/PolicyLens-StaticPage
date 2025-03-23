@@ -9,7 +9,7 @@ const EvidenceData = () => {
     const [sortOption, setSortOption] = useState('recent');
     const [activeTab, setActiveTab] = useState('evidence'); // 'evidence' or 'plc'
     const [selectedPLCItems, setSelectedPLCItems] = useState([]);
-    const {projectid} = useParams();
+    const { projectid } = useParams();
 
     // Toggle the filter dropdown
     const toggleFilterDropdown = () => {
@@ -147,41 +147,41 @@ const EvidenceData = () => {
     ];
 
     // Sample evidence data - restructured to group by control
-    const [evidenceData,setEvidenceData] = useState([]);
-        
-    // PLC data
-    const [plcData,setPLCData] = useState([]);
+    const [evidenceData, setEvidenceData] = useState([]);
 
-    const getPLCEvidence = async () =>{
+    // PLC data
+    const [plcData, setPLCData] = useState([]);
+
+    const getPLCEvidence = async () => {
         const res = await apiRequest(
-          "GET",
-          `/api/plc/plc-documents/all-steps/${projectid}/latest/`,
-          null,
-          true
+            "GET",
+            `/api/plc/plc-documents/all-steps/${projectid}/latest/`,
+            null,
+            true
         );
-        if(res.status === 200){
+        if (res.status === 200) {
             console.log(res.data);
             setPLCData(res.data);
         }
     }
 
-    const getQuestionnaireEvidence = async () =>{
+    const getQuestionnaireEvidence = async () => {
         const res = await apiRequest(
-          "GET",
-          `/api/project/${projectid}/questionnaire/evidences/`,
-          null,
-          true
-        );   
-        if(res.status === 200){
+            "GET",
+            `/api/project/${projectid}/questionnaire/evidences/`,
+            null,
+            true
+        );
+        if (res.status === 200) {
             console.log(res.data);
             setEvidenceData(res.data);
         }
     }
 
-    useEffect(()=>{
+    useEffect(() => {
         getPLCEvidence();
         getQuestionnaireEvidence();
-    },[])
+    }, [])
 
     // Get total documents count from PLC data
     const plcDocumentsCount = plcData.reduce((total, item) => total + item.documents.length, 0);
@@ -192,7 +192,7 @@ const EvidenceData = () => {
     return (
         <div className="flex flex-col h-screen bg-slate-50">
             {/* Main Content */}
-            <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg m-6">
+            <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg">
                 <div className="flex flex-col w-full bg-white">
                     {/* Tabs */}
                     <div className="flex border-b border-slate-200 px-4 bg-white">
@@ -200,13 +200,13 @@ const EvidenceData = () => {
                             className={`py-4 px-6 font-medium transition-colors ${activeTab === 'evidence' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
                             onClick={() => setActiveTab('evidence')}
                         >
-                            Evidence Data
+                            Evidence Files
                         </button>
                         <button
                             className={`py-4 px-6 font-medium transition-colors ${activeTab === 'plc' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
                             onClick={() => setActiveTab('plc')}
                         >
-                            PLC Data
+                            PLC Files
                         </button>
                     </div>
 
@@ -351,7 +351,7 @@ const EvidenceData = () => {
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="flex items-center space-x-2">
-                                                        <button 
+                                                        <button
                                                             className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100"
                                                             onClick={() => window.open(`${BASE_URL}/${file.file}`, '_blank')}
                                                         >
@@ -435,7 +435,7 @@ const EvidenceData = () => {
                                                         <button onClick={() => window.open(`${BASE_URL}/${doc.file}`, '_blank')} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
                                                             <Eye size={18} />
                                                         </button>
-                                                        
+
                                                     </div>
                                                 </td>
                                             </tr>
