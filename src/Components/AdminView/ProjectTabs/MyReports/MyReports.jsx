@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FilePlus2, FileUp } from 'lucide-react';
-import { apiRequest } from "../../../utils/api";
-import Vapt from './MyReports/Vapt';
-import RiskTreatment from './MyReports/RiskTreatment';
+import { apiRequest } from "../../../../utils/api";
 
 const MyReports = () => {
     // State to track which column groups are expanded
@@ -940,27 +938,24 @@ const MyReports = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 overflow-auto">
+        <div className="flex flex-col h-screen bg-slate-50">
             {/* Main Content */}
-            <div className="flex flex-1 overflow-auto shadow-xl rounded-lg">
-                <div className="flex flex-col w-full bg-white border-r border-slate-200 relative overflow-auto">
+            <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg">
+                <div className="flex flex-col w-full bg-white border-r border-slate-200 relative">
                     {/* Tab Navigation */}
                     <div className="flex border-b border-slate-200">
                         <button
                             className={`py-4 px-6 font-medium transition-colors ${activeTab === 'riskAssessment' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
-                            onClick={() => setActiveTab('riskAssessment')}
                         >
                             Risk Assessment
                         </button>
                         <button
                             className={`py-4 px-6 font-medium transition-colors ${activeTab === 'riskTreatment' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
-                            onClick={() => setActiveTab('riskTreatment')}
                         >
                             Risk Treatment
                         </button>
                         <button
                             className={`py-4 px-6 font-medium transition-colors ${activeTab === 'vapt' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}
-                            onClick={() => setActiveTab('vapt')}
                         >
                             VAPT
                         </button>
@@ -1232,9 +1227,7 @@ const MyReports = () => {
                                                             <button
                                                                 className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
                                                                 title="View Risk"
-                                                                onClick={() => {
-                                                                    // Button is now static/disabled
-                                                                }}
+                                                                onClick={() => console.log("View button clicked")}
                                                             >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -1244,9 +1237,7 @@ const MyReports = () => {
                                                             <button
                                                                 className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
                                                                 title="Edit Risk"
-                                                                onClick={() => {
-                                                                    // Button is now static/disabled
-                                                                }}
+                                                                onClick={() => console.log("Edit button clicked")}
                                                             >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -1412,383 +1403,407 @@ const MyReports = () => {
 
                     {/* Risk Treatment Tab */}
                     {activeTab === 'riskTreatment' && (
-                        <RiskTreatment />
+                        <div className="flex flex-col items-center justify-center p-12 h-96">
+                            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-indigo-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-semibold text-slate-800 mb-3">Risk Treatment</h3>
+                            <p className="text-slate-600 max-w-md text-center mb-6">
+                                This section will contain information about risk treatment plans, controls, and implementation status.
+                            </p>
+                            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md">
+                                Coming Soon
+                            </button>
+                        </div>
                     )}
 
                     {/* VAPT Tab */}
                     {activeTab === 'vapt' && (
-                        <Vapt />
+                        <div className="flex flex-col items-center justify-center p-12 h-96">
+                            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-indigo-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0112 12.75zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 01-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 002.248-2.354M12 12.75a2.25 2.25 0 01-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 00-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 01.4-2.253M12 8.25a2.25 2.25 0 00-2.248 2.146M12 8.25a2.25 2.25 0 012.248 2.146M8.683 5a6.032 6.032 0 01-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0115.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 00-.575-1.752M4.921 6a24.048 24.048 0 00-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 01-5.223 1.082" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-semibold text-slate-800 mb-3">Vulnerability Assessment & Penetration Testing</h3>
+                            <p className="text-slate-600 max-w-md text-center mb-6">
+                                This section will contain reports and findings from vulnerability assessments and penetration testing activities.
+                            </p>
+                            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md">
+                                Coming Soon
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
 
             {/* Modal */}
-            {
-                showModal && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                            {/* Background overlay */}
-                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
+            {showModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        {/* Background overlay */}
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
 
-                            {/* Modal panel */}
-                            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
-                                <div className="bg-indigo-50 px-4 py-3 border-b border-gray-200">
-                                    <h3 className="text-lg leading-6 font-medium text-gray-900">
-                                        {modalType === 'edit' ? 'Edit Risk Assessment' :
-                                            modalType === 'excel' ? 'Upload Excel Risk Data' :
-                                                'New Risk Assessment'}
-                                    </h3>
-                                </div>
-                                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[80vh] overflow-y-auto">
-                                    {/* Form for creating or editing risk */}
-                                    {(modalType === 'create' || modalType === 'edit' || modalType === 'view') && (
-                                        <form className="space-y-6">
-                                            {/* Basic Information */}
-                                            <div className="bg-gray-50 p-4 rounded-md">
-                                                <h4 className="text-lg font-medium mb-4 text-gray-800">Basic Information</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Modal panel */}
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
+                            <div className="bg-indigo-50 px-4 py-3 border-b border-gray-200">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                                    {modalType === 'edit' ? 'Edit Risk Assessment' :
+                                        modalType === 'excel' ? 'Upload Excel Risk Data' :
+                                            'New Risk Assessment'}
+                                </h3>
+                            </div>
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[80vh] overflow-y-auto">
+                                {/* Form for creating or editing risk */}
+                                {(modalType === 'create' || modalType === 'edit' || modalType === 'view') && (
+                                    <form className="space-y-6">
+                                        {/* Basic Information */}
+                                        <div className="bg-gray-50 p-4 rounded-md">
+                                            <h4 className="text-lg font-medium mb-4 text-gray-800">Basic Information</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Risk ID *</label>
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        value={formData.risk_id}
+                                                        onChange={(e) => handleFormChange(e, null, 'risk_id')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        placeholder="e.g., Admin_Risk_12"
+                                                        disabled={modalType === 'view'}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vulnerability Type *</label>
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        value={formData.vulnerability_type}
+                                                        onChange={(e) => handleFormChange(e, null, 'vulnerability_type')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        placeholder="e.g., Earthquake"
+                                                        disabled={modalType === 'view'}
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Threat Description *</label>
+                                                    <textarea
+                                                        required
+                                                        value={formData.threat_description}
+                                                        onChange={(e) => handleFormChange(e, null, 'threat_description')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        rows="2"
+                                                        placeholder="Describe the threat..."
+                                                        disabled={modalType === 'view'}
+                                                    ></textarea>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Context</label>
+                                                    <select
+                                                        value={formData.context}
+                                                        onChange={(e) => handleSelectChange(e, null, 'context')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        disabled={modalType === 'view'}
+                                                    >
+                                                        <option value="Natural">Natural</option>
+                                                        <option value="Resource management">Resource management</option>
+                                                        <option value="Infrastructure components">Infrastructure components</option>
+                                                        <option value="Employees">Employees</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Applicable Activity</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.applicable_activity}
+                                                        onChange={(e) => handleFormChange(e, null, 'applicable_activity')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        placeholder="e.g., Working in the organisation"
+                                                        disabled={modalType === 'view'}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Impact Assessment */}
+                                        <div className="bg-indigo-50 p-4 rounded-md">
+                                            <h4 className="text-lg font-medium mb-4 text-indigo-800">Impact Assessment</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Impact on Confidentiality?</label>
+                                                    <select
+                                                        value={formData.impact_assessment.impact_on_confidentiality}
+                                                        onChange={(e) => handleSelectChange(e, 'impact_assessment', 'impact_on_confidentiality')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        disabled={modalType === 'view'}
+                                                    >
+                                                        <option value="Y">Yes (Y)</option>
+                                                        <option value="N">No (N)</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Impact on Integrity?</label>
+                                                    <select
+                                                        value={formData.impact_assessment.impact_on_integrity}
+                                                        onChange={(e) => handleSelectChange(e, 'impact_assessment', 'impact_on_integrity')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        disabled={modalType === 'view'}
+                                                    >
+                                                        <option value="Y">Yes (Y)</option>
+                                                        <option value="N">No (N)</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Impact on Availability?</label>
+                                                    <select
+                                                        value={formData.impact_assessment.impact_on_availability}
+                                                        onChange={(e) => handleSelectChange(e, 'impact_assessment', 'impact_on_availability')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        disabled={modalType === 'view'}
+                                                    >
+                                                        <option value="Y">Yes (Y)</option>
+                                                        <option value="N">No (N)</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Breach of Legal Obligation?</label>
+                                                    <select
+                                                        value={formData.impact_assessment.breach_of_legal_obligation}
+                                                        onChange={(e) => handleSelectChange(e, 'impact_assessment', 'breach_of_legal_obligation')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        disabled={modalType === 'view'}
+                                                    >
+                                                        <option value="Y">Yes (Y)</option>
+                                                        <option value="N">No (N)</option>
+                                                    </select>
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description of Legal Obligation</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.impact_assessment.description_of_legal_obligation}
+                                                        onChange={(e) => handleFormChange(e, 'impact_assessment', 'description_of_legal_obligation')}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        placeholder="If applicable"
+                                                        disabled={modalType === 'view'}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Impact Ratings and Control Assessment */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="bg-amber-50 p-4 rounded-md">
+                                                <h4 className="text-lg font-medium mb-4 text-amber-800">Severity Assessment</h4>
+                                                <div className="space-y-4">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Risk ID *</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Consequence Rating (1-5)</label>
                                                         <input
-                                                            type="text"
-                                                            required
-                                                            value={formData.risk_id}
-                                                            onChange={(e) => handleFormChange(e, null, 'risk_id')}
+                                                            type="number"
+                                                            min="1"
+                                                            max="5"
+                                                            value={formData.severity.consequence_rating}
+                                                            onChange={(e) => handleNumericChange(e, 'severity', 'consequence_rating')}
                                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            placeholder="e.g., Admin_Risk_12"
                                                             disabled={modalType === 'view'}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Vulnerability Type *</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Likelihood Rating (1-5)</label>
                                                         <input
-                                                            type="text"
-                                                            required
-                                                            value={formData.vulnerability_type}
-                                                            onChange={(e) => handleFormChange(e, null, 'vulnerability_type')}
+                                                            type="number"
+                                                            min="1"
+                                                            max="5"
+                                                            value={formData.severity.likelihood_rating}
+                                                            onChange={(e) => handleNumericChange(e, 'severity', 'likelihood_rating')}
                                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            placeholder="e.g., Earthquake"
                                                             disabled={modalType === 'view'}
                                                         />
                                                     </div>
-                                                    <div className="md:col-span-2">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Threat Description *</label>
+                                                </div>
+                                            </div>
+                                            <div className="bg-gray-100 p-4 rounded-md">
+                                                <h4 className="text-lg font-medium mb-4 text-gray-800">Control Assessment</h4>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                                         <textarea
-                                                            required
-                                                            value={formData.threat_description}
-                                                            onChange={(e) => handleFormChange(e, null, 'threat_description')}
+                                                            value={formData.control_assessment.description}
+                                                            onChange={(e) => handleFormChange(e, 'control_assessment', 'description')}
                                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                                             rows="2"
-                                                            placeholder="Describe the threat..."
+                                                            placeholder="Describe existing controls..."
                                                             disabled={modalType === 'view'}
                                                         ></textarea>
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Context</label>
-                                                        <select
-                                                            value={formData.context}
-                                                            onChange={(e) => handleSelectChange(e, null, 'context')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            disabled={modalType === 'view'}
-                                                        >
-                                                            <option value="Natural">Natural</option>
-                                                            <option value="Resource management">Resource management</option>
-                                                            <option value="Infrastructure components">Infrastructure components</option>
-                                                            <option value="Employees">Employees</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Applicable Activity</label>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Rating (1-5)</label>
                                                         <input
-                                                            type="text"
-                                                            value={formData.applicable_activity}
-                                                            onChange={(e) => handleFormChange(e, null, 'applicable_activity')}
+                                                            type="number"
+                                                            min="1"
+                                                            max="5"
+                                                            value={formData.control_assessment.rating}
+                                                            onChange={(e) => handleNumericChange(e, 'control_assessment', 'rating')}
                                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            placeholder="e.g., Working in the organisation"
                                                             disabled={modalType === 'view'}
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Impact Assessment */}
-                                            <div className="bg-indigo-50 p-4 rounded-md">
-                                                <h4 className="text-lg font-medium mb-4 text-indigo-800">Impact Assessment</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Risk Assessment and Treatment */}
+                                        <div className="grid grid-cols-1 gap-6">
+                                            <div className="bg-slate-700 p-4 rounded-md text-white">
+                                                <h4 className="text-lg font-medium mb-4">Risk Assessment</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Impact on Confidentiality?</label>
-                                                        <select
-                                                            value={formData.impact_assessment.impact_on_confidentiality}
-                                                            onChange={(e) => handleSelectChange(e, 'impact_assessment', 'impact_on_confidentiality')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            disabled={modalType === 'view'}
-                                                        >
-                                                            <option value="Y">Yes (Y)</option>
-                                                            <option value="N">No (N)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Impact on Integrity?</label>
-                                                        <select
-                                                            value={formData.impact_assessment.impact_on_integrity}
-                                                            onChange={(e) => handleSelectChange(e, 'impact_assessment', 'impact_on_integrity')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            disabled={modalType === 'view'}
-                                                        >
-                                                            <option value="Y">Yes (Y)</option>
-                                                            <option value="N">No (N)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Impact on Availability?</label>
-                                                        <select
-                                                            value={formData.impact_assessment.impact_on_availability}
-                                                            onChange={(e) => handleSelectChange(e, 'impact_assessment', 'impact_on_availability')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            disabled={modalType === 'view'}
-                                                        >
-                                                            <option value="Y">Yes (Y)</option>
-                                                            <option value="N">No (N)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Breach of Legal Obligation?</label>
-                                                        <select
-                                                            value={formData.impact_assessment.breach_of_legal_obligation}
-                                                            onChange={(e) => handleSelectChange(e, 'impact_assessment', 'breach_of_legal_obligation')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            disabled={modalType === 'view'}
-                                                        >
-                                                            <option value="Y">Yes (Y)</option>
-                                                            <option value="N">No (N)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div className="md:col-span-2">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Description of Legal Obligation</label>
+                                                        <label className="block text-sm font-medium mb-1">Risk Rating</label>
                                                         <input
-                                                            type="text"
-                                                            value={formData.impact_assessment.description_of_legal_obligation}
-                                                            onChange={(e) => handleFormChange(e, 'impact_assessment', 'description_of_legal_obligation')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            placeholder="If applicable"
+                                                            type="number"
+                                                            min="1"
+                                                            value={formData.risk_assessment.risk_rating}
+                                                            onChange={(e) => handleNumericChange(e, 'risk_assessment', 'risk_rating')}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
                                                             disabled={modalType === 'view'}
                                                         />
                                                     </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Impact Ratings and Control Assessment */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div className="bg-amber-50 p-4 rounded-md">
-                                                    <h4 className="text-lg font-medium mb-4 text-amber-800">Severity Assessment</h4>
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Consequence Rating (1-5)</label>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                max="5"
-                                                                value={formData.severity.consequence_rating}
-                                                                onChange={(e) => handleNumericChange(e, 'severity', 'consequence_rating')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                                disabled={modalType === 'view'}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Likelihood Rating (1-5)</label>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                max="5"
-                                                                value={formData.severity.likelihood_rating}
-                                                                onChange={(e) => handleNumericChange(e, 'severity', 'likelihood_rating')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                                disabled={modalType === 'view'}
-                                                            />
-                                                        </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Risk Category</label>
+                                                        <select
+                                                            value={formData.risk_assessment.risk_category}
+                                                            onChange={(e) => handleSelectChange(e, 'risk_assessment', 'risk_category')}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                                                            disabled={modalType === 'view'}
+                                                        >
+                                                            <option value="Not Significant">Not Significant</option>
+                                                            <option value="Significant">Significant</option>
+                                                            <option value="Critical">Critical</option>
+                                                        </select>
                                                     </div>
-                                                </div>
-                                                <div className="bg-gray-100 p-4 rounded-md">
-                                                    <h4 className="text-lg font-medium mb-4 text-gray-800">Control Assessment</h4>
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                                            <textarea
-                                                                value={formData.control_assessment.description}
-                                                                onChange={(e) => handleFormChange(e, 'control_assessment', 'description')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                                rows="2"
-                                                                placeholder="Describe existing controls..."
-                                                                disabled={modalType === 'view'}
-                                                            ></textarea>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Rating (1-5)</label>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                max="5"
-                                                                value={formData.control_assessment.rating}
-                                                                onChange={(e) => handleNumericChange(e, 'control_assessment', 'rating')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                                disabled={modalType === 'view'}
-                                                            />
-                                                        </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Department/BU</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.risk_assessment.department_bu}
+                                                            onChange={(e) => handleFormChange(e, 'risk_assessment', 'department_bu')}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                                                            disabled={modalType === 'view'}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Risk Owner</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.risk_assessment.risk_owner}
+                                                            onChange={(e) => handleFormChange(e, 'risk_assessment', 'risk_owner')}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                                                            disabled={modalType === 'view'}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Mitigation Strategy</label>
+                                                        <select
+                                                            value={formData.risk_assessment.risk_mitigation_strategy}
+                                                            onChange={(e) => handleSelectChange(e, 'risk_assessment', 'risk_mitigation_strategy')}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                                                            disabled={modalType === 'view'}
+                                                        >
+                                                            <option value="Tolerate">Tolerate</option>
+                                                            <option value="Treat">Treat</option>
+                                                            <option value="Transfer">Transfer</option>
+                                                            <option value="Terminate">Terminate</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Risk Assessment and Treatment */}
-                                            <div className="grid grid-cols-1 gap-6">
-                                                <div className="bg-slate-700 p-4 rounded-md text-white">
-                                                    <h4 className="text-lg font-medium mb-4">Risk Assessment</h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium mb-1">Risk Rating</label>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                value={formData.risk_assessment.risk_rating}
-                                                                onChange={(e) => handleNumericChange(e, 'risk_assessment', 'risk_rating')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium mb-1">Risk Category</label>
-                                                            <select
-                                                                value={formData.risk_assessment.risk_category}
-                                                                onChange={(e) => handleSelectChange(e, 'risk_assessment', 'risk_category')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
-                                                            >
-                                                                <option value="Not Significant">Not Significant</option>
-                                                                <option value="Significant">Significant</option>
-                                                                <option value="Critical">Critical</option>
-                                                            </select>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium mb-1">Department/BU</label>
-                                                            <input
-                                                                type="text"
-                                                                value={formData.risk_assessment.department_bu}
-                                                                onChange={(e) => handleFormChange(e, 'risk_assessment', 'department_bu')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium mb-1">Risk Owner</label>
-                                                            <input
-                                                                type="text"
-                                                                value={formData.risk_assessment.risk_owner}
-                                                                onChange={(e) => handleFormChange(e, 'risk_assessment', 'risk_owner')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium mb-1">Mitigation Strategy</label>
-                                                            <select
-                                                                value={formData.risk_assessment.risk_mitigation_strategy}
-                                                                onChange={(e) => handleSelectChange(e, 'risk_assessment', 'risk_mitigation_strategy')}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
-                                                            >
-                                                                <option value="Tolerate">Tolerate</option>
-                                                                <option value="Treat">Treat</option>
-                                                                <option value="Transfer">Transfer</option>
-                                                                <option value="Terminate">Terminate</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Submit Buttons */}
-                                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                                        {/* Submit Buttons */}
+                                        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                                            <button
+                                                type="button"
+                                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                                onClick={closeModal}
+                                            >
+                                                Cancel
+                                            </button>
+                                            {modalType !== 'view' && (
                                                 <button
                                                     type="button"
-                                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                                                    onClick={closeModal}
+                                                    className="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                                                    onClick={modalType === 'edit' ? handleRiskUpdate : handleRiskSubmit}
                                                 >
-                                                    Cancel
+                                                    {modalType === 'edit' ? 'Update Risk Assessment' : 'Save Risk Assessment'}
                                                 </button>
-                                                {modalType !== 'view' && (
-                                                    <button
-                                                        type="button"
-                                                        className="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                                                        onClick={modalType === 'edit' ? handleRiskUpdate : handleRiskSubmit}
-                                                    >
-                                                        {modalType === 'edit' ? 'Update Risk Assessment' : 'Save Risk Assessment'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </form>
-                                    )}
-
-                                    {/* Form for uploading Excel */}
-                                    {modalType === 'excel' && (
-                                        <form className="space-y-6">
-                                            <div className="bg-green-50 p-6 rounded-lg border-2 border-dashed border-green-300">
-                                                <div className="text-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="mx-auto h-12 w-12 text-green-500">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                                                    </svg>
-                                                    <h4 className="mt-2 text-lg font-medium text-gray-900">Upload Excel File</h4>
-                                                    <p className="mt-1 text-sm text-gray-500">
-                                                        Upload a .xlsx or .xls file with multiple risk assessments
-                                                    </p>
-                                                    <div className="mt-6">
-                                                        <label htmlFor="file-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50">
-                                                            <span>Select file</span>
-                                                            <input
-                                                                id="file-upload"
-                                                                name="file-upload"
-                                                                type="file"
-                                                                accept=".xlsx,.xls"
-                                                                className="sr-only"
-                                                                onChange={handleFileChange}
-                                                            />
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {excelFile && (
-                                                <div className="mt-4 flex items-center justify-center text-sm">
-                                                    <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                                                        Selected: {excelFile.name}
-                                                    </div>
-                                                </div>
                                             )}
+                                        </div>
+                                    </form>
+                                )}
 
-                                            {/* Submit Buttons */}
-                                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                                                    onClick={closeModal}
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700"
-                                                    onClick={handleExcelSubmit}
-                                                >
-                                                    Upload Risk Data
-                                                </button>
+                                {/* Form for uploading Excel */}
+                                {modalType === 'excel' && (
+                                    <form className="space-y-6">
+                                        <div className="bg-green-50 p-6 rounded-lg border-2 border-dashed border-green-300">
+                                            <div className="text-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="mx-auto h-12 w-12 text-green-500">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                                </svg>
+                                                <h4 className="mt-2 text-lg font-medium text-gray-900">Upload Excel File</h4>
+                                                <p className="mt-1 text-sm text-gray-500">
+                                                    Upload a .xlsx or .xls file with multiple risk assessments
+                                                </p>
+                                                <div className="mt-6">
+                                                    <label htmlFor="file-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50">
+                                                        <span>Select file</span>
+                                                        <input
+                                                            id="file-upload"
+                                                            name="file-upload"
+                                                            type="file"
+                                                            accept=".xlsx,.xls"
+                                                            className="sr-only"
+                                                            onChange={handleFileChange}
+                                                        />
+                                                    </label>
+                                                </div>
                                             </div>
-                                        </form>
-                                    )}
-                                </div>
+                                        </div>
+
+                                        {excelFile && (
+                                            <div className="mt-4 flex items-center justify-center text-sm">
+                                                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                                                    Selected: {excelFile.name}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Submit Buttons */}
+                                        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                                            <button
+                                                type="button"
+                                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                                onClick={closeModal}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700"
+                                                onClick={handleExcelSubmit}
+                                            >
+                                                Upload Risk Data
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
                             </div>
                         </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 
