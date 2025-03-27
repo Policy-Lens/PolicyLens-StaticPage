@@ -3,7 +3,7 @@ import { List, Tag, Typography, Space, Button, Spin, Collapse, Empty, message } 
 import { CheckCircleOutlined, DownloadOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
-
+import { BASE_URL } from "../../utils/api";
 const { Text } = Typography;
 const { Panel } = Collapse;
 
@@ -111,7 +111,7 @@ const PreviewPage = () => {
                             <div key={doc.id} className="flex items-center">
                               <FileTextOutlined className="text-blue-500 mr-2" />
                               <a 
-                                href={`http://localhost:8000${doc.file}`}
+                                href={`${BASE_URL}${doc.file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-500 hover:text-blue-700"
@@ -205,7 +205,7 @@ const PreviewPage = () => {
                                 <span>{getFileName(doc.file)}</span>
                               </div>
                               <a 
-                                href={`http://localhost:8000${doc.file}`}
+                                href={`${BASE_URL}${doc.file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-500 hover:text-blue-700"

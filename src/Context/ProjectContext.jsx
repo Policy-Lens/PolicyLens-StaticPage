@@ -18,9 +18,9 @@ export const ProjectProvider = ({ children }) => {
     // console.log(getProjectRole(),projectid);
   }, []);
   const getProjectRole = async(projectid) => {
-    console.log('get Project Role')
+    // console.log('get Project Role')
     const res = await apiRequest("GET", `/api/project/${projectid}/my-role/`,null,true);
-    console.log(res);
+    // console.log(res);
     if(res.status==200){
       setProjectRole(res.data.project_role)
     }
@@ -32,7 +32,7 @@ export const ProjectProvider = ({ children }) => {
       return res.data.plc_step_id
     }
     else{
-      console.log(res.error)
+      // console.log(res.error)
     }
   }
 
@@ -42,14 +42,14 @@ export const ProjectProvider = ({ children }) => {
       return res.data.authorization
     }
     else{
-      console.log(res.error)
+      // console.log(res.error)
       return false
     }
   }
 
   const getStepData = async(step_id) =>{
     const res = await apiRequest('GET',`/api/plc/plc_data/${step_id}/latest/`,null,true);
-    console.log(res.data);
+    // console.log(res.data);
     return res.data
   }
 
@@ -64,7 +64,7 @@ export const ProjectProvider = ({ children }) => {
       return true
     }
     else{
-      console.log(res.error)
+      // console.log(res.error)
       return false
     }
   }

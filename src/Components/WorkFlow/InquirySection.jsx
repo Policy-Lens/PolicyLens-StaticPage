@@ -3,7 +3,7 @@ import { Modal, Input, Upload, Button, message, Select, DatePicker } from "antd"
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-
+import { BASE_URL } from "../../utils/api";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -222,7 +222,7 @@ function InquirySection({ isVisible, onClose }) {
                   </div>
                   <div className="flex items-center">
                     <a
-                      href={`http://localhost:8000${fileUrl}`}
+                      href={`${BASE_URL}${fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:text-blue-700 mr-2"
@@ -360,16 +360,16 @@ function InquiryPage() {
 
     // For PDFs, use PDF viewer
     if (extension === 'pdf') {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
     }
 
     // For images, use direct URL (browsers will display these)
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
-      return `http://localhost:8000${filePath}`;
+      return `${BASE_URL}${filePath}`;
     }
 
     // For other file types, use Google Docs viewer
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
   };
 
   const formatDate = (dateString) => {

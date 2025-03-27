@@ -3,7 +3,7 @@ import { Collapse, Button, Input, Upload, DatePicker, Modal, Select, message } f
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-
+import { BASE_URL } from "../../utils/api";
 const { Panel } = Collapse;
 const { TextArea } = Input;
 const { Option } = Select;
@@ -276,7 +276,7 @@ const StakeholderInterviews = () => {
                             <span className="text-sm text-gray-600">{getFileName(doc.file)}</span>
                           </div>
                           <a
-                            href={`http://localhost:8000${doc.file}`}
+                            href={`${BASE_URL}${doc.file}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-500 hover:text-blue-700"
@@ -379,7 +379,7 @@ const StakeholderInterviews = () => {
                   </div>
                   <div className="flex items-center">
                     <a
-                      href={`http://localhost:8000${fileUrl}`}
+                      href={`${BASE_URL}${fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:text-blue-700 mr-2"

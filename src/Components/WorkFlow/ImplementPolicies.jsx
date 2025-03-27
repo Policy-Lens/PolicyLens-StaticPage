@@ -3,7 +3,7 @@ import { Button, Modal, Input, Upload, message, DatePicker, Select } from "antd"
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-
+import { BASE_URL } from "../../utils/api";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -228,14 +228,14 @@ function ImplementPolicies() {
     const extension = filePath.split('.').pop().toLowerCase();
 
     if (extension === 'pdf') {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
     }
 
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
-      return `http://localhost:8000${filePath}`;
+      return `${BASE_URL}${filePath}`;
     }
 
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
   };
 
   return (
@@ -449,7 +449,7 @@ function ImplementPolicies() {
                   </div>
                   <div className="flex items-center">
                     <a
-                      href={`http://localhost:8000${fileUrl}`}
+                      href={`${BASE_URL}${fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:text-blue-700 mr-2"

@@ -4,7 +4,7 @@ import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { LoadingContext } from "./VertStepper";
-
+import { BASE_URL } from "../../utils/api";
 const { Panel } = Collapse;
 const { TextArea } = Input;
 const { Option } = Select;
@@ -50,7 +50,7 @@ const GapAnalysis = () => {
   const get_members = async () => {
     try {
       const res = await getMembers(projectid)
-      console.log(res)
+      // console.log(res)
       setMembers(res)
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -112,10 +112,10 @@ const GapAnalysis = () => {
       const assignmentData = await getStepAssignment(step_id);
       if (assignmentData.status === 200 && assignmentData.data.length > 0) {
         setTaskAssignment(assignmentData.data[0]); // Access the first element
-        console.log(assignmentData.data[0]);
+        // console.log(assignmentData.data[0]);
       } else {
         setTaskAssignment(null);
-        console.log("No assignment data found");
+        // console.log("No assignment data found");
       }
     } catch (error) {
       console.error("Error fetching task assignment:", error);
@@ -176,14 +176,14 @@ const GapAnalysis = () => {
     const extension = filePath.split('.').pop().toLowerCase();
 
     if (extension === 'pdf') {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
     }
 
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
-      return `http://localhost:8000${filePath}`;
+      return `${BASE_URL}${filePath}`;
     }
 
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(`http://localhost:8000${filePath}`)}&embedded=true`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
   };
 
   // New function to handle file removal
@@ -261,7 +261,7 @@ const GapAnalysis = () => {
 
     setIsLoading(true);
     try {
-      console.log(selectedTeamMembers);
+      // console.log(selectedTeamMembers);
       const assignmentData = {
         assigned_to: selectedTeamMembers,
         description: taskDescription,

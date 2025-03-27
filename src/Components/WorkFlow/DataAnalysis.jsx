@@ -4,7 +4,7 @@ import { UploadOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { LoadingContext } from "./VertStepper";
-
+import { BASE_URL } from "../../utils/api";
 const { Option } = Select;
 
 const DataAnalysis = () => {
@@ -313,7 +313,7 @@ const DataAnalysis = () => {
                             <span className="text-sm text-gray-600">{getFileName(doc.file)}</span>
                           </div>
                           <a
-                            href={`http://localhost:8000${doc.file}`}
+                            href={`${BASE_URL}${doc.file}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-500 hover:text-blue-700"
