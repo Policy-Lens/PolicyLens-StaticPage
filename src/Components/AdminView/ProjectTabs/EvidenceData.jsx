@@ -108,8 +108,47 @@ const EvidenceData = () => {
 
     // Get filename from path
     const getFileName = (filePath) => {
-        if (!filePath) return '';
-        return filePath.split('/').pop();
+        if (!filePath) return "Unknown file";
+
+        try {
+            // Handle blob URLs (from URL.createObjectURL)
+            if (filePath.startsWith('blob:')) {
+                // For blob URLs, we might not have a real filename
+                // In actual usage, this would be paired with displayName from the upload
+                return "Uploaded file";
+            }
+
+            // Handle URL format (http, https)
+            if (filePath.startsWith('http')) {
+                const url = new URL(filePath);
+
+                // Check if URL has a filename in the pathname
+                const pathParts = url.pathname.split('/').filter(Boolean);
+                if (pathParts.length > 0) {
+                    const fileName = decodeURIComponent(pathParts[pathParts.length - 1]);
+
+                    // Check if the last path segment looks like a filename (has extension or no trailing slash)
+                    if (fileName.includes('.') || !url.pathname.endsWith('/')) {
+                        return fileName;
+                    }
+                }
+
+                // If no valid filename in path, use hostname as fallback
+                return url.hostname;
+            }
+
+            // Handle Windows-style paths with backslashes
+            if (filePath.includes('\\')) {
+                return filePath.split('\\').pop();
+            }
+
+            // Handle normal file path with forward slashes
+            return filePath.split('/').pop() || "File";
+        } catch (error) {
+            console.error("Error parsing filename:", error);
+            // Return last part or original string as fallback
+            return filePath.split(/[\/\\]/).pop() || "File";
+        }
     };
 
     // Get file extension

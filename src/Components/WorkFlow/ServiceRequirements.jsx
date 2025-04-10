@@ -175,94 +175,84 @@ function ServiceRequirements() {
           </div>
         </div>
       ) : serviceRequirementsData.length > 0 ? (
-        <div className="space-y-8">
-          {serviceRequirementsData.map((item, index) => (
-            <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden transform transition-all hover:shadow-lg">
-              {/* Top section with colored accent */}
-              <div className="h-2 bg-blue-600"></div>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {/* Main content */}
+          <div className="p-6">
+            {/* Header with metadata */}
+            <div className="flex flex-wrap justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">Service Requirements Information</h3>
+                {serviceRequirementsData[0]?.saved_at && (
+                  <div className="flex items-center mt-1">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-xs text-gray-500">Last updated {formatDate(serviceRequirementsData[0].saved_at)}</span>
+                  </div>
+                )}
+              </div>
 
-              {/* Main content */}
-              <div className="p-6">
-                {/* Header with metadata */}
-                <div className="flex flex-wrap justify-between items-start mb-6">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-800">{item.field_name}</h3>
-                    <div className="flex items-center mt-1">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <span className="text-xs text-gray-500">Updated {formatDate(item.saved_at)}</span>
+              {/* User info with avatar */}
+              {serviceRequirementsData[0]?.saved_by && (
+                <div className="flex items-center bg-gray-50 px-3 py-1 rounded-lg">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
+                      {serviceRequirementsData[0].saved_by.name.charAt(0).toUpperCase()}
                     </div>
                   </div>
-
-                  {/* User info with avatar */}
-                  <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
-                        {item.saved_by.name.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-800">{item.saved_by.name}</p>
-                      <p className="text-xs text-gray-500">{item.saved_by.email}</p>
-                    </div>
+                  <div className="ml-2">
+                    <p className="text-sm font-medium text-gray-800">{serviceRequirementsData[0].saved_by.name}</p>
+                    <p className="text-xs text-gray-500">{serviceRequirementsData[0].saved_by.email}</p>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Description with styled container */}
-                <div className="mb-8">
-                  <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Description</h4>
-                  <div className="bg-gray-50 rounded-lg p-5 border-l-4 border-blue-400">
-                    <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{item.text_data}</p>
+            {/* Service Requirements data with documents on the right */}
+            <div className="space-y-4 mb-6">
+              {serviceRequirementsData.map((item) => (
+                <div key={item.id} className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-500 uppercase">{item.field_name}</h4>
                   </div>
-                </div>
+                  <div className="flex flex-col md:flex-row">
+                    <div className="px-4 py-3 flex-grow">
+                      <p className="text-gray-700">{item.text_data}</p>
+                    </div>
 
-                {/* Documents with card layout */}
-                {item.documents && item.documents.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
-                      Attached Documents ({item.documents.length})
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {item.documents.map((doc) => (
-                        <div key={doc.id} className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden transition-all hover:border-blue-300 hover:shadow-md">
-                          {/* File type indicator */}
-                          <div className="absolute top-0 right-0 bg-blue-100 text-xs text-blue-600 px-2 py-1 rounded-bl-lg">
-                            {doc.file.split('.').pop().toUpperCase()}
-                          </div>
-
-                          <div className="p-4 pr-16">
-                            <div className="flex items-start">
-                              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                                <FileTextOutlined className="text-blue-600" />
+                    {/* Documents for this item */}
+                    {item.documents && item.documents.length > 0 && (
+                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
+                        <h5 className="text-xs font-medium text-gray-500 mb-2">ATTACHED FILES</h5>
+                        <div className="space-y-2">
+                          {item.documents.map((doc) => (
+                            <div key={doc.id} className="flex items-center">
+                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
+                                <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
-                              <div className="overflow-hidden">
-                                <p className="text-sm font-medium text-gray-800 truncate mb-1">{getFileName(doc.file)}</p>
+                              <div className="overflow-hidden flex-grow">
+                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
                                 <a
                                   href={getViewerUrl(doc.file)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
                                 >
-                                  View Document
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                                    <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                                  </svg>
+                                  View
                                 </a>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-md p-10 text-center">

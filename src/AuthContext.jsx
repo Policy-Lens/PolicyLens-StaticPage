@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
         // } else {
         //     setUser(null);
         // }
-        
+
       } catch (error) {
         console.error("Auth check failed:", error);
         setUser(null);
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
           null,
           true
         );
-        if(res.status==200){
+        if (res.status == 200) {
           // console.log(res)
           setUser(res.data.user)
         }
@@ -71,11 +71,11 @@ export const AuthProvider = ({ children }) => {
           setLoading(false);
           return true;
         }
-    }
+      }
     } catch (error) {
       console.error("API Error:", error); // Debugging
     }
-    
+
     handleLogout();
     console.log("Token is invalid or missing");
     setLoading(false);
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
   // }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, checkLogin,handleLogout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, checkLogin, handleLogout }}>
       {children}
     </AuthContext.Provider>
   );

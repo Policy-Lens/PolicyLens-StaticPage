@@ -80,20 +80,20 @@ const LoginPage = () => {
         email: formData.username,
         password: formData.password,
       });
-      if(res.status==200){
+      if (res.status == 200) {
         console.log(res);
         Cookies.set("accessToken", res.data.access, {
           secure: true,
           sameSite: "Strict",
-        }); 
+        });
         Cookies.set("refreshToken", res.data.refresh, {
           secure: true,
           sameSite: "Strict",
-        }); 
+        });
         Cookies.set("role", res.data.user.role, {
           secure: true,
           sameSite: "Strict",
-        }); 
+        });
         setUser(res.data.user)
         setMessage("Login successful!");
         setErrors({});

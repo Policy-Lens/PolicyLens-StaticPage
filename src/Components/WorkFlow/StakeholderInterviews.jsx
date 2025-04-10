@@ -251,49 +251,109 @@ const StakeholderInterviews = () => {
       </div>
 
       {/* Display Interview Data */}
-      {interviewData.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-800">Interview Details</h3>
-          <div className="grid grid-cols-1 gap-4 mt-4">
-            {interviewData.map(item => (
-              <div key={item.id} className="p-4 border border-gray-200 rounded-lg">
-                <div className="mb-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium text-gray-700">{item.field_name}</h4>
-                    <p className="text-xs text-gray-500">{formatDate(item.saved_at)}</p>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">{item.text_data}</p>
-                </div>
-
-                {item.documents && item.documents.length > 0 && (
-                  <div className="mt-3">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Documents</h3>
-                    <ul className="space-y-1">
-                      {item.documents.map((doc) => (
-                        <li key={doc.id} className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <FileTextOutlined className="text-blue-500 mr-2" />
-                            <span className="text-sm text-gray-600">{getFileName(doc.file)}</span>
-                          </div>
-                          <a
-                            href={`${BASE_URL}${doc.file}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:text-blue-700"
-                          >
-                            View File
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
+      {interviewData.length > 0 ? (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {/* Main content */}
+          <div className="p-6">
+            {/* Header with metadata */}
+            <div className="flex flex-wrap justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">Stakeholder Interview Information</h3>
+                {interviewData[0]?.saved_at && (
+                  <div className="flex items-center mt-1">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-xs text-gray-500">Last updated {formatDate(interviewData[0].saved_at)}</span>
                   </div>
                 )}
-
-                <div className="text-xs text-gray-500 mt-2">
-                  <p><b>Saved by:</b> {item.saved_by.name} - {item.saved_by.email}</p>
-                </div>
               </div>
-            ))}
+
+              {/* User info with avatar */}
+              {interviewData[0]?.saved_by && (
+                <div className="flex items-center bg-gray-50 px-3 py-1 rounded-lg">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
+                      {interviewData[0].saved_by.name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-sm font-medium text-gray-800">{interviewData[0].saved_by.name}</p>
+                    <p className="text-xs text-gray-500">{interviewData[0].saved_by.email}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Interview data with documents on the right */}
+            <div className="space-y-4 mb-6">
+              {interviewData.map((item) => (
+                <div key={item.id} className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-500 uppercase">{item.field_name}</h4>
+                  </div>
+                  <div className="flex flex-col md:flex-row">
+                    <div className="px-4 py-3 flex-grow">
+                      <p className="text-gray-700">{item.text_data}</p>
+                    </div>
+
+                    {/* Documents for this item */}
+                    {item.documents && item.documents.length > 0 && (
+                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
+                        <h5 className="text-xs font-medium text-gray-500 mb-2">ATTACHED FILES</h5>
+                        <div className="space-y-2">
+                          {item.documents.map((doc) => (
+                            <div key={doc.id} className="flex items-center">
+                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
+                                <FileTextOutlined className="text-blue-600 text-xs" />
+                              </div>
+                              <div className="overflow-hidden flex-grow">
+                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
+                                <a
+                                  href={`${BASE_URL}${doc.file}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  View
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-md p-10 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Stakeholder Interviews</h3>
+            <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+              Stakeholder interviews help gather valuable insights from key project stakeholders. Add your first interview details to get started.
+            </p>
+            <Button
+              onClick={handleAddData}
+              type="primary"
+              size="large"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add Stakeholder Interview
+            </Button>
           </div>
         </div>
       )}

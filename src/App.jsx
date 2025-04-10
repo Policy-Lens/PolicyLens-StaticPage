@@ -18,7 +18,7 @@ import Questionnaire from "./Components/AdminView/ProjectTabs/Questionnaire";
 import MeetingCalendar from "./Components/AdminView/ProjectTabs/Calender";
 import EvidenceData from "./Components/AdminView/ProjectTabs/EvidenceData";
 import Support from "./Components/AdminView/ProjectTabs/Support";
-import MyReports from "./Components/AdminView/ProjectTabs/MyReports";
+import MyReports from "./Components/AdminView/ProjectTabs/MyReports/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
