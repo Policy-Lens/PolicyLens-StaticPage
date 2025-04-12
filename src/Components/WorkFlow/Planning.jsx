@@ -4,6 +4,7 @@ import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { BASE_URL } from "../../utils/api";
+import DiscussingPolicies from "./DiscussingPolicies";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -564,6 +565,7 @@ const Planning = () => {
           />
         </div>
       </Modal>
+      <DiscussingPolicies />
     </div>
   );
 };

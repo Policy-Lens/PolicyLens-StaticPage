@@ -22,6 +22,7 @@ import MyReports from "./Components/AdminView/ProjectTabs/MyReports/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
+import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -85,8 +86,8 @@ const router = createBrowserRouter([
         element: <AdminDashboard />
       },
       {
-        path: "admindocuments",
-        element: <AdminDocument />
+        path: "internalauditprocess",
+        element: <InternalAuditProcess />
       },
       {
         path: "adminpreview",

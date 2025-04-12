@@ -273,7 +273,7 @@ const DataAnalysis = () => {
   return (
     <div className="p-6 rounded-md">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">ASIS Data Analysis</h2>
+        <h2 className="text-xl font-bold">Gap Analysis Report</h2>
         <div className="flex gap-2">
           {projectRole.includes("admin") && !taskAssignment && (
             <Button type="default" onClick={() => { get_members(); setIsAssignTaskVisible(true); }}>

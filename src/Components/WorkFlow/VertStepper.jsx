@@ -4,13 +4,14 @@ import ServiceRequirements from "./ServiceRequirements";
 import GapAnalysis from "./GapAnalysis";
 import StakeholderInterviews from "./StakeholderInterviews";
 import DataAnalysis from "./DataAnalysis";
+import RART from "./RART";
 import InquirySection from "./InquirySection";
 import FinalizeContract from "./FinalizeContract";
 import Planning from "./Planning";
 import DiscussingPolicies from "./DiscussingPolicies";
 import DiscussImplementation from "./DiscussImplementation";
 import ImplementPolicies from "./ImplementPolicies";
-import ExternalAuditProcess from "./ExternalAuditProcess";
+import InternalAuditProcess from "./InternalAuditProcess";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Calendar, HelpCircle, FileText, Shield, CheckCircle, Database } from "lucide-react";
 import { Spin } from "antd";
@@ -38,16 +39,12 @@ const steps = [
   { title: "Service Requirements", content: <ServiceRequirements /> },
   { title: "Inquiry Section", content: <InquirySection /> },
   { title: "Finalize Contract", content: <FinalizeContract /> },
-  // { title: "Kickoff Meetings", content: <KickoffMeetings /> },
   { title: "Gap Analysis", content: <GapAnalysis /> },
-  { title: "Stakeholder Interviews", content: <StakeholderInterviews /> },
   { title: "Data Analysis", content: <DataAnalysis /> },
-  // { title: "Report Presentation", content: <ReportPresentation /> },
-  { title: "Planning Section", content: <Planning /> },
-  { title: "Discussing Policies", content: <DiscussingPolicies /> },
-  { title: "Discuss Implementation", content: <DiscussImplementation /> },
-  { title: "Implement Policies", content: <ImplementPolicies /> },
-  { title: "Ext. Audit Process", content: <ExternalAuditProcess /> },
+  { title: "RART", content: <RART /> },
+  { title: "Planning and Discussing Policies", content: <Planning /> },
+  { title: "Implementation of Policies", content: <DiscussImplementation /> },
+  { title: "Internal Audit Process", content: <InternalAuditProcess /> },
 ];
 
 const CarouselHorizontalStepper = () => {
@@ -185,6 +182,7 @@ const CarouselHorizontalStepper = () => {
                         key={actualIndex}
                         className={`flex flex-col items-center cursor-pointer relative group ${status === "current" ? "text-blue-600 font-semibold" : "text-gray-500"}`}
                         onClick={() => handleStepClick(actualIndex)}
+                        title={step.title}
                       >
                         <div
                           className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 
@@ -237,6 +235,27 @@ const CarouselHorizontalStepper = () => {
           {/* Step Content - Dynamic Sizing */}
           <div className="flex-grow relative overflow-hidden bg-white rounded-lg shadow-md">
             {isLoading && <LoadingIndicator />}
+
+            {/* Previous button - gray background */}
+            <button
+              onClick={handlePrev}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-gray-200 rounded-full shadow-md p-3 text-blue-600 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
+              disabled={currentStep === 0 || isTransitioning || isLoading}
+              aria-label="Previous step"
+            >
+              <ChevronLeft size={24} strokeWidth={2.5} />
+            </button>
+
+            {/* Next button - gray background */}
+            <button
+              onClick={handleNext}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-gray-200 rounded-full shadow-md p-3 text-blue-600 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
+              disabled={currentStep === steps.length - 1 || isTransitioning || isLoading}
+              aria-label="Next step"
+            >
+              <ChevronRight size={24} strokeWidth={2.5} />
+            </button>
+
             <div
               className={`flex transition-transform duration-500 h-full ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
               style={{ transform: `translateX(-${currentStep * 100}%)` }}
@@ -252,25 +271,13 @@ const CarouselHorizontalStepper = () => {
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between items-center mt-4">
-            <button
-              onClick={handlePrev}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 flex items-center"
-              disabled={currentStep === 0 || isTransitioning || isLoading}
-            >
-              <ChevronLeft size={16} className="mr-1" /> Previous
-            </button>
-
-            <button
-              onClick={handleNext}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center"
-              disabled={currentStep === steps.length - 1 || isTransitioning || isLoading}
-            >
-              Next <ChevronRight size={16} className="ml-1" />
-            </button>
+            {/* Step indicator at bottom */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-80 px-4 py-1.5 rounded-full shadow-sm text-sm text-gray-600 flex items-center">
+              <span className="font-medium text-blue-600">{currentStep + 1}</span>
+              <span>&nbsp;of&nbsp;</span>
+              <span>{steps.length}</span>
+            </div>
           </div>
 
           {/* Add keyboard event listener effect */}

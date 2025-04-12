@@ -2,9 +2,10 @@ import React, { useState, useContext, useEffect } from "react";
 import { Collapse, Button, Input, Upload, DatePicker, Modal, Select, message } from "antd";
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { LoadingContext } from "./VertStepper";
 import { BASE_URL } from "../../utils/api";
+import StakeholderInterviews from "./StakeholderInterviews";
 const { Panel } = Collapse;
 const { TextArea } = Input;
 const { Option } = Select;
@@ -29,7 +30,14 @@ const GapAnalysis = () => {
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
   const [removedOldFiles, setRemovedOldFiles] = useState([]);
 
+  // Add state for stakeholder data inclusion
+  const [includeStakeholderData, setIncludeStakeholderData] = useState(false);
+  const [showInsightsPanel, setShowInsightsPanel] = useState(false);
+  const [stakeholderData, setStakeholderData] = useState(null);
+  const [fetchingStakeholderData, setFetchingStakeholderData] = useState(false);
+
   const { projectid } = useParams();
+  const navigate = useNavigate();
   const {
     addStepData,
     getStepData,
@@ -58,7 +66,6 @@ const GapAnalysis = () => {
     }
   }
 
-  // Get step ID, step data, and check authorization
   const get_step_id = async () => {
     setIsLoading(true);
     try {
@@ -167,8 +174,16 @@ const GapAnalysis = () => {
 
   // Helper function to format date
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
+    if (!dateString) return "Not available";
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid date format";
+      return date.toLocaleString();
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Date error";
+    }
   };
 
   // Add getViewerUrl helper function after the formatDate function
@@ -198,6 +213,50 @@ const GapAnalysis = () => {
     setOldFilesNeeded(prev => [...prev, fileUrl]);
   };
 
+  // Function to incorporate stakeholder insights into the gap analysis
+  const incorporateInsight = (insight) => {
+    const newText = gapAnalysisText +
+      "\n\n--- Stakeholder Insight ---\n" +
+      insight +
+      "\n-------------------------\n";
+    setGapAnalysisText(newText);
+  };
+
+  // Helper function to extract key insights from stakeholder interviews
+  const extractKeyInsights = (text) => {
+    if (!text) return [];
+
+    // First try to split by standard separators
+    let insights = [];
+
+    // Check for bullet points
+    if (text.includes("•") || text.includes("*") || text.includes("-")) {
+      const pattern = /[•*-]\s+(.*?)(?=\n[•*-]|\n\n|$)/gs;
+      const matches = text.match(pattern);
+      if (matches && matches.length > 0) {
+        insights = matches.map(match => match.trim());
+      }
+    }
+    // Check for numbered lists
+    else if (/\d+\.\s/.test(text)) {
+      const pattern = /\d+\.\s+(.*?)(?=\n\d+\.|\n\n|$)/gs;
+      const matches = text.match(pattern);
+      if (matches && matches.length > 0) {
+        insights = matches.map(match => match.trim());
+      }
+    }
+
+    // If no structured insights found, split by paragraphs
+    if (insights.length === 0) {
+      insights = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    }
+
+    // Limit to reasonable snippets (not too long, not too short)
+    return insights
+      .filter(insight => insight.length > 15 && insight.length < 300)
+      .slice(0, 5); // Limit to 5 insights
+  };
+
   // Submit gap analysis data
   const handleSubmit = async () => {
     if (!gapAnalysisText.trim()) {
@@ -213,6 +272,18 @@ const GapAnalysis = () => {
 
       // Append old files array as JSON string
       formData.append("old_files", JSON.stringify(oldFilesNeeded));
+
+      // If stakeholder reference is included, add reference ID
+      if (includeStakeholderData && stakeholderData && stakeholderData.id) {
+        formData.append("references", JSON.stringify([{
+          step_type: "stakeholder_interviews",
+          step_id: 5,
+          data_id: stakeholderData.id
+        }]));
+      } else if (includeStakeholderData) {
+        // If they wanted to include the reference but we don't have valid data
+        message.warning("Could not include stakeholder data reference - invalid or missing data");
+      }
 
       // Append new files
       if (fileLists["gapAnalysisPlan"]) {
@@ -291,8 +362,52 @@ const GapAnalysis = () => {
     }
   };
 
+  // Function to get stakeholder data for reference
+  const getStakeholderData = async () => {
+    if (stakeholderData) return; // Don't fetch if we already have it
+
+    setFetchingStakeholderData(true);
+    try {
+      // Get the step ID for stakeholder interviews (step 5)
+      const interviewStepId = await getStepId(projectid, 5);
+
+      if (interviewStepId) {
+        // Get latest data for that step
+        const interviewData = await getStepData(interviewStepId);
+        if (interviewData && interviewData.length > 0) {
+          setStakeholderData(interviewData[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching stakeholder data for reference:", error);
+    } finally {
+      setFetchingStakeholderData(false);
+    }
+  };
+
+  // Function to toggle insights panel, fetch data if needed
+  const toggleInsightsPanel = () => {
+    if (!stakeholderData && !showInsightsPanel) {
+      getStakeholderData();
+    }
+    setShowInsightsPanel(!showInsightsPanel);
+  };
+
+  const handleRedirectToQuestionnaire = () => {
+    navigate(`/project/${projectid}/questionbank`);
+  };
+
   return (
     <div className="bg-gray-50 min-h-full p-6">
+      <Button
+        type="primary"
+        size="large"
+        className="mb-4 bg-blue-600 hover:bg-blue-700"
+        onClick={handleRedirectToQuestionnaire}
+      >
+        Go to Questionnaire
+      </Button>
+
       {/* Simple header with no background */}
       <div className="mb-8 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-800">Gap Analysis</h2>
@@ -421,6 +536,11 @@ const GapAnalysis = () => {
         </div>
       )}
 
+      {/* Stakeholder Interview Data Section */}
+      <div className="mt-8">
+        <StakeholderInterviews />
+      </div>
+
       {/* Task Assignment section remains unchanged */}
       {taskAssignment && (
         <div className="mt-8">
@@ -471,44 +591,139 @@ const GapAnalysis = () => {
 
       {/* Add Data Modal */}
       <Modal
-        title={gapAnalysisData.length > 0 ? "Update Gap Analysis" : "Add Gap Analysis"}
+        title={gapAnalysisData.length > 0 ? "Update Gap Analysis Plan" : "Add Gap Analysis Plan"}
         open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          setGapAnalysisText("");
-          setFileLists({});
-          setOldFilesNeeded([]);
-          setRemovedOldFiles([]);
-        }}
+        onCancel={handleModalClose}
         footer={[
-          <Button key="save" type="primary" onClick={handleSubmit} className="bg-blue-500">
-            Save
+          <Button key="cancel" onClick={handleModalClose}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={handleSubmit}
+            loading={isLoading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Submit
           </Button>,
         ]}
+        width={800}
       >
         <div className="mb-4">
+          <label className="block mb-2 font-medium text-gray-700">Gap Analysis Plan</label>
           <TextArea
-            rows={6}
-            placeholder="Enter details for the gap analysis plan"
+            rows={8}
             value={gapAnalysisText}
             onChange={(e) => setGapAnalysisText(e.target.value)}
+            placeholder="Enter gap analysis plan details..."
           />
         </div>
 
-        {/* Move existing files component here */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="includeStakeholder"
+                checked={includeStakeholderData}
+                onChange={(e) => {
+                  setIncludeStakeholderData(e.target.checked);
+                  if (e.target.checked && !stakeholderData) {
+                    getStakeholderData();
+                  }
+                }}
+                className="mr-2"
+              />
+              <label htmlFor="includeStakeholder" className="cursor-pointer">
+                Include reference to stakeholder interview data
+              </label>
+            </div>
+
+            <Button
+              type="link"
+              onClick={toggleInsightsPanel}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              {showInsightsPanel ? "Hide Insights" : "View Key Insights"}
+            </Button>
+          </div>
+
+          {/* Show loading indicator when fetching data */}
+          {fetchingStakeholderData && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-md flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2"></div>
+              <span className="text-sm text-gray-600">Loading stakeholder data...</span>
+            </div>
+          )}
+
+          {/* Show insights panel when requested */}
+          {showInsightsPanel && stakeholderData?.text_data ? (
+            <div className="mt-3 border rounded-md p-3 bg-blue-50">
+              <h4 className="font-medium mb-2">Key Stakeholder Insights</h4>
+              <div className="max-h-60 overflow-y-auto">
+                {extractKeyInsights(stakeholderData.text_data).map((insight, idx) => (
+                  <div key={idx} className="mb-2 p-2 bg-white rounded shadow-sm">
+                    <p className="text-sm mb-1">{insight}</p>
+                    <Button
+                      size="small"
+                      type="primary"
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => incorporateInsight(insight)}
+                    >
+                      Add to Analysis
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : showInsightsPanel && (
+            <div className="mt-3 border rounded-md p-3 bg-gray-50">
+              <p className="text-sm text-gray-500 italic">No stakeholder insights available. Complete the stakeholder interviews first.</p>
+            </div>
+          )}
+
+          {/* Show reference preview when including data */}
+          {includeStakeholderData && stakeholderData && (
+            <div className="mt-2 p-3 bg-gray-50 rounded-md">
+              <h4 className="text-sm font-medium mb-1">Stakeholder Data Reference</h4>
+              <p className="text-xs text-gray-600">
+                Latest interview data from {formatDate(stakeholderData.created_at || stakeholderData.saved_at)} will be linked
+              </p>
+              <div className="mt-2 text-xs bg-blue-50 p-2 rounded">
+                <strong>Preview:</strong> {stakeholderData.text_data
+                  ? stakeholderData.text_data.substring(0, 100) + "..."
+                  : "No text content available"}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label className="block mb-2 font-medium text-gray-700">Attachments</label>
+          <Upload
+            multiple
+            fileList={fileLists["gapAnalysisPlan"] || []}
+            onChange={(info) => handleFileChange("gapAnalysisPlan", info)}
+            beforeUpload={() => false}
+          >
+            <Button icon={<PaperClipOutlined />}>Select Files</Button>
+          </Upload>
+        </div>
+
         {oldFilesNeeded.length > 0 && (
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-800 mb-2">Existing Files</h3>
-            <div className="space-y-2">
-              {oldFilesNeeded.map((fileUrl) => (
-                <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                  <div className="flex items-center">
-                    <FileTextOutlined className="text-blue-500 mr-2" />
-                    <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
-                  </div>
+            <label className="block mb-2 font-medium text-gray-700">Existing Attachments</label>
+            <div className="flex flex-wrap gap-2">
+              {oldFilesNeeded.map((fileUrl, index) => (
+                <div key={index} className="border rounded p-2 flex items-center bg-gray-50 group">
+                  <FileTextOutlined className="mr-2 text-blue-500" />
+                  <span className="text-sm">{getFileName(fileUrl)}</span>
                   <Button
                     type="text"
+                    size="small"
                     danger
+                    className="ml-2 opacity-0 group-hover:opacity-100"
                     onClick={() => handleRemoveFile(fileUrl)}
                   >
                     Remove
@@ -519,19 +734,18 @@ const GapAnalysis = () => {
           </div>
         )}
 
-        {/* Move removed files component here */}
         {removedOldFiles.length > 0 && (
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-800 mb-2">Removed Files</h3>
-            <div className="space-y-2">
-              {removedOldFiles.map((fileUrl) => (
-                <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                  <div className="flex items-center">
-                    <FileTextOutlined className="text-red-500 mr-2" />
-                    <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
-                  </div>
+            <label className="block mb-2 font-medium text-gray-700">Removed Attachments</label>
+            <div className="flex flex-wrap gap-2">
+              {removedOldFiles.map((fileUrl, index) => (
+                <div key={index} className="border rounded p-2 flex items-center bg-gray-100 text-gray-500 group">
+                  <FileTextOutlined className="mr-2" />
+                  <span className="text-sm line-through">{getFileName(fileUrl)}</span>
                   <Button
                     type="text"
+                    size="small"
+                    className="ml-2 opacity-0 group-hover:opacity-100"
                     onClick={() => handleRestoreFile(fileUrl)}
                   >
                     Restore
@@ -541,19 +755,6 @@ const GapAnalysis = () => {
             </div>
           </div>
         )}
-
-        {/* Add new files component */}
-        <div className="mt-3">
-          <Upload
-            fileList={fileLists["gapAnalysisPlan"] || []}
-            onChange={(info) => handleFileChange("gapAnalysisPlan", info)}
-            beforeUpload={() => false}
-            showUploadList={true}
-            multiple
-          >
-            <Button icon={<PaperClipOutlined />}>Attach New Files</Button>
-          </Upload>
-        </div>
       </Modal>
 
       {/* Assign Task Modal */}
@@ -562,7 +763,7 @@ const GapAnalysis = () => {
         open={isAssignTaskVisible}
         onCancel={() => setIsAssignTaskVisible(false)}
         footer={[
-          <Button key="assign" type="primary" onClick={handleSubmitAssignment} className="bg-blue-500">
+          <Button key="assign" type="primary" onClick={handleSubmitAssignment} className="bg-blue-600 hover:bg-blue-700">
             Assign
           </Button>
         ]}

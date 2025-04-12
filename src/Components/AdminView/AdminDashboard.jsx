@@ -18,9 +18,9 @@ const AdminDashboard = () => {
   ];
 
   const messages = [
-    { sender: "John Doe", text: "Can you update the report?", time: "2 mins ago" },
-    { sender: "Alice Smith", text: "Meeting at 3 PM confirmed.", time: "30 mins ago" },
-    { sender: "Michael Brown", text: "Please check the new requirements.", time: "1 hour ago" },
+    { sender: "Rajesh Kumar", text: "Can you update the report?", time: "2 mins ago" },
+    { sender: "Priya Sharma", text: "Meeting at 3 PM confirmed.", time: "30 mins ago" },
+    { sender: "Vikram Patel", text: "Please check the new requirements.", time: "1 hour ago" },
   ];
 
   const deadlines = [

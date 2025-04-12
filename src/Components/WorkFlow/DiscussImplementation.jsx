@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button, Modal, Input, DatePicker, Select } from "antd";
 import { PaperClipOutlined } from "@ant-design/icons";
+import ImplementPolicies from "./ImplementPolicies";
 
 const { Option } = Select;
 
@@ -21,15 +22,22 @@ const DiscussImplementation = () => {
       <h1 className="text-2xl font-bold text-gray-800 mb-10">Policy Lens</h1>
 
       {/* Discuss Implementation Section */}
-      <div>
+      <div className="mb-16">
         <h2 className="text-xl font-bold mb-4">Organize Meeting</h2>
         <Button type="primary" onClick={openMeetingModal}>
           Schedule Meeting
         </Button>
       </div>
 
+      {/* Implement Policies Section with padding adjustment */}
+      <div className="-mx-6">
+        <div className="px-6">
+          <ImplementPolicies />
+        </div>
+      </div>
+
       {/* Assign Task Button positioned in the bottom-right corner */}
-      <div className="absolute  right-8">
+      <div className="absolute right-8">
         <Button type="default" onClick={openAssignTaskModal}>
           Assign Task
         </Button>
