@@ -2,6 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "http://3.81.160.196";
+// const BASE_URL = "http://localhost:8000";
 
 const apiRequest = async (
   method,
