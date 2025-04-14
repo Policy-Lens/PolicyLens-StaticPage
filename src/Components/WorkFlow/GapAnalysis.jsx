@@ -1,10 +1,20 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Collapse, Button, Input, Upload, DatePicker, Modal, Select, message } from "antd";
+import {
+  Collapse,
+  Button,
+  Input,
+  Upload,
+  DatePicker,
+  Modal,
+  Select,
+  message,
+  Dropdown,
+} from "antd";
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoadingContext } from "./VertStepper";
-import { BASE_URL } from "../../utils/api";
+import { BASE_URL, apiRequest } from "../../utils/api";
 import StakeholderInterviews from "./StakeholderInterviews";
 const { Panel } = Collapse;
 const { TextArea } = Input;
@@ -46,37 +56,40 @@ const GapAnalysis = () => {
     projectRole,
     assignStep,
     getStepAssignment,
-    getMembers
+    getMembers,
   } = useContext(ProjectContext);
 
   // Use the loading context
   const { isLoading, setIsLoading } = useContext(LoadingContext);
 
   const consultants = ["Consultant 1", "Consultant 2", "Consultant 3"];
-  const [members, setMembers] = useState([])
+  const [members, setMembers] = useState([]);
 
   const get_members = async () => {
     try {
-      const res = await getMembers(projectid)
+      const res = await getMembers(projectid);
       // console.log(res)
-      setMembers(res)
+      setMembers(res);
     } catch (error) {
       console.error("Error fetching members:", error);
       message.error("Failed to load team members");
     }
-  }
+  };
+
+  const [stepStatus, setStepStatus] = useState("pending");
 
   const get_step_id = async () => {
     setIsLoading(true);
     try {
-      const step_id = await getStepId(projectid, 4);
-      if (step_id) {
-        setStepId(step_id);
-        await get_step_data(step_id);
-        const isAuthorized = await checkStepAuth(step_id);
+      const response = await getStepId(projectid, 4);
+      if (response) {
+        setStepId(response.plc_step_id);
+        setStepStatus(response.status);
+        await get_step_data(response.plc_step_id);
+        const isAuthorized = await checkStepAuth(response.plc_step_id);
         setIsAssignedUser(isAuthorized);
         if (isAuthorized) {
-          await getTaskAssignment(step_id);
+          await getTaskAssignment(response.plc_step_id);
         }
         await get_members();
       }
@@ -99,7 +112,7 @@ const GapAnalysis = () => {
         setGapAnalysisText(latestData.text_data);
 
         // Initialize old files from existing documents
-        const existingFiles = latestData.documents.map(doc => doc.file);
+        const existingFiles = latestData.documents.map((doc) => doc.file);
         setOldFilesNeeded(existingFiles);
         setRemovedOldFiles([]); // Reset removed files when data is refreshed
       }
@@ -143,7 +156,7 @@ const GapAnalysis = () => {
     if (gapAnalysisData.length > 0) {
       const latestData = gapAnalysisData[0];
       setGapAnalysisText(latestData.text_data);
-      const existingFiles = latestData.documents.map(doc => doc.file);
+      const existingFiles = latestData.documents.map((doc) => doc.file);
       setOldFilesNeeded(existingFiles);
       setRemovedOldFiles([]); // Reset removed files when opening modal
     }
@@ -169,7 +182,7 @@ const GapAnalysis = () => {
 
   // Helper function to extract filename from path
   const getFileName = (filePath) => {
-    return filePath.split('/').pop();
+    return filePath.split("/").pop();
   };
 
   // Helper function to format date
@@ -188,34 +201,39 @@ const GapAnalysis = () => {
 
   // Add getViewerUrl helper function after the formatDate function
   const getViewerUrl = (filePath) => {
-    const extension = filePath.split('.').pop().toLowerCase();
+    const extension = filePath.split(".").pop().toLowerCase();
 
-    if (extension === 'pdf') {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
+    if (extension === "pdf") {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(
+        `${BASE_URL}${filePath}`
+      )}&embedded=true`;
     }
 
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
+    if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(extension)) {
       return `${BASE_URL}${filePath}`;
     }
 
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(
+      `${BASE_URL}${filePath}`
+    )}&embedded=true`;
   };
 
   // New function to handle file removal
   const handleRemoveFile = (fileUrl) => {
-    setOldFilesNeeded(prev => prev.filter(file => file !== fileUrl));
-    setRemovedOldFiles(prev => [...prev, fileUrl]);
+    setOldFilesNeeded((prev) => prev.filter((file) => file !== fileUrl));
+    setRemovedOldFiles((prev) => [...prev, fileUrl]);
   };
 
   // New function to handle file restoration
   const handleRestoreFile = (fileUrl) => {
-    setRemovedOldFiles(prev => prev.filter(file => file !== fileUrl));
-    setOldFilesNeeded(prev => [...prev, fileUrl]);
+    setRemovedOldFiles((prev) => prev.filter((file) => file !== fileUrl));
+    setOldFilesNeeded((prev) => [...prev, fileUrl]);
   };
 
   // Function to incorporate stakeholder insights into the gap analysis
   const incorporateInsight = (insight) => {
-    const newText = gapAnalysisText +
+    const newText =
+      gapAnalysisText +
       "\n\n--- Stakeholder Insight ---\n" +
       insight +
       "\n-------------------------\n";
@@ -234,7 +252,7 @@ const GapAnalysis = () => {
       const pattern = /[•*-]\s+(.*?)(?=\n[•*-]|\n\n|$)/gs;
       const matches = text.match(pattern);
       if (matches && matches.length > 0) {
-        insights = matches.map(match => match.trim());
+        insights = matches.map((match) => match.trim());
       }
     }
     // Check for numbered lists
@@ -242,18 +260,18 @@ const GapAnalysis = () => {
       const pattern = /\d+\.\s+(.*?)(?=\n\d+\.|\n\n|$)/gs;
       const matches = text.match(pattern);
       if (matches && matches.length > 0) {
-        insights = matches.map(match => match.trim());
+        insights = matches.map((match) => match.trim());
       }
     }
 
     // If no structured insights found, split by paragraphs
     if (insights.length === 0) {
-      insights = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+      insights = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
     }
 
     // Limit to reasonable snippets (not too long, not too short)
     return insights
-      .filter(insight => insight.length > 15 && insight.length < 300)
+      .filter((insight) => insight.length > 15 && insight.length < 300)
       .slice(0, 5); // Limit to 5 insights
   };
 
@@ -275,14 +293,21 @@ const GapAnalysis = () => {
 
       // If stakeholder reference is included, add reference ID
       if (includeStakeholderData && stakeholderData && stakeholderData.id) {
-        formData.append("references", JSON.stringify([{
-          step_type: "stakeholder_interviews",
-          step_id: 5,
-          data_id: stakeholderData.id
-        }]));
+        formData.append(
+          "references",
+          JSON.stringify([
+            {
+              step_type: "stakeholder_interviews",
+              step_id: 5,
+              data_id: stakeholderData.id,
+            },
+          ])
+        );
       } else if (includeStakeholderData) {
         // If they wanted to include the reference but we don't have valid data
-        message.warning("Could not include stakeholder data reference - invalid or missing data");
+        message.warning(
+          "Could not include stakeholder data reference - invalid or missing data"
+        );
       }
 
       // Append new files
@@ -337,7 +362,7 @@ const GapAnalysis = () => {
         assigned_to: selectedTeamMembers,
         description: taskDescription,
         deadline: taskDeadline.format("YYYY-MM-DD"),
-        references: taskReferences
+        references: taskReferences,
       };
 
       const result = await assignStep(stepId, assignmentData);
@@ -397,6 +422,27 @@ const GapAnalysis = () => {
     navigate(`/project/${projectid}/questionbank`);
   };
 
+  const updateStepStatus = async (newStatus) => {
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepId}/update-status/`,
+        {
+          status: newStatus,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setStepStatus(newStatus);
+        message.success("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      message.error("Failed to update status");
+    }
+  };
+
   return (
     <div className="bg-gray-50 min-h-full p-6">
       <Button
@@ -410,10 +456,78 @@ const GapAnalysis = () => {
 
       {/* Simple header with no background */}
       <div className="mb-8 flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800">Gap Analysis</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-semibold text-gray-800">Gap Analysis</h2>
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium
+              ${
+                stepStatus === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : stepStatus === "in_progress"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
+              {stepStatus.charAt(0).toUpperCase() +
+                stepStatus.slice(1).replace("_", " ")}
+            </span>
+
+            {(projectRole.includes("admin") || isAssignedUser) && (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "pending",
+                      label: "Pending",
+                      onClick: () => updateStepStatus("pending"),
+                    },
+                    {
+                      key: "in_progress",
+                      label: "In Progress",
+                      onClick: () => updateStepStatus("in_progress"),
+                    },
+                    {
+                      key: "completed",
+                      label: "Completed",
+                      onClick: () => updateStepStatus("completed"),
+                    },
+                  ],
+                }}
+              >
+                <Button
+                  size="small"
+                  className="flex items-center gap-1"
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  }
+                />
+              </Dropdown>
+            )}
+          </div>
+        </div>
         <div className="flex gap-2">
           {projectRole.includes("admin") && !taskAssignment && (
-            <Button type="default" onClick={() => { get_members(); setIsAssignTaskVisible(true); }}>
+            <Button
+              type="default"
+              onClick={() => {
+                get_members();
+                setIsAssignTaskVisible(true);
+              }}
+            >
               Assign Task
             </Button>
           )}
@@ -436,15 +550,28 @@ const GapAnalysis = () => {
             {/* Header with metadata */}
             <div className="flex flex-wrap justify-between items-center mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">Gap Analysis Information</h3>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  Gap Analysis Information
+                </h3>
                 {gapAnalysisData[0].saved_at && (
                   <div className="flex items-center mt-1">
                     <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3 w-3 text-blue-600"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
-                    <span className="text-xs text-gray-500">Last updated {formatDate(gapAnalysisData[0].saved_at)}</span>
+                    <span className="text-xs text-gray-500">
+                      Last updated {formatDate(gapAnalysisData[0].saved_at)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -458,8 +585,12 @@ const GapAnalysis = () => {
                     </div>
                   </div>
                   <div className="ml-2">
-                    <p className="text-sm font-medium text-gray-800">{gapAnalysisData[0].saved_by.name}</p>
-                    <p className="text-xs text-gray-500">{gapAnalysisData[0].saved_by.email}</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      {gapAnalysisData[0].saved_by.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {gapAnalysisData[0].saved_by.email}
+                    </p>
                   </div>
                 </div>
               )}
@@ -468,9 +599,14 @@ const GapAnalysis = () => {
             {/* Gap Analysis data with documents on the right */}
             <div className="space-y-4 mb-6">
               {gapAnalysisData.map((item) => (
-                <div key={item.id} className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
+                <div
+                  key={item.id}
+                  className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden"
+                >
                   <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">{item.field_name}</h4>
+                    <h4 className="text-sm font-medium text-gray-500 uppercase">
+                      {item.field_name}
+                    </h4>
                   </div>
                   <div className="flex flex-col md:flex-row">
                     <div className="px-4 py-3 flex-grow">
@@ -480,7 +616,9 @@ const GapAnalysis = () => {
                     {/* Documents for this item */}
                     {item.documents && item.documents.length > 0 && (
                       <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">ATTACHED FILES</h5>
+                        <h5 className="text-xs font-medium text-gray-500 mb-2">
+                          ATTACHED FILES
+                        </h5>
                         <div className="space-y-2">
                           {item.documents.map((doc) => (
                             <div key={doc.id} className="flex items-center">
@@ -488,7 +626,9 @@ const GapAnalysis = () => {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
+                                <p className="text-xs font-medium text-gray-700 truncate">
+                                  {getFileName(doc.file)}
+                                </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
                                   target="_blank"
@@ -513,13 +653,27 @@ const GapAnalysis = () => {
         <div className="bg-white rounded-xl shadow-md p-10 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-10 w-10 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Gap Analysis Data</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              No Gap Analysis Data
+            </h3>
             <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-              The gap analysis section helps identify areas for improvement. Add your analysis to get started.
+              The gap analysis section helps identify areas for improvement. Add
+              your analysis to get started.
             </p>
             <Button
               onClick={handleAddData}
@@ -527,8 +681,17 @@ const GapAnalysis = () => {
               size="large"
               className="bg-blue-600 hover:bg-blue-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
               </svg>
               Add Analysis
             </Button>
@@ -544,17 +707,25 @@ const GapAnalysis = () => {
       {/* Task Assignment section remains unchanged */}
       {taskAssignment && (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Task Assignment</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Task Assignment
+          </h3>
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="mb-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-medium text-gray-700">Assignment Details</h4>
-                <p className="text-xs text-gray-500">{formatDate(taskAssignment.assigned_at)}</p>
+                <h4 className="font-medium text-gray-700">
+                  Assignment Details
+                </h4>
+                <p className="text-xs text-gray-500">
+                  {formatDate(taskAssignment.assigned_at)}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Assigned To:</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Assigned To:
+                  </p>
                   <ul className="list-disc list-inside mt-2">
                     {taskAssignment.assigned_to.map((user) => (
                       <li key={user.id} className="text-sm text-gray-600">
@@ -565,25 +736,37 @@ const GapAnalysis = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">Deadline:</p>
-                  <p className="text-sm text-gray-600 mt-2">{formatDate(taskAssignment.deadline)}</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {formatDate(taskAssignment.deadline)}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-4">
-                <p className="text-sm font-medium text-gray-700">Description:</p>
-                <p className="text-sm text-gray-600 mt-2">{taskAssignment.description}</p>
+                <p className="text-sm font-medium text-gray-700">
+                  Description:
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {taskAssignment.description}
+                </p>
               </div>
 
               {taskAssignment.references && (
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700">References:</p>
-                  <p className="text-sm text-gray-600 mt-2">{taskAssignment.references}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    References:
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {taskAssignment.references}
+                  </p>
                 </div>
               )}
             </div>
 
             <div className="text-xs text-gray-500 mt-2">
-              <p><b>Status:</b> {taskAssignment.status}</p>
+              <p>
+                <b>Status:</b> {taskAssignment.status}
+              </p>
             </div>
           </div>
         </div>
@@ -591,7 +774,11 @@ const GapAnalysis = () => {
 
       {/* Add Data Modal */}
       <Modal
-        title={gapAnalysisData.length > 0 ? "Update Gap Analysis Plan" : "Add Gap Analysis Plan"}
+        title={
+          gapAnalysisData.length > 0
+            ? "Update Gap Analysis Plan"
+            : "Add Gap Analysis Plan"
+        }
         open={isModalVisible}
         onCancel={handleModalClose}
         footer={[
@@ -611,7 +798,9 @@ const GapAnalysis = () => {
         width={800}
       >
         <div className="mb-4">
-          <label className="block mb-2 font-medium text-gray-700">Gap Analysis Plan</label>
+          <label className="block mb-2 font-medium text-gray-700">
+            Gap Analysis Plan
+          </label>
           <TextArea
             rows={8}
             value={gapAnalysisText}
@@ -653,7 +842,9 @@ const GapAnalysis = () => {
           {fetchingStakeholderData && (
             <div className="mt-3 p-3 bg-gray-50 rounded-md flex items-center justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2"></div>
-              <span className="text-sm text-gray-600">Loading stakeholder data...</span>
+              <span className="text-sm text-gray-600">
+                Loading stakeholder data...
+              </span>
             </div>
           )}
 
@@ -662,36 +853,53 @@ const GapAnalysis = () => {
             <div className="mt-3 border rounded-md p-3 bg-blue-50">
               <h4 className="font-medium mb-2">Key Stakeholder Insights</h4>
               <div className="max-h-60 overflow-y-auto">
-                {extractKeyInsights(stakeholderData.text_data).map((insight, idx) => (
-                  <div key={idx} className="mb-2 p-2 bg-white rounded shadow-sm">
-                    <p className="text-sm mb-1">{insight}</p>
-                    <Button
-                      size="small"
-                      type="primary"
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() => incorporateInsight(insight)}
+                {extractKeyInsights(stakeholderData.text_data).map(
+                  (insight, idx) => (
+                    <div
+                      key={idx}
+                      className="mb-2 p-2 bg-white rounded shadow-sm"
                     >
-                      Add to Analysis
-                    </Button>
-                  </div>
-                ))}
+                      <p className="text-sm mb-1">{insight}</p>
+                      <Button
+                        size="small"
+                        type="primary"
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() => incorporateInsight(insight)}
+                      >
+                        Add to Analysis
+                      </Button>
+                    </div>
+                  )
+                )}
               </div>
             </div>
-          ) : showInsightsPanel && (
-            <div className="mt-3 border rounded-md p-3 bg-gray-50">
-              <p className="text-sm text-gray-500 italic">No stakeholder insights available. Complete the stakeholder interviews first.</p>
-            </div>
+          ) : (
+            showInsightsPanel && (
+              <div className="mt-3 border rounded-md p-3 bg-gray-50">
+                <p className="text-sm text-gray-500 italic">
+                  No stakeholder insights available. Complete the stakeholder
+                  interviews first.
+                </p>
+              </div>
+            )
           )}
 
           {/* Show reference preview when including data */}
           {includeStakeholderData && stakeholderData && (
             <div className="mt-2 p-3 bg-gray-50 rounded-md">
-              <h4 className="text-sm font-medium mb-1">Stakeholder Data Reference</h4>
+              <h4 className="text-sm font-medium mb-1">
+                Stakeholder Data Reference
+              </h4>
               <p className="text-xs text-gray-600">
-                Latest interview data from {formatDate(stakeholderData.created_at || stakeholderData.saved_at)} will be linked
+                Latest interview data from{" "}
+                {formatDate(
+                  stakeholderData.created_at || stakeholderData.saved_at
+                )}{" "}
+                will be linked
               </p>
               <div className="mt-2 text-xs bg-blue-50 p-2 rounded">
-                <strong>Preview:</strong> {stakeholderData.text_data
+                <strong>Preview:</strong>{" "}
+                {stakeholderData.text_data
                   ? stakeholderData.text_data.substring(0, 100) + "..."
                   : "No text content available"}
               </div>
@@ -700,7 +908,9 @@ const GapAnalysis = () => {
         </div>
 
         <div className="mb-4">
-          <label className="block mb-2 font-medium text-gray-700">Attachments</label>
+          <label className="block mb-2 font-medium text-gray-700">
+            Attachments
+          </label>
           <Upload
             multiple
             fileList={fileLists["gapAnalysisPlan"] || []}
@@ -713,10 +923,15 @@ const GapAnalysis = () => {
 
         {oldFilesNeeded.length > 0 && (
           <div className="mb-4">
-            <label className="block mb-2 font-medium text-gray-700">Existing Attachments</label>
+            <label className="block mb-2 font-medium text-gray-700">
+              Existing Attachments
+            </label>
             <div className="flex flex-wrap gap-2">
               {oldFilesNeeded.map((fileUrl, index) => (
-                <div key={index} className="border rounded p-2 flex items-center bg-gray-50 group">
+                <div
+                  key={index}
+                  className="border rounded p-2 flex items-center bg-gray-50 group"
+                >
                   <FileTextOutlined className="mr-2 text-blue-500" />
                   <span className="text-sm">{getFileName(fileUrl)}</span>
                   <Button
@@ -736,12 +951,19 @@ const GapAnalysis = () => {
 
         {removedOldFiles.length > 0 && (
           <div className="mb-4">
-            <label className="block mb-2 font-medium text-gray-700">Removed Attachments</label>
+            <label className="block mb-2 font-medium text-gray-700">
+              Removed Attachments
+            </label>
             <div className="flex flex-wrap gap-2">
               {removedOldFiles.map((fileUrl, index) => (
-                <div key={index} className="border rounded p-2 flex items-center bg-gray-100 text-gray-500 group">
+                <div
+                  key={index}
+                  className="border rounded p-2 flex items-center bg-gray-100 text-gray-500 group"
+                >
                   <FileTextOutlined className="mr-2" />
-                  <span className="text-sm line-through">{getFileName(fileUrl)}</span>
+                  <span className="text-sm line-through">
+                    {getFileName(fileUrl)}
+                  </span>
                   <Button
                     type="text"
                     size="small"
@@ -763,9 +985,14 @@ const GapAnalysis = () => {
         open={isAssignTaskVisible}
         onCancel={() => setIsAssignTaskVisible(false)}
         footer={[
-          <Button key="assign" type="primary" onClick={handleSubmitAssignment} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            key="assign"
+            type="primary"
+            onClick={handleSubmitAssignment}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
             Assign
-          </Button>
+          </Button>,
         ]}
       >
         <div className="mb-4">
@@ -777,15 +1004,18 @@ const GapAnalysis = () => {
             onChange={setSelectedTeamMembers}
             style={{ width: "100%" }}
           >
-            {members && members.map((member) => (
-              <Option key={member.id} value={member.id}>
-                {member.name}
-              </Option>
-            ))}
+            {members &&
+              members.map((member) => (
+                <Option key={member.id} value={member.id}>
+                  {member.name}
+                </Option>
+              ))}
           </Select>
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Team Deadline</label>
+          <label className="block text-sm font-medium mb-2">
+            Team Deadline
+          </label>
           <DatePicker
             style={{ width: "100%" }}
             value={taskDeadline}
@@ -793,7 +1023,9 @@ const GapAnalysis = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Task Description</label>
+          <label className="block text-sm font-medium mb-2">
+            Task Description
+          </label>
           <Input
             placeholder="Enter task description"
             value={taskDescription}
@@ -801,7 +1033,9 @@ const GapAnalysis = () => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Task References</label>
+          <label className="block text-sm font-medium mb-2">
+            Task References
+          </label>
           <Input
             placeholder="Add reference URLs"
             value={taskReferences}

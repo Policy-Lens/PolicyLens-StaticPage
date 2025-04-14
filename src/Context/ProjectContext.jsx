@@ -29,7 +29,7 @@ export const ProjectProvider = ({ children }) => {
   const getStepId = async(project_id,step_no) =>{
     const res = await apiRequest('GET',`/api/plc/plc_step/${project_id}/${step_no}/get_id/`,null,true);
     if(res.status==200){
-      return res.data.plc_step_id
+      return res.data
     }
     else{
       // console.log(res.error)

@@ -175,7 +175,6 @@ const Support = () => {
           bg: "bg-amber-50",
         };
       case "in_progress":
-      case "in_progress":
         return {
           icon: <Clock size={16} />,
           color: "text-blue-500",

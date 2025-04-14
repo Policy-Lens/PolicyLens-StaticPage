@@ -1,9 +1,19 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Button, Input, Modal, Select, DatePicker, Upload, message } from "antd";
+import {
+  Button,
+  Input,
+  Modal,
+  Select,
+  DatePicker,
+  Upload,
+  message,
+  Dropdown,
+} from "antd";
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-import { BASE_URL } from "../../utils/api";
+import { LoadingContext } from "./VertStepper";
+import { BASE_URL, apiRequest } from "../../utils/api";
 import DiscussingPolicies from "./DiscussingPolicies";
 const { TextArea } = Input;
 const { Option } = Select;
@@ -17,6 +27,7 @@ const Planning = () => {
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDeadline, setTaskDeadline] = useState(null);
   const [taskReferences, setTaskReferences] = useState("");
+  const [stepStatus, setStepStatus] = useState("pending");
 
   // State for API data
   const [planningData, setPlanningData] = useState([]);
@@ -36,34 +47,40 @@ const Planning = () => {
     projectRole,
     assignStep,
     getStepAssignment,
-    getMembers
+    getMembers,
   } = useContext(ProjectContext);
+  const { setIsLoading } = useContext(LoadingContext);
 
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList(newFileList);
   };
 
   const handleRemoveFile = (fileUrl) => {
-    setOldFilesNeeded(prev => prev.filter(file => file !== fileUrl));
-    setRemovedOldFiles(prev => [...prev, fileUrl]);
+    setOldFilesNeeded((prev) => prev.filter((file) => file !== fileUrl));
+    setRemovedOldFiles((prev) => [...prev, fileUrl]);
   };
 
   const handleRestoreFile = (fileUrl) => {
-    setRemovedOldFiles(prev => prev.filter(file => file !== fileUrl));
-    setOldFilesNeeded(prev => [...prev, fileUrl]);
+    setRemovedOldFiles((prev) => prev.filter((file) => file !== fileUrl));
+    setOldFilesNeeded((prev) => [...prev, fileUrl]);
   };
 
   // Get step ID, step data, and check authorization
   const get_step_id = async () => {
-    const step_id = await getStepId(projectid, 7);
-    if (step_id) {
-      setStepId(step_id);
-      await get_step_data(step_id);
-      const isAuthorized = await checkStepAuth(step_id);
-      setIsAssignedUser(isAuthorized);
-      if (isAuthorized) {
-        await getTaskAssignment(step_id);
+    setIsLoading(true);
+    try {
+      const response = await getStepId(projectid, 7);
+      if (response) {
+        setStepId(response.plc_step_id);
+        setStepStatus(response.status);
+        const isAuthorized = await checkStepAuth(response.plc_step_id);
+        setIsAssignedUser(isAuthorized);
       }
+    } catch (error) {
+      console.error("Error fetching step ID:", error);
+      message.error("Failed to load Planning data");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,7 +94,7 @@ const Planning = () => {
       setPlanningText(latestData.text_data);
 
       // Initialize old files from existing documents
-      const existingFiles = latestData.documents.map(doc => doc.file);
+      const existingFiles = latestData.documents.map((doc) => doc.file);
       setOldFilesNeeded(existingFiles);
       setRemovedOldFiles([]);
     }
@@ -108,6 +125,27 @@ const Planning = () => {
     setMembers(res);
   };
 
+  const updateStepStatus = async (newStatus) => {
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepId}/update-status/`,
+        {
+          status: newStatus,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setStepStatus(newStatus);
+        message.success("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      message.error("Failed to update status");
+    }
+  };
+
   useEffect(() => {
     get_step_id();
   }, []);
@@ -134,7 +172,7 @@ const Planning = () => {
 
   // Helper function to extract filename from path
   const getFileName = (filePath) => {
-    return filePath.split('/').pop();
+    return filePath.split("/").pop();
   };
 
   // Helper function to format date
@@ -145,17 +183,21 @@ const Planning = () => {
 
   // Add getViewerUrl helper function after the formatDate function
   const getViewerUrl = (filePath) => {
-    const extension = filePath.split('.').pop().toLowerCase();
+    const extension = filePath.split(".").pop().toLowerCase();
 
-    if (extension === 'pdf') {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
+    if (extension === "pdf") {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(
+        `${BASE_URL}${filePath}`
+      )}&embedded=true`;
     }
 
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
+    if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(extension)) {
       return `${BASE_URL}${filePath}`;
     }
 
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(
+      `${BASE_URL}${filePath}`
+    )}&embedded=true`;
   };
 
   // Submit planning data
@@ -217,7 +259,7 @@ const Planning = () => {
       assigned_to: selectedTeamMembers,
       description: taskDescription,
       deadline: taskDeadline.format("YYYY-MM-DD"),
-      references: taskReferences
+      references: taskReferences,
     };
 
     try {
@@ -248,10 +290,80 @@ const Planning = () => {
     <div className="bg-gray-50 min-h-full p-6">
       {/* Simple header with no background */}
       <div className="mb-8 flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800">Create a Plan/Draft Policies</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-semibold text-gray-800">
+            Create a Plan/Draft Policies
+          </h2>
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium
+              ${
+                stepStatus === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : stepStatus === "in_progress"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
+              {stepStatus.charAt(0).toUpperCase() +
+                stepStatus.slice(1).replace("_", " ")}
+            </span>
+
+            {(projectRole.includes("admin") || isAssignedUser) && (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "pending",
+                      label: "Pending",
+                      onClick: () => updateStepStatus("pending"),
+                    },
+                    {
+                      key: "in_progress",
+                      label: "In Progress",
+                      onClick: () => updateStepStatus("in_progress"),
+                    },
+                    {
+                      key: "completed",
+                      label: "Completed",
+                      onClick: () => updateStepStatus("completed"),
+                    },
+                  ],
+                }}
+              >
+                <Button
+                  size="small"
+                  className="flex items-center gap-1"
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  }
+                />
+              </Dropdown>
+            )}
+          </div>
+        </div>
         <div className="flex gap-2">
           {projectRole.includes("admin") && !taskAssignment && (
-            <Button type="default" onClick={() => { get_members(); handleAssignTask(); }}>
+            <Button
+              type="default"
+              onClick={() => {
+                get_members();
+                handleAssignTask();
+              }}
+            >
               Assign Task
             </Button>
           )}
@@ -274,15 +386,28 @@ const Planning = () => {
             {/* Header with metadata */}
             <div className="flex flex-wrap justify-between items-center mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">Planning Information</h3>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  Planning Information
+                </h3>
                 {planningData[0].saved_at && (
                   <div className="flex items-center mt-1">
                     <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3 w-3 text-blue-600"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
-                    <span className="text-xs text-gray-500">Last updated {formatDate(planningData[0].saved_at)}</span>
+                    <span className="text-xs text-gray-500">
+                      Last updated {formatDate(planningData[0].saved_at)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -296,8 +421,12 @@ const Planning = () => {
                     </div>
                   </div>
                   <div className="ml-2">
-                    <p className="text-sm font-medium text-gray-800">{planningData[0].saved_by.name}</p>
-                    <p className="text-xs text-gray-500">{planningData[0].saved_by.email}</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      {planningData[0].saved_by.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {planningData[0].saved_by.email}
+                    </p>
                   </div>
                 </div>
               )}
@@ -306,9 +435,14 @@ const Planning = () => {
             {/* Planning data with documents on the right */}
             <div className="space-y-4 mb-6">
               {planningData.map((item) => (
-                <div key={item.id} className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
+                <div
+                  key={item.id}
+                  className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden"
+                >
                   <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">{item.field_name}</h4>
+                    <h4 className="text-sm font-medium text-gray-500 uppercase">
+                      {item.field_name}
+                    </h4>
                   </div>
                   <div className="flex flex-col md:flex-row">
                     <div className="px-4 py-3 flex-grow">
@@ -318,7 +452,9 @@ const Planning = () => {
                     {/* Documents for this item */}
                     {item.documents && item.documents.length > 0 && (
                       <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">ATTACHED FILES</h5>
+                        <h5 className="text-xs font-medium text-gray-500 mb-2">
+                          ATTACHED FILES
+                        </h5>
                         <div className="space-y-2">
                           {item.documents.map((doc) => (
                             <div key={doc.id} className="flex items-center">
@@ -326,7 +462,9 @@ const Planning = () => {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
+                                <p className="text-xs font-medium text-gray-700 truncate">
+                                  {getFileName(doc.file)}
+                                </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
                                   target="_blank"
@@ -351,13 +489,27 @@ const Planning = () => {
         <div className="bg-white rounded-xl shadow-md p-10 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-10 w-10 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Planning Data</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              No Planning Data
+            </h3>
             <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-              The planning section helps outline project policies and strategies. Add your plan to get started.
+              The planning section helps outline project policies and
+              strategies. Add your plan to get started.
             </p>
             <Button
               onClick={handleAddData}
@@ -365,8 +517,17 @@ const Planning = () => {
               size="large"
               className="bg-blue-600 hover:bg-blue-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
               </svg>
               Add Plan
             </Button>
@@ -377,17 +538,25 @@ const Planning = () => {
       {/* Task Assignment section */}
       {taskAssignment && (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Task Assignment</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Task Assignment
+          </h3>
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="mb-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-medium text-gray-700">Assignment Details</h4>
-                <p className="text-xs text-gray-500">{formatDate(taskAssignment.assigned_at)}</p>
+                <h4 className="font-medium text-gray-700">
+                  Assignment Details
+                </h4>
+                <p className="text-xs text-gray-500">
+                  {formatDate(taskAssignment.assigned_at)}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Assigned To:</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Assigned To:
+                  </p>
                   <ul className="list-disc list-inside mt-2">
                     {taskAssignment.assigned_to.map((user) => (
                       <li key={user.id} className="text-sm text-gray-600">
@@ -398,25 +567,37 @@ const Planning = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">Deadline:</p>
-                  <p className="text-sm text-gray-600 mt-2">{formatDate(taskAssignment.deadline)}</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {formatDate(taskAssignment.deadline)}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-4">
-                <p className="text-sm font-medium text-gray-700">Description:</p>
-                <p className="text-sm text-gray-600 mt-2">{taskAssignment.description}</p>
+                <p className="text-sm font-medium text-gray-700">
+                  Description:
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {taskAssignment.description}
+                </p>
               </div>
 
               {taskAssignment.references && (
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700">References:</p>
-                  <p className="text-sm text-gray-600 mt-2">{taskAssignment.references}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    References:
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {taskAssignment.references}
+                  </p>
                 </div>
               )}
             </div>
 
             <div className="text-xs text-gray-500 mt-2">
-              <p><b>Status:</b> {taskAssignment.status}</p>
+              <p>
+                <b>Status:</b> {taskAssignment.status}
+              </p>
             </div>
           </div>
         </div>
@@ -424,11 +605,18 @@ const Planning = () => {
 
       {/* Add Data Modal */}
       <Modal
-        title={planningData.length > 0 ? "Update Plan Details" : "Add Plan Details"}
+        title={
+          planningData.length > 0 ? "Update Plan Details" : "Add Plan Details"
+        }
         open={isModalVisible}
         onCancel={handleModalClose}
         footer={[
-          <Button key="save" type="primary" onClick={handleSubmit} className="bg-blue-500">
+          <Button
+            key="save"
+            type="primary"
+            onClick={handleSubmit}
+            className="bg-blue-500"
+          >
             Save
           </Button>,
         ]}
@@ -445,13 +633,20 @@ const Planning = () => {
         {/* Existing Files */}
         {oldFilesNeeded.length > 0 && (
           <div className="mt-4 mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Files</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Existing Files
+            </h4>
             <div className="space-y-2">
               {oldFilesNeeded.map((fileUrl) => (
-                <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <div
+                  key={fileUrl}
+                  className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                >
                   <div className="flex items-center">
                     <FileTextOutlined className="text-blue-500 mr-2" />
-                    <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
+                    <span className="text-sm text-gray-600">
+                      {getFileName(fileUrl)}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <a
@@ -479,13 +674,20 @@ const Planning = () => {
         {/* Removed Files */}
         {removedOldFiles.length > 0 && (
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Removed Files</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Removed Files
+            </h4>
             <div className="space-y-2">
               {removedOldFiles.map((fileUrl) => (
-                <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <div
+                  key={fileUrl}
+                  className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                >
                   <div className="flex items-center">
                     <FileTextOutlined className="text-red-500 mr-2" />
-                    <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
+                    <span className="text-sm text-gray-600">
+                      {getFileName(fileUrl)}
+                    </span>
                   </div>
                   <Button
                     type="text"
@@ -519,9 +721,14 @@ const Planning = () => {
         open={isAssignTaskVisible}
         onCancel={handleAssignTaskClose}
         footer={[
-          <Button key="assign" type="primary" onClick={handleSubmitAssignment} className="bg-blue-500">
+          <Button
+            key="assign"
+            type="primary"
+            onClick={handleSubmitAssignment}
+            className="bg-blue-500"
+          >
             Assign
-          </Button>
+          </Button>,
         ]}
       >
         <div className="mb-4">
@@ -533,15 +740,18 @@ const Planning = () => {
             onChange={setSelectedTeamMembers}
             style={{ width: "100%" }}
           >
-            {members && members.map((member) => (
-              <Option key={member.id} value={member.id}>
-                {member.name}
-              </Option>
-            ))}
+            {members &&
+              members.map((member) => (
+                <Option key={member.id} value={member.id}>
+                  {member.name}
+                </Option>
+              ))}
           </Select>
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Team Deadline</label>
+          <label className="block text-sm font-medium mb-2">
+            Team Deadline
+          </label>
           <DatePicker
             style={{ width: "100%" }}
             value={taskDeadline}
@@ -549,7 +759,9 @@ const Planning = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Task Description</label>
+          <label className="block text-sm font-medium mb-2">
+            Task Description
+          </label>
           <Input
             placeholder="Enter task description"
             value={taskDescription}
@@ -557,7 +769,9 @@ const Planning = () => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Task References</label>
+          <label className="block text-sm font-medium mb-2">
+            Task References
+          </label>
           <Input
             placeholder="Add reference URLs"
             value={taskReferences}
