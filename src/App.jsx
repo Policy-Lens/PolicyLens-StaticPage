@@ -4,7 +4,6 @@ import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper";
 import AdminDashboard from "./Components/AdminView/AdminDashboard";
 import ProjectTeam from "./Components/AdminView/ProjectTeam";
 import AdminPreview from "./Components/AdminView/AdminPreview";
-import AdminDocument from "./Components/AdminView/AdminDocument";
 import AuditorsPage from "./Components/HomeNav/Auditors";
 import CompaniesPage from "./Components/HomeNav/Company";
 import DashboardPage from "./Components/HomeNav/Dashboard";
