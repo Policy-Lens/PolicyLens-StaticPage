@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../../../../utils/api';
 import Vapt from './Vapt';
 import RiskTreatment from "./RiskTreatment"
+import { useParams } from 'react-router-dom';
 
 const MyReports = () => {
     // State to track which column groups are expanded
+    const {projectid} = useParams()
     const [expandedGroups, setExpandedGroups] = useState({
         impactAssessment: false,
         impactRatings: false,
@@ -110,7 +112,7 @@ const MyReports = () => {
             // Call the API to get risks for the current project
             const response = await apiRequest(
                 "GET",
-                `/api/rarpt/project/${currentProject.id}/risks/`,
+                `/api/rarpt/project/${projectid}/risks/`,
                 null,
                 true
             );
@@ -192,7 +194,7 @@ const MyReports = () => {
 
     // Function to fetch risks for current project
     useEffect(() => {
-        if (currentProject && currentProject.id) {
+        if (currentProject && projectid) {
             fetchRisks();
         }
     }, [currentProject]);
@@ -534,7 +536,7 @@ const MyReports = () => {
             // Send data to the API
             const response = await apiRequest(
                 "POST",
-                `/api/rarpt/project/${currentProject.id}/risks/create/`,
+                `/api/rarpt/project/${projectid}/risks/create/`,
                 apiData,
                 true
             );
@@ -662,7 +664,7 @@ const MyReports = () => {
             // Use the exact endpoint format that works in the Questionnaire component
             const response = await apiRequest(
                 "POST",
-                `/api/rarpt/project/${currentProject.id}/risks/create/`,
+                `/api/rarpt/project/${projectid}/risks/create/`,
                 formData,
                 true
             );

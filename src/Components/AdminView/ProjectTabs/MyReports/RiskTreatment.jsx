@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FilePlus2, FileUp } from 'lucide-react';
 import { apiRequest } from "../../../../utils/api";
+import { useParams } from 'react-router-dom';
 
 const RiskTreatment = () => {
     // State to track which column groups are expanded
@@ -26,6 +27,7 @@ const RiskTreatment = () => {
         id: '1',
         name: 'Project Alpha'
     });
+    const {projectid}  = useParams()
 
     // States for API interactions
     const [riskData, setRiskData] = useState([]);
@@ -271,7 +273,7 @@ const RiskTreatment = () => {
             // Call the API to get risks for the current project
             const response = await apiRequest(
                 "GET",
-                `/api/rarpt/project/${currentProject.id}/risks/`,
+                `/api/rarpt/project/${projectid}/risks/`,
                 null,
                 true
             );
@@ -357,7 +359,7 @@ const RiskTreatment = () => {
     // Fetch risks on component mount
     useEffect(() => {
         fetchRisks();
-    }, [currentProject.id]);
+    }, [projectid]);
 
     return (
         <>
