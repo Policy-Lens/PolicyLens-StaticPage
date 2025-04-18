@@ -59,7 +59,22 @@ const SideNav = ({ collapsed, setCollapsed }) => {
   }, []);
 
   // Check if a menu item is active
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    // Special case for Project Lifecycle
+    if (path === `/project/${projectid}/`) {
+      return location.pathname === `/project/${projectid}/` ||
+        location.pathname === `/project/${projectid}` ||
+        // Also match top nav tabs pages
+        location.pathname.includes('/questionbank') ||
+        location.pathname.includes('/calender') ||
+        location.pathname.includes('/myevidences') ||
+        location.pathname.includes('/askforhelp') ||
+        location.pathname.includes('/myreports');
+    }
+
+    // For other menu items, use exact match
+    return location.pathname === path;
+  };
 
   return (
     <div
