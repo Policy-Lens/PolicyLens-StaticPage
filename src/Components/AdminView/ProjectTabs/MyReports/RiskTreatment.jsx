@@ -123,6 +123,48 @@ const RiskTreatment = () => {
         message: 'Are you sure?',
     });
 
+    // --- Automatic Calculation Logic for Risk Treatment --- 
+    useEffect(() => {
+        // Calculate Residual Risk Rating
+        const { revised_control_rating, revised_consequence_rating, revised_likelihood_rating } = formData.rt_revision;
+        const calculatedResidualRiskRating = 
+            (revised_control_rating || 1) * 
+            (revised_consequence_rating || 1) * 
+            (revised_likelihood_rating || 1);
+
+        // Calculate Risk Category based on rt_assessment.risk_rating
+        const assessmentRiskRating = formData.rt_assessment.risk_rating || 1;
+        const calculatedRiskCategory = assessmentRiskRating >= 27 ? 'Significant' : 'Not Significant';
+
+        // Update formData state if calculated values differ
+        setFormData(prevFormData => {
+            const needsUpdate = 
+                prevFormData.rt_revision.residual_risk_rating !== calculatedResidualRiskRating ||
+                prevFormData.rt_assessment.risk_category !== calculatedRiskCategory;
+
+            if (needsUpdate) {
+                return {
+                    ...prevFormData,
+                    rt_assessment: {
+                        ...prevFormData.rt_assessment,
+                        risk_category: calculatedRiskCategory,
+                    },
+                    rt_revision: {
+                        ...prevFormData.rt_revision,
+                        residual_risk_rating: calculatedResidualRiskRating,
+                    }
+                };
+            }
+            return prevFormData; // No update needed
+        });
+
+    }, [
+        formData.rt_revision.revised_control_rating, 
+        formData.rt_revision.revised_consequence_rating, 
+        formData.rt_revision.revised_likelihood_rating,
+        formData.rt_assessment.risk_rating // Dependency for Risk Category calc
+    ]);
+
     // Function to toggle column group expansion
     const toggleGroup = (group) => {
         setExpandedGroups(prev => ({
@@ -267,6 +309,29 @@ const RiskTreatment = () => {
         }
     };
 
+    // Function to handle numeric input changes
+    const handleNumericChange = (e, section, field) => {
+        // Parse value as integer, default to 1 if NaN or less than 1
+        const value = parseInt(e.target.value) || 1; 
+        // Ensure value is at least 1 (or adjust min as needed per field logic, e.g., 0)
+        const validatedValue = Math.max(1, value);
+
+        if (section) {
+            setFormData(prev => ({
+                ...prev,
+                [section]: {
+                    ...prev[section],
+                    [field]: validatedValue // Use validated value
+                }
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [field]: validatedValue // Use validated value
+            }));
+        }
+    };
+
     // Function to handle select changes
     const handleSelectChange = (e, section, field) => {
         const { value } = e.target;
@@ -304,7 +369,7 @@ const RiskTreatment = () => {
 
     // Function to fetch risks for a specific treatment sheet
     const fetchRisksForSheet = async (sheetId) => {
-        setIsLoading(true);
+            setIsLoading(true);
         try {
             const response = await apiRequest(
                 "GET",
@@ -397,12 +462,12 @@ const RiskTreatment = () => {
                 }
             };
 
-            await apiRequest(
+                await apiRequest(
                 "POST",
                 `/api/rarpt/treatment-sheets/${selectedSheet.id}/risks/create/`, 
                 apiData,
-                true
-            );
+                    true
+                );
             message.success('Treatment plan created successfully');
             await fetchRisksForSheet(selectedSheet.id);
             setTimeout(closeModal, 2000);
@@ -452,12 +517,12 @@ const RiskTreatment = () => {
             message.success('Treatment plan updated successfully');
             await fetchRisksForSheet(selectedSheet.id);
             setTimeout(closeModal, 2000);
-        } catch (err) {
+            } catch (err) {
             console.error('Error updating treatment plan:', err);
             message.error(err.message || 'Failed to update treatment plan');
-        } finally {
-            setIsLoading(false);
-        }
+            } finally {
+                setIsLoading(false);
+            }
     };
 
     // Submit excel file for treatment plans
@@ -516,7 +581,7 @@ const RiskTreatment = () => {
             message: "Are you sure you want to delete this treatment plan? This action cannot be undone.",
             onConfirm: async () => {
                 closeConfirmModal();
-                setIsLoading(true);
+        setIsLoading(true);
                 try {
                     await apiRequest(
                         "DELETE",
@@ -606,7 +671,7 @@ const RiskTreatment = () => {
             console.error('Error creating treatment sheet:', err);
             message.error(err.message || 'Failed to create treatment sheet');
         } finally {
-            setIsLoading(false);
+                setIsLoading(false);
         }
     };
 
@@ -644,7 +709,7 @@ const RiskTreatment = () => {
                              const nextSheet = updatedSheets[0];
                              setSelectedSheet(nextSheet);
                              await fetchRisksForSheet(nextSheet.id); // Fetch treatment plans for the new sheet
-                        } else {
+            } else {
                             // No sheets left
                             setSelectedSheet(null);
                             setRiskData([]); // Clear treatment plan data
@@ -652,12 +717,12 @@ const RiskTreatment = () => {
                     } else {
                        // If a different sheet was deleted, just update the list
                        // The current selection remains valid
-                    }
-                } catch (err) {
+            }
+        } catch (err) {
                     console.error('Error deleting or fetching treatment sheets after deletion:', err);
                     message.error(err.message || 'Failed to delete sheet or refresh list');
                 } finally {
-                    setIsLoading(false);
+            setIsLoading(false);
                 }
             },
             onClose: closeConfirmModal
@@ -773,7 +838,7 @@ const RiskTreatment = () => {
                     </button>
                     
                 </div>
-            </div>
+                </div>
 
             {isLoading && (
                 <div className="flex justify-center items-center p-4">
@@ -817,58 +882,58 @@ const RiskTreatment = () => {
                         </div>
                     ) : (
                         // Existing Table Rendering
-                        <div className="overflow-x-auto w-full p-4" style={{ maxWidth: '100vw' }}>
-                            <div className="inline-block min-w-full whitespace-nowrap">
-                                <table className="border-collapse shadow-lg rounded-lg overflow-hidden">
-                                    <thead>
-                                        <tr className="bg-slate-100">
-                                            {/* Action column */}
-                                            <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Actions</th>
+            <div className="overflow-x-auto w-full p-4" style={{ maxWidth: '100vw' }}>
+                <div className="inline-block min-w-full whitespace-nowrap">
+                    <table className="border-collapse shadow-lg rounded-lg overflow-hidden">
+                        <thead>
+                            <tr className="bg-slate-100">
+                                {/* Action column */}
+                                <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Actions</th>
 
                                                 {/* Basic columns - Adjust based on what needs to be shown */}
-                                            <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Risk ID</th>
-                                            <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Vulnerability Type</th>
-                                            <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Threat Description</th>
+                                <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Risk ID</th>
+                                <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Vulnerability Type</th>
+                                <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Threat Description</th>
                                                 {/* Remove columns not present in rt_ data if necessary */}
                                                 {/* <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Context</th> */}
                                                 {/* <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Applicable Activity</th> */}
 
                                                 {/* Risk Assessment column group (from rt_assessment) */}
-                                            <th
-                                                className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
+                                <th
+                                    className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
                                                     onClick={() => toggleGroup('riskAssessment')} // Keep state key or update if needed
                                                     colSpan={expandedGroups.riskAssessment ? 4 : 1} // Adjusted colspan
-                                            >
-                                                <div className="flex items-center justify-center">
+                                >
+                                    <div className="flex items-center justify-center">
                                                         <span>Risk Assessment</span>
-                                                    {renderExpandIcon(expandedGroups.riskAssessment)}
-                                                </div>
-                                            </th>
+                                        {renderExpandIcon(expandedGroups.riskAssessment)}
+                                    </div>
+                                </th>
 
                                                 {/* Risk Revision column group (from rt_revision) */}
-                                            <th
-                                                className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
+                                <th
+                                    className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
                                                     onClick={() => toggleGroup('riskRevision')} // Keep state key or update if needed
                                                     colSpan={expandedGroups.riskRevision ? 7 : 1} // Adjusted colspan
-                                            >
-                                                <div className="flex items-center justify-center">
+                                >
+                                    <div className="flex items-center justify-center">
                                                         <span>Risk Revision</span>
-                                                    {renderExpandIcon(expandedGroups.riskRevision)}
-                                                </div>
-                                            </th>
+                                        {renderExpandIcon(expandedGroups.riskRevision)}
+                                    </div>
+                                </th>
 
                                                 {/* Risk Mitigation Plan column group (from rt_mitigation_plans) */}
-                                            <th
-                                                className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
+                                <th
+                                    className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
                                                     onClick={() => toggleGroup('mitigationPlan')} // Keep state key or update if needed
                                                     colSpan={expandedGroups.mitigationPlan ? 8 : 1} // Adjusted colspan
-                                            >
-                                                <div className="flex items-center justify-center">
+                                >
+                                    <div className="flex items-center justify-center">
                                                         <span>Risk Mitigation Plan</span>
-                                                    {renderExpandIcon(expandedGroups.mitigationPlan)}
-                                                </div>
-                                            </th>
-                                        </tr>
+                                        {renderExpandIcon(expandedGroups.mitigationPlan)}
+                                    </div>
+                                </th>
+                            </tr>
                                             
                                             {/* Second row for subheaders */} 
                                             <tr className="bg-slate-50">
@@ -920,71 +985,71 @@ const RiskTreatment = () => {
                                                      <th className="border border-slate-200 p-3 font-medium bg-green-100"></th>
                                                  )}
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Array.isArray(riskData) && riskData.map((risk, index) => (
-                                            <tr key={risk.id}
-                                                className={index % 2 === 0 ? "bg-white hover:bg-indigo-50 transition-colors duration-150" : "bg-slate-50 hover:bg-indigo-50 transition-colors duration-150"}>
+                        </thead>
+                        <tbody>
+                            {Array.isArray(riskData) && riskData.map((risk, index) => (
+                                <tr key={risk.id}
+                                    className={index % 2 === 0 ? "bg-white hover:bg-indigo-50 transition-colors duration-150" : "bg-slate-50 hover:bg-indigo-50 transition-colors duration-150"}>
 
                                                 {/* Action buttons - Link to openModal with type 'edit' or 'view' */}
-                                            <td className="border border-slate-200 p-3">
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
-                                                        title="View Treatment Plan"
+                                    <td className="border border-slate-200 p-3">
+                                        <div className="flex space-x-2">
+                                            <button
+                                                className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
+                                                title="View Treatment Plan"
                                                             onClick={() => openModal('view', risk)} // Pass risk object
                                                         >
                                                             {/* View Icon */}
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                                    </button>
-                                                    <button
-                                                        className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
-                                                        title="Edit Treatment Plan"
+                                            </button>
+                                            <button
+                                                className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
+                                                title="Edit Treatment Plan"
                                                             onClick={() => openModal('edit', risk)} // Pass risk object
-                                                    >
+                                            >
                                                             {/* Edit Icon */}
                                                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                                                    </button>
-                                                    <button
-                                                        className="p-1 bg-red-100 rounded hover:bg-red-200 transition-colors"
-                                                        title="Delete"
-                                                        onClick={() => handleDeleteRisk(risk.id)}
-                                                    >
+                                            </button>
+                                            <button
+                                                className="p-1 bg-red-100 rounded hover:bg-red-200 transition-colors"
+                                                title="Delete"
+                                                onClick={() => handleDeleteRisk(risk.id)}
+                                            >
                                                             {/* Delete Icon */}
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-red-600"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                            </button>
+                                        </div>
+                                    </td>
 
-                                                    {/* Basic cells */}
+                                    {/* Basic cells */}
                                                         <td className="border border-slate-200 p-3">{risk.risk_id}</td>
-                                                    <td className="border border-slate-200 p-3">{risk.vulnerabilityType}</td>
-                                                    <td className="border border-slate-200 p-3">{risk.threatDescription}</td>
+                                    <td className="border border-slate-200 p-3">{risk.vulnerabilityType}</td>
+                                    <td className="border border-slate-200 p-3">{risk.threatDescription}</td>
 
                                                     {/* rt_assessment cells */} 
-                                                {expandedGroups.riskAssessment ? (
-                                                    <>
+                                    {expandedGroups.riskAssessment ? (
+                                        <>
                                                             <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskAssessment.riskRating)}`}>
-                                                            {risk.riskAssessment.riskRating}
-                                                        </td>
-                                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.riskCategory}</td>
-                                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.departmentBU}</td>
-                                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.mitigationStrategy}</td>
-                                                    </>
-                                                ) : (
+                                                {risk.riskAssessment.riskRating}
+                                            </td>
+                                            <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.riskCategory}</td>
+                                            <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.departmentBU}</td>
+                                            <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.mitigationStrategy}</td>
+                                        </>
+                                    ) : (
                                                         <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskAssessment.riskRating)}`}>
-                                                        {risk.riskAssessment.riskRating}
-                                                    </td>
-                                                )}
+                                            {risk.riskAssessment.riskRating}
+                                        </td>
+                                    )}
 
                                                     {/* rt_revision cells */} 
-                                                {expandedGroups.riskRevision ? (
-                                                    <>
-                                                        <td className="border border-slate-200 p-3 bg-indigo-50">{risk.riskRevision.soaControl}</td>
-                                                        <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.meetsRequirements}</td>
+                                    {expandedGroups.riskRevision ? (
+                                        <>
+                                            <td className="border border-slate-200 p-3 bg-indigo-50">{risk.riskRevision.soaControl}</td>
+                                            <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.meetsRequirements}</td>
                                                             <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.revisedControlRating)}`}>
-                                                            {risk.riskRevision.revisedControlRating}
-                                                        </td>
+                                                {risk.riskRevision.revisedControlRating}
+                                            </td>
                                                             <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.revisedConsequenceRating)}`}>
                                                                 {risk.riskRevision.revisedConsequenceRating}
                                                             </td>
@@ -994,37 +1059,37 @@ const RiskTreatment = () => {
                                                             <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.residualRiskRating)}`}>
                                                                 {risk.riskRevision.residualRiskRating}
                                                             </td>
-                                                        <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.acceptableToOwner}</td>
-                                                    </>
-                                                ) : (
+                                            <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.acceptableToOwner}</td>
+                                        </>
+                                    ) : (
                                                         <td className={`border border-slate-200 p-3 text-center bg-indigo-50 ${getRatingColor(risk.riskRevision.residualRiskRating)}`}>
-                                                        RR: {risk.riskRevision.residualRiskRating}
-                                                    </td>
-                                                )}
+                                            RR: {risk.riskRevision.residualRiskRating}
+                                        </td>
+                                    )}
 
                                                     {/* rt_mitigation_plans cells */} 
-                                                {expandedGroups.mitigationPlan ? (
-                                                    <>
-                                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.furtherPlannedAction}</td>
-                                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskId}</td>
-                                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskDescription}</td>
-                                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskOwner}</td>
-                                                        <td className="border border-slate-200 p-3 text-center">{risk.mitigationPlan.isOngoing}</td>
-                                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.plannedCompletionDate}</td>
-                                                        <td className="border border-slate-200 p-3 text-center">{risk.mitigationPlan.isRecurrent}</td>
-                                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.frequency}</td>
-                                                    </>
-                                                ) : (
-                                                    <td className="border border-slate-200 p-3 text-center">
+                                    {expandedGroups.mitigationPlan ? (
+                                        <>
+                                            <td className="border border-slate-200 p-3">{risk.mitigationPlan.furtherPlannedAction}</td>
+                                            <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskId}</td>
+                                            <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskDescription}</td>
+                                            <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskOwner}</td>
+                                            <td className="border border-slate-200 p-3 text-center">{risk.mitigationPlan.isOngoing}</td>
+                                            <td className="border border-slate-200 p-3">{risk.mitigationPlan.plannedCompletionDate}</td>
+                                            <td className="border border-slate-200 p-3 text-center">{risk.mitigationPlan.isRecurrent}</td>
+                                            <td className="border border-slate-200 p-3">{risk.mitigationPlan.frequency}</td>
+                                        </>
+                                    ) : (
+                                        <td className="border border-slate-200 p-3 text-center">
                                                             {(risk.mitigationPlan.furtherPlannedAction || '').substring(0, 15)}...
-                                                    </td>
-                                                )}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
                     )}
                 </> // Close fragment
             )}
@@ -1125,14 +1190,15 @@ const RiskTreatment = () => {
                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                  <div>
                                                      <label className="block text-sm font-medium text-gray-700 mb-1">Risk Rating</label>
+                                                     {/* Assuming this is manually entered or fetched, not calculated here */} 
                                                      <input type="number" min="1" value={formData.rt_assessment.risk_rating} onChange={(e) => handleNumericChange(e, 'rt_assessment', 'risk_rating')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
                                                  </div>
                                                  <div>
                                                      <label className="block text-sm font-medium text-gray-700 mb-1">Risk Category</label>
-                                                     <select value={formData.rt_assessment.risk_category} onChange={(e) => handleSelectChange(e, 'rt_assessment', 'risk_category')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'}>
+                                                     {/* Make Category disabled and limit options */}
+                                                     <select value={formData.rt_assessment.risk_category} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100 appearance-none" disabled>
                                                          <option value="Not Significant">Not Significant</option>
                                                          <option value="Significant">Significant</option>
-                                                         <option value="Critical">Critical</option>
                                                      </select>
                                                  </div>
                                                   <div>
@@ -1180,7 +1246,8 @@ const RiskTreatment = () => {
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">Residual Risk Rating</label>
-                                                    <input type="number" min="1" value={formData.rt_revision.residual_risk_rating} onChange={(e) => handleNumericChange(e, 'rt_revision', 'residual_risk_rating')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    {/* Make Residual Risk disabled */}
+                                                    <input type="number" min="1" value={formData.rt_revision.residual_risk_rating} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100" readOnly disabled />
                                                 </div>
                                                  <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">Acceptable to Risk Owner? (Y/N)</label>

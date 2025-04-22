@@ -97,7 +97,7 @@ const MyReports = () => {
     const [riskData, setRiskData] = useState([]);
     const [isLoading, setIsLoading] = useState(true); // Start with loading state
 
-    // State for form data
+    // State for form data - Updated structure
     const [formData, setFormData] = useState({
         risk_id: '',
         vulnerability_type: '',
@@ -111,6 +111,7 @@ const MyReports = () => {
             breach_of_legal_obligation: 'N',
             description_of_legal_obligation: ''
         },
+        // Added Impact Ratings section
         impact_ratings: {
             on_customer: 1,
             on_service_capability: 1,
@@ -126,24 +127,26 @@ const MyReports = () => {
             rating: 1
         },
         risk_assessment: {
-            risk_rating: 5,
+            risk_rating: 1, // Initialize with 1 or a calculated default
             risk_category: 'Not Significant',
-            department_bu: 'Admin',
+            department_bu: '',
             risk_owner: '',
             risk_mitigation_strategy: 'Tolerate'
         },
         risk_revision: {
             applicable_soa_control: '',
+            soaControlDesc: '', // Added SoA Control Description
             planned_controls_meet_requirements: 'Y',
             revised_control_rating: 1,
-            residual_risk_rating: 5,
+            residual_risk_rating: 1, // Initialize with 1 or a calculated default
             acceptable_to_risk_owner: 'Y'
         },
         mitigation_task: {
+            further_planned_action: '', // Added Further Planned Action
             task_id: '',
             task_description: '',
             task_owner: '',
-            is_ongoing: 'Y',
+            is_ongoing: 'N', // Defaulting to No
             is_recurrent: 'N',
             frequency: '',
             planned_completion_date: ''
@@ -160,6 +163,74 @@ const MyReports = () => {
         title: 'Confirm Action',
         message: 'Are you sure?',
     });
+
+    // --- Automatic Calculation Logic --- 
+    useEffect(() => {
+        // Calculate Total Impact
+        const { on_customer, on_service_capability, financial_damage, spread_magnitude } = formData.impact_ratings;
+        const totalImpact = (on_customer || 0) + (on_service_capability || 0) + (financial_damage || 0) + (spread_magnitude || 0);
+
+        // Calculate Consequence Rating based on Total Impact
+        let calculatedConsequenceRating = 1;
+        if (totalImpact >= 17) {
+            calculatedConsequenceRating = 5;
+        } else if (totalImpact >= 13) {
+            calculatedConsequenceRating = 4;
+        } else if (totalImpact >= 9) {
+            calculatedConsequenceRating = 3;
+        } else if (totalImpact >= 5) {
+            calculatedConsequenceRating = 2;
+        } 
+
+        // Calculate Risk Rating
+        const likelihoodRating = formData.severity.likelihood_rating || 1;
+        const controlRating = formData.control_assessment.rating || 1;
+        const calculatedRiskRating = calculatedConsequenceRating * likelihoodRating * controlRating;
+
+        // Calculate Risk Category
+        let calculatedRiskCategory = 'Not Significant';
+        if (formData.impact_assessment.breach_of_legal_obligation === 'Y') {
+            calculatedRiskCategory = 'Significant';
+        } else if (calculatedRiskRating >= 27) {
+            calculatedRiskCategory = 'Significant';
+        }
+
+        // Calculate Residual Risk Rating
+        const revisedControlRating = formData.risk_revision.revised_control_rating || 1;
+        const calculatedResidualRiskRating = calculatedConsequenceRating * likelihoodRating * revisedControlRating;
+
+        // Update formData state if calculated values differ from current state
+        // Use functional update to avoid stale state issues
+        setFormData(prevFormData => {
+            const needsUpdate = 
+                prevFormData.severity.consequence_rating !== calculatedConsequenceRating ||
+                prevFormData.risk_assessment.risk_rating !== calculatedRiskRating ||
+                prevFormData.risk_assessment.risk_category !== calculatedRiskCategory ||
+                prevFormData.risk_revision.residual_risk_rating !== calculatedResidualRiskRating;
+            
+            if (needsUpdate) {
+                return {
+                    ...prevFormData,
+                    severity: {
+                        ...prevFormData.severity,
+                        consequence_rating: calculatedConsequenceRating,
+                    },
+                    risk_assessment: {
+                        ...prevFormData.risk_assessment,
+                        risk_rating: calculatedRiskRating,
+                        risk_category: calculatedRiskCategory,
+                    },
+                    risk_revision: {
+                        ...prevFormData.risk_revision,
+                        residual_risk_rating: calculatedResidualRiskRating,
+                    }
+                };
+            }
+            return prevFormData; // No update needed
+        });
+
+    }, [formData.impact_ratings, formData.severity.likelihood_rating, formData.control_assessment.rating, formData.risk_revision.revised_control_rating, formData.impact_assessment.breach_of_legal_obligation]);
+    // Watch all dependencies for recalculation
 
     // Toggle expansion of a column group
     const toggleGroup = (group) => {
@@ -319,65 +390,65 @@ const MyReports = () => {
         setExcelFile(null);
 
         if ((type === 'edit' || type === 'view') && riskToEdit) {
-            // When editing or viewing, populate form with existing risk data
             setEditingRisk(riskToEdit);
-            // Populate form with the risk data
+            // Populate form with the risk data - Updated mapping
             setFormData({
                 risk_id: riskToEdit.risk_id || '',
-                vulnerability_type: riskToEdit.vulnerability_type || riskToEdit.vulnerabilityType || '',
-                threat_description: riskToEdit.threat_description || riskToEdit.threatDescription || '',
+                vulnerability_type: riskToEdit.vulnerabilityType || '',
+                threat_description: riskToEdit.threatDescription || '',
                 context: riskToEdit.context || '',
-                applicable_activity: riskToEdit.applicable_activity || riskToEdit.applicableActivity || '',
+                applicable_activity: riskToEdit.applicableActivity || '',
                 impact_assessment: {
-                    impact_on_confidentiality: riskToEdit.impact_assessment?.impact_on_confidentiality || riskToEdit.impactAssessment?.confidentiality || 'N',
-                    impact_on_integrity: riskToEdit.impact_assessment?.impact_on_integrity || riskToEdit.impactAssessment?.integrity || 'N',
-                    impact_on_availability: riskToEdit.impact_assessment?.impact_on_availability || riskToEdit.impactAssessment?.availability || 'N',
-                    breach_of_legal_obligation: riskToEdit.impact_assessment?.breach_of_legal_obligation || riskToEdit.impactAssessment?.legalObligation || 'N',
-                    description_of_legal_obligation: riskToEdit.impact_assessment?.description_of_legal_obligation || riskToEdit.impactAssessment?.legalObligationDesc || ''
+                    impact_on_confidentiality: riskToEdit.impactAssessment?.confidentiality || 'N',
+                    impact_on_integrity: riskToEdit.impactAssessment?.integrity || 'N',
+                    impact_on_availability: riskToEdit.impactAssessment?.availability || 'N',
+                    breach_of_legal_obligation: riskToEdit.impactAssessment?.legalObligation || 'N',
+                    description_of_legal_obligation: riskToEdit.impactAssessment?.legalObligationDesc || ''
                 },
+                // Map impact ratings
                 impact_ratings: {
-                    on_customer: riskToEdit.impact_assessment?.on_customer || riskToEdit.impactRatings?.customer || 1,
-                    on_service_capability: riskToEdit.impact_assessment?.on_service_capability || riskToEdit.impactRatings?.serviceCapability || 1,
-                    financial_damage: riskToEdit.impact_assessment?.financial_damage || riskToEdit.impactRatings?.financialDamage || 1,
-                    spread_magnitude: riskToEdit.impact_assessment?.spread_magnitude || riskToEdit.impactRatings?.spreadMagnitude || 1
+                    on_customer: riskToEdit.impactRatings?.customer || 1,
+                    on_service_capability: riskToEdit.impactRatings?.serviceCapability || 1,
+                    financial_damage: riskToEdit.impactRatings?.financialDamage || 1,
+                    spread_magnitude: riskToEdit.impactRatings?.spreadMagnitude || 1
                 },
                 severity: {
-                    consequence_rating: riskToEdit.impact_assessment?.consequence_rating || riskToEdit.severity?.consequenceRating || 1,
-                    likelihood_rating: riskToEdit.impact_assessment?.likelihood_rating || riskToEdit.severity?.likelihoodRating || 1
+                    consequence_rating: riskToEdit.severity?.consequenceRating || 1,
+                    likelihood_rating: riskToEdit.severity?.likelihoodRating || 1
                 },
                 control_assessment: {
-                    description: riskToEdit.control_assessment?.description || riskToEdit.controlAssessment?.description || '',
-                    rating: riskToEdit.control_assessment?.rating || riskToEdit.controlAssessment?.rating || 1
+                    description: riskToEdit.controlAssessment?.description || '',
+                    rating: riskToEdit.controlAssessment?.rating || 1
                 },
                 risk_assessment: {
-                    risk_rating: riskToEdit.risk_assessment?.risk_rating || riskToEdit.riskAssessment?.riskRating || 1,
-                    risk_category: riskToEdit.risk_assessment?.risk_category || riskToEdit.riskAssessment?.riskCategory || 'Not Significant',
-                    department_bu: riskToEdit.risk_assessment?.department_bu || riskToEdit.riskAssessment?.departmentBU || '',
-                    risk_owner: riskToEdit.risk_assessment?.risk_owner || riskToEdit.riskAssessment?.riskOwner || '',
-                    risk_mitigation_strategy: riskToEdit.risk_assessment?.risk_mitigation_strategy || riskToEdit.riskAssessment?.mitigationStrategy || 'Tolerate'
+                    risk_rating: riskToEdit.riskAssessment?.riskRating || 1,
+                    risk_category: riskToEdit.riskAssessment?.riskCategory || 'Not Significant',
+                    department_bu: riskToEdit.riskAssessment?.departmentBU || '',
+                    risk_owner: riskToEdit.riskAssessment?.riskOwner || '',
+                    risk_mitigation_strategy: riskToEdit.riskAssessment?.mitigationStrategy || 'Tolerate'
                 },
                 risk_revision: {
-                    applicable_soa_control: riskToEdit.risk_revision?.applicable_soa_control || riskToEdit.riskRevision?.soaControl || '',
-                    soaControlDesc: riskToEdit.risk_revision?.soa_control_description || riskToEdit.riskRevision?.soaControlDesc || '',
-                    planned_controls_meet_requirements: riskToEdit.risk_revision?.planned_controls_meet_requirements || riskToEdit.riskRevision?.meetsRequirements || 'Y',
-                    revised_control_rating: riskToEdit.risk_revision?.revised_control_rating || riskToEdit.riskRevision?.revisedControlRating || 1,
-                    residual_risk_rating: riskToEdit.risk_revision?.residual_risk_rating || riskToEdit.riskRevision?.residualRiskRating || 1,
-                    acceptable_to_risk_owner: riskToEdit.risk_revision?.acceptable_to_risk_owner || riskToEdit.riskRevision?.acceptableToOwner || 'Y'
+                    applicable_soa_control: riskToEdit.riskRevision?.soaControl || '',
+                    soaControlDesc: riskToEdit.riskRevision?.soaControlDesc || '', // Map SoA Control Desc
+                    planned_controls_meet_requirements: riskToEdit.riskRevision?.meetsRequirements || 'Y',
+                    revised_control_rating: riskToEdit.riskRevision?.revisedControlRating || 1,
+                    residual_risk_rating: riskToEdit.riskRevision?.residualRiskRating || 1,
+                    acceptable_to_risk_owner: riskToEdit.riskRevision?.acceptableToOwner || 'Y'
                 },
                 mitigation_task: {
-                    task_id: riskToEdit.mitigation_task?.task_id || riskToEdit.mitigationPlan?.taskId || '',
-                    task_description: riskToEdit.mitigation_task?.task_description || riskToEdit.mitigationPlan?.taskDescription || '',
-                    task_owner: riskToEdit.mitigation_task?.task_owner || riskToEdit.mitigationPlan?.taskOwner || '',
-                    is_ongoing: riskToEdit.mitigation_task?.is_ongoing || riskToEdit.mitigationPlan?.isOngoing || 'Y',
-                    is_recurrent: riskToEdit.mitigation_task?.is_recurrent || riskToEdit.mitigationPlan?.isRecurrent || 'N',
-                    frequency: riskToEdit.mitigation_task?.frequency || riskToEdit.mitigationPlan?.frequency || '',
-                    planned_completion_date: riskToEdit.mitigation_task?.planned_completion_date || riskToEdit.mitigationPlan?.plannedCompletionDate || ''
+                    further_planned_action: riskToEdit.mitigationPlan?.furtherPlannedAction || '', // Map Further Planned Action
+                    task_id: riskToEdit.mitigationPlan?.taskId || '',
+                    task_description: riskToEdit.mitigationPlan?.taskDescription || '',
+                    task_owner: riskToEdit.mitigationPlan?.taskOwner || '',
+                    is_ongoing: riskToEdit.mitigationPlan?.isOngoing || 'N',
+                    is_recurrent: riskToEdit.mitigationPlan?.isRecurrent || 'N',
+                    frequency: riskToEdit.mitigationPlan?.frequency || '',
+                    planned_completion_date: riskToEdit.mitigationPlan?.plannedCompletionDate || ''
                 }
             });
         } else if (type === 'create') {
-            // For new risk form, reset to default values
             setEditingRisk(null);
-            // Reset form data to defaults
+            // Reset form data to defaults - Updated structure
             setFormData({
                 risk_id: '',
                 vulnerability_type: '',
@@ -391,7 +462,7 @@ const MyReports = () => {
                     breach_of_legal_obligation: 'N',
                     description_of_legal_obligation: ''
                 },
-                impact_ratings: {
+                impact_ratings: { // Reset impact ratings
                     on_customer: 1,
                     on_service_capability: 1,
                     financial_damage: 1,
@@ -406,25 +477,26 @@ const MyReports = () => {
                     rating: 1
                 },
                 risk_assessment: {
-                    risk_rating: 5,
+                    risk_rating: 1,
                     risk_category: 'Not Significant',
-                    department_bu: 'Admin',
+                    department_bu: '',
                     risk_owner: '',
                     risk_mitigation_strategy: 'Tolerate'
                 },
-                risk_revision: {
+                risk_revision: { // Reset risk revision
                     applicable_soa_control: '',
                     soaControlDesc: '',
                     planned_controls_meet_requirements: 'Y',
                     revised_control_rating: 1,
-                    residual_risk_rating: 5,
+                    residual_risk_rating: 1,
                     acceptable_to_risk_owner: 'Y'
                 },
-                mitigation_task: {
+                mitigation_task: { // Reset mitigation task
+                    further_planned_action: '',
                     task_id: '',
                     task_description: '',
                     task_owner: '',
-                    is_ongoing: 'Y',
+                    is_ongoing: 'N',
                     is_recurrent: 'N',
                     frequency: '',
                     planned_completion_date: ''
@@ -435,67 +507,28 @@ const MyReports = () => {
         setShowModal(true);
     };
 
-    // Close the modal and reset form state
+    // Close the modal and reset form state - Updated structure
     const closeModal = () => {
         setShowModal(false);
         setModalType('form');
         setEditingRisk(null);
-
-        // Reset form data to defaults
-        setFormData({
+        setFormData({ // Reset using the updated structure
             risk_id: '',
             vulnerability_type: '',
             threat_description: '',
             context: 'Natural',
             applicable_activity: '',
-            impact_assessment: {
-                impact_on_confidentiality: 'N',
-                impact_on_integrity: 'N',
-                impact_on_availability: 'N',
-                breach_of_legal_obligation: 'N',
-                description_of_legal_obligation: ''
-            },
-            impact_ratings: {
-                on_customer: 1,
-                on_service_capability: 1,
-                financial_damage: 1,
-                spread_magnitude: 1
-            },
-            severity: {
-                consequence_rating: 1,
-                likelihood_rating: 1
-            },
-            control_assessment: {
-                description: '',
-                rating: 1
-            },
-            risk_assessment: {
-                risk_rating: 5,
-                risk_category: 'Not Significant',
-                department_bu: 'Admin',
-                risk_owner: '',
-                risk_mitigation_strategy: 'Tolerate'
-            },
-            risk_revision: {
-                applicable_soa_control: '',
-                planned_controls_meet_requirements: 'Y',
-                revised_control_rating: 1,
-                residual_risk_rating: 5,
-                acceptable_to_risk_owner: 'Y'
-            },
-            mitigation_task: {
-                task_id: '',
-                task_description: '',
-                task_owner: '',
-                is_ongoing: 'Y',
-                is_recurrent: 'N',
-                frequency: '',
-                planned_completion_date: ''
-            }
+            impact_assessment: { impact_on_confidentiality: 'N', impact_on_integrity: 'N', impact_on_availability: 'N', breach_of_legal_obligation: 'N', description_of_legal_obligation: '' },
+            impact_ratings: { on_customer: 1, on_service_capability: 1, financial_damage: 1, spread_magnitude: 1 },
+            severity: { consequence_rating: 1, likelihood_rating: 1 },
+            control_assessment: { description: '', rating: 1 },
+            risk_assessment: { risk_rating: 1, risk_category: 'Not Significant', department_bu: '', risk_owner: '', risk_mitigation_strategy: 'Tolerate' },
+            risk_revision: { applicable_soa_control: '', soaControlDesc: '', planned_controls_meet_requirements: 'Y', revised_control_rating: 1, residual_risk_rating: 1, acceptable_to_risk_owner: 'Y' },
+            mitigation_task: { further_planned_action: '', task_id: '', task_description: '', task_owner: '', is_ongoing: 'N', is_recurrent: 'N', frequency: '', planned_completion_date: '' }
         });
     };
 
-    // Handle form input changes
+    // Handle form input changes (No change needed here)
     const handleFormChange = (e, section, field) => {
         const { value } = e.target;
 
@@ -515,7 +548,7 @@ const MyReports = () => {
         }
     };
 
-    // Handle numeric input changes
+    // Handle numeric input changes (No change needed here)
     const handleNumericChange = (e, section, field) => {
         const value = parseInt(e.target.value) || 1;
 
@@ -535,7 +568,7 @@ const MyReports = () => {
         }
     };
 
-    // Handle select input changes
+    // Handle select input changes (No change needed here)
     const handleSelectChange = (e, section, field) => {
         if (section) {
             setFormData(prev => ({
@@ -553,7 +586,7 @@ const MyReports = () => {
         }
     };
 
-    // Handle file input change - static stub, no actual functionality
+    // Handle file input change (No change needed here)
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -561,39 +594,30 @@ const MyReports = () => {
         }
     };
 
-    // Submit risk form
+    // Submit risk form - Updated API mapping
     const handleRiskSubmit = async (e) => {
         e.preventDefault();
-        
-        if (!selectedSheet) {
-            message.error("Please select a sheet first"); // Use message.error
-            return;
-        }
-        
+        if (!selectedSheet) { message.error("Please select a sheet first"); return; }
         setIsLoading(true);
-
         try {
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-
-            // Convert form data to API format
+            const today = new Date().toISOString().split('T')[0];
             const apiData = {
                 risk_id: formData.risk_id || "Risk_" + Date.now(),
                 vulnerability_type: formData.vulnerability_type || "Default",
                 threat_description: formData.threat_description || "Default threat description",
                 context: formData.context || "Natural",
                 applicable_activity: formData.applicable_activity || "Working in the organisation",
+                // Combine impact assessment, ratings, and severity for API
                 ra_impact_assessment: {
                     impact_on_confidentiality: formData.impact_assessment.impact_on_confidentiality || "N",
                     impact_on_integrity: formData.impact_assessment.impact_on_integrity || "N",
                     impact_on_availability: formData.impact_assessment.impact_on_availability || "N",
                     breach_of_legal_obligation: formData.impact_assessment.breach_of_legal_obligation || "N",
                     description_of_legal_obligation: formData.impact_assessment.description_of_legal_obligation || "",
-                    // Impact ratings data
                     on_customer: formData.impact_ratings.on_customer || 1,
                     on_service_capability: formData.impact_ratings.on_service_capability || 1,
                     financial_damage: formData.impact_ratings.financial_damage || 1,
                     spread_magnitude: formData.impact_ratings.spread_magnitude || 1,
-                    // Severity data
                     consequence_rating: formData.severity.consequence_rating || 1,
                     likelihood_rating: formData.severity.likelihood_rating || 1
                 },
@@ -610,65 +634,40 @@ const MyReports = () => {
                 },
                 ra_risk_revision: {
                     applicable_soa_control: formData.risk_revision.applicable_soa_control || "",
-                    soa_control_description: formData.risk_revision.soaControlDesc || "",
+                    soa_control_description: formData.risk_revision.soaControlDesc || "", // Map SoA Control Desc
                     planned_controls_meet_requirements: formData.risk_revision.planned_controls_meet_requirements || "Y",
                     revised_control_rating: formData.risk_revision.revised_control_rating || 1,
                     residual_risk_rating: formData.risk_revision.residual_risk_rating || 1,
                     acceptable_to_risk_owner: formData.risk_revision.acceptable_to_risk_owner || "Y"
                 },
                 ra_mitigation_task: {
-                    task_id: formData.mitigation_task.task_id || "Task_" + Date.now(),
+                    task_id: formData.mitigation_task.task_id || "Task_" + Date.now(), // Task ID might be generated or optional
                     task_description: formData.mitigation_task.task_description || "Default task description",
                     task_owner: formData.mitigation_task.task_owner || "Admin",
-                    is_ongoing: formData.mitigation_task.is_ongoing || "Y",
-                    is_recurrent: formData.mitigation_task.is_recurrent || "N",
-                    frequency: formData.mitigation_task.frequency || "",
+                    is_ongoing: formData.mitigation_task.is_ongoing || "N",
                     planned_completion_date: formData.mitigation_task.planned_completion_date || today,
-                    further_planned_action: "Yes"
+                    is_recurrent: formData.mitigation_task.is_recurrent || "N",
+                    frequency: formData.mitigation_task.is_recurrent === 'Y' ? formData.mitigation_task.frequency : null, // Send null if not recurrent
+                    further_planned_action: formData.mitigation_task.further_planned_action || "" // Map Further Planned Action
                 }
             };
-
-            // Send data to the API
-            const response = await apiRequest(
-                "POST",
-                `/api/rarpt/assessment-sheets/${selectedSheet.id}/risks/create/`,
-                apiData,
-                true
-            );
-
-            message.success('Risk created successfully'); // Use message.success
-
-            // Refresh risks for the current sheet
+            await apiRequest("POST", `/api/rarpt/assessment-sheets/${selectedSheet.id}/risks/create/`, apiData, true);
+            message.success('Risk created successfully');
             await fetchRisksForSheet(selectedSheet.id);
-
-            // Reset form after successful submission
-            setTimeout(() => {
-                closeModal();
-            }, 2000);
-
+            setTimeout(closeModal, 1000);
         } catch (err) {
             console.error('Error creating risk:', err.message || 'Unknown error');
             message.error(err.message || 'Failed to create risk'); // Use message.error
-        } finally {
-            setIsLoading(false);
-        }
+        } finally { setIsLoading(false); }
     };
 
-    // Update existing risk
+    // Update existing risk - Updated API mapping
     const handleRiskUpdate = async (e) => {
         e.preventDefault();
-        
-        if (!selectedSheet || !editingRisk) {
-            message.error("Sheet or risk not selected"); // Use message.error
-            return;
-        }
-        
+        if (!selectedSheet || !editingRisk) { message.error("Sheet or risk not selected"); return; }
         setIsLoading(true);
-
         try {
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-
-            // Convert form data to API format
+            const today = new Date().toISOString().split('T')[0];
             const apiData = {
                 risk_id: formData.risk_id || "Risk_" + Date.now(),
                 vulnerability_type: formData.vulnerability_type || "Default",
@@ -681,70 +680,42 @@ const MyReports = () => {
                     impact_on_availability: formData.impact_assessment.impact_on_availability || "N",
                     breach_of_legal_obligation: formData.impact_assessment.breach_of_legal_obligation || "N",
                     description_of_legal_obligation: formData.impact_assessment.description_of_legal_obligation || "",
-                    // Impact ratings data
                     on_customer: formData.impact_ratings.on_customer || 1,
                     on_service_capability: formData.impact_ratings.on_service_capability || 1,
                     financial_damage: formData.impact_ratings.financial_damage || 1,
                     spread_magnitude: formData.impact_ratings.spread_magnitude || 1,
-                    // Severity data
                     consequence_rating: formData.severity.consequence_rating || 1,
                     likelihood_rating: formData.severity.likelihood_rating || 1
                 },
-                ra_control_assessment: {
-                    description: formData.control_assessment.description || "Not specified",
-                    rating: formData.control_assessment.rating || 1
-                },
-                ra_risk_assessment: {
-                    risk_rating: formData.risk_assessment.risk_rating || 1,
-                    risk_category: formData.risk_assessment.risk_category || "Not Significant",
-                    department_bu: formData.risk_assessment.department_bu || "Admin",
-                    risk_owner: formData.risk_assessment.risk_owner || "Admin",
-                    risk_mitigation_strategy: formData.risk_assessment.risk_mitigation_strategy || "Tolerate"
-                },
+                ra_control_assessment: { description: formData.control_assessment.description || "Not specified", rating: formData.control_assessment.rating || 1 },
+                ra_risk_assessment: { risk_rating: formData.risk_assessment.risk_rating || 1, risk_category: formData.risk_assessment.risk_category || "Not Significant", department_bu: formData.risk_assessment.department_bu || "Admin", risk_owner: formData.risk_assessment.risk_owner || "Admin", risk_mitigation_strategy: formData.risk_assessment.risk_mitigation_strategy || "Tolerate" },
                 ra_risk_revision: {
                     applicable_soa_control: formData.risk_revision.applicable_soa_control || "",
-                    soa_control_description: formData.risk_revision.soaControlDesc || "",
+                    soa_control_description: formData.risk_revision.soaControlDesc || "", // Map SoA Control Desc
                     planned_controls_meet_requirements: formData.risk_revision.planned_controls_meet_requirements || "Y",
                     revised_control_rating: formData.risk_revision.revised_control_rating || 1,
                     residual_risk_rating: formData.risk_revision.residual_risk_rating || 1,
                     acceptable_to_risk_owner: formData.risk_revision.acceptable_to_risk_owner || "Y"
                 },
                 ra_mitigation_task: {
-                    task_id: formData.mitigation_task.task_id || "Task_" + Date.now(),
+                    task_id: formData.mitigation_task.task_id || editingRisk.mitigationPlan?.taskId || "Task_" + Date.now(), // Keep existing Task ID if available
                     task_description: formData.mitigation_task.task_description || "Default task description",
                     task_owner: formData.mitigation_task.task_owner || "Admin",
-                    is_ongoing: formData.mitigation_task.is_ongoing || "Y",
-                    is_recurrent: formData.mitigation_task.is_recurrent || "N",
-                    frequency: formData.mitigation_task.frequency || "",
+                    is_ongoing: formData.mitigation_task.is_ongoing || "N",
                     planned_completion_date: formData.mitigation_task.planned_completion_date || today,
-                    further_planned_action: "Yes"
+                    is_recurrent: formData.mitigation_task.is_recurrent || "N",
+                    frequency: formData.mitigation_task.is_recurrent === 'Y' ? formData.mitigation_task.frequency : null,
+                    further_planned_action: formData.mitigation_task.further_planned_action || "" // Map Further Planned Action
                 }
             };
-
-            // Send update to the API
-            const response = await apiRequest(
-                "PUT",
-                `/api/rarpt/assessment-risks/${editingRisk.id}/`,
-                apiData,
-                true
-            );
-
-            message.success('Risk updated successfully'); // Use message.success
-
-            // Refresh risks to ensure data consistency
+            await apiRequest("PUT", `/api/rarpt/assessment-risks/${editingRisk.id}/`, apiData, true);
+            message.success('Risk updated successfully');
             await fetchRisksForSheet(selectedSheet.id);
-
-            // Close modal after successful update
-            setTimeout(() => {
-                closeModal();
-            }, 2000);
-
+            setTimeout(closeModal, 1000);
         } catch (err) {
             console.error('Error updating risk:', err.message || 'Unknown error');
             message.error(err.message || 'Failed to update risk'); // Use message.error
-        } finally {
-            setIsLoading(false);
-        }
+        } finally { setIsLoading(false); }
     };
 
     // Delete a risk
@@ -754,24 +725,24 @@ const MyReports = () => {
             message: "Are you sure you want to delete this risk assessment? This action cannot be undone.",
             onConfirm: async () => {
                 closeConfirmModal();
-                setIsLoading(true);
-                try {
-                    await apiRequest(
-                        "DELETE",
+            setIsLoading(true);
+            try {
+                await apiRequest(
+                    "DELETE",
                         `/api/rarpt/assessment-risks/${riskId}/`,
-                        null,
-                        true
-                    );
+                    null,
+                    true
+                );
                     message.success('Risk deleted successfully');
                     if (selectedSheet) {
                         await fetchRisksForSheet(selectedSheet.id);
                     }
-                } catch (err) {
-                    console.error('Error deleting risk:', err);
+            } catch (err) {
+                console.error('Error deleting risk:', err);
                     message.error(err.message || 'Failed to delete risk');
-                } finally {
-                    setIsLoading(false);
-                }
+            } finally {
+                setIsLoading(false);
+            }
             },
             onClose: closeConfirmModal
         });
@@ -1463,7 +1434,7 @@ const MyReports = () => {
                                     </button>
                                 </div>
                             )}
-                            
+
                             {/* Risk Assessment Table or Empty State - Only show if sheet is selected */}
                             {selectedSheet && !isLoading && (
                                 <> { /* Wrap conditional content in fragment */}
@@ -1496,7 +1467,7 @@ const MyReports = () => {
                                                 </svg>
                                                 <span>Upload Excel</span>
                                             </button>
-                                        </div>
+                                </div>
                                     </div>
                                 ) : (
                             <div className="overflow-x-auto w-full p-4" style={{ maxWidth: '100vw' }}>
@@ -1878,7 +1849,7 @@ const MyReports = () => {
                                                         </>
                                                     ) : (
                                                         <td className="border border-slate-200 p-3 text-center">
-                                                            {risk.mitigationPlan.furtherPlannedAction}
+                                                            {(risk.mitigationPlan.furtherPlannedAction || 'No').substring(0,3)}
                                                         </td>
                                                     )}
                                                 </tr>
@@ -2058,7 +2029,30 @@ const MyReports = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Impact Ratings and Control Assessment */}
+                                            {/* Impact Ratings (New Section) */}
+                                            <div className="bg-indigo-50 p-4 rounded-md">
+                                                <h4 className="text-lg font-medium mb-4 text-indigo-800">Impact Ratings</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">On Customer (1-5)</label>
+                                                        <input type="number" min="1" max="5" value={formData.impact_ratings.on_customer} onChange={(e) => handleNumericChange(e, 'impact_ratings', 'on_customer')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">On Service Capability (1-5)</label>
+                                                        <input type="number" min="1" max="5" value={formData.impact_ratings.on_service_capability} onChange={(e) => handleNumericChange(e, 'impact_ratings', 'on_service_capability')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Financial Damage (1-5)</label>
+                                                        <input type="number" min="1" max="5" value={formData.impact_ratings.financial_damage} onChange={(e) => handleNumericChange(e, 'impact_ratings', 'financial_damage')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Spread / Magnitude (1-5)</label>
+                                                        <input type="number" min="1" max="5" value={formData.impact_ratings.spread_magnitude} onChange={(e) => handleNumericChange(e, 'impact_ratings', 'spread_magnitude')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Severity & Control Assessment Sections */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="bg-amber-50 p-4 rounded-md">
                                                     <h4 className="text-lg font-medium mb-4 text-amber-800">Severity Assessment</h4>
@@ -2072,7 +2066,7 @@ const MyReports = () => {
                                                                 value={formData.severity.consequence_rating}
                                                                 onChange={(e) => handleNumericChange(e, 'severity', 'consequence_rating')}
                                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                                disabled={modalType === 'view'}
+                                                                disabled
                                                             />
                                                         </div>
                                                         <div>
@@ -2132,7 +2126,7 @@ const MyReports = () => {
                                                                 value={formData.risk_assessment.risk_rating}
                                                                 onChange={(e) => handleNumericChange(e, 'risk_assessment', 'risk_rating')}
                                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
+                                                                disabled
                                                             />
                                                         </div>
                                                         <div>
@@ -2141,7 +2135,7 @@ const MyReports = () => {
                                                                 value={formData.risk_assessment.risk_category}
                                                                 onChange={(e) => handleSelectChange(e, 'risk_assessment', 'risk_category')}
                                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                                                                disabled={modalType === 'view'}
+                                                                disabled
                                                             >
                                                                 <option value="Not Significant">Not Significant</option>
                                                                 <option value="Significant">Significant</option>
@@ -2186,21 +2180,95 @@ const MyReports = () => {
                                                 </div>
                                             </div>
 
+                                            {/* Risk Revision - Updated */}
+                                            <div className="bg-indigo-100 p-4 rounded-md">
+                                                <h4 className="text-lg font-medium mb-4 text-indigo-800">Risk Revision</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Applicable SoA Control</label>
+                                                        <input type="text" value={formData.risk_revision.applicable_soa_control} onChange={(e) => handleFormChange(e, 'risk_revision', 'applicable_soa_control')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    {/* Added SoA Control Description Input */}
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">SoA Control Description</label>
+                                                        <input type="text" value={formData.risk_revision.soaControlDesc} onChange={(e) => handleFormChange(e, 'risk_revision', 'soaControlDesc')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Description of the SoA control" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Planned Controls Meet Requirements? (Y/N)</label>
+                                                        <select value={formData.risk_revision.planned_controls_meet_requirements} onChange={(e) => handleSelectChange(e, 'risk_revision', 'planned_controls_meet_requirements')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} >
+                                                            <option value="Y">Yes</option>
+                                                            <option value="N">No</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Revised Control Rating (1-5)</label>
+                                                        <input type="number" min="1" max="5" value={formData.risk_revision.revised_control_rating} onChange={(e) => handleNumericChange(e, 'risk_revision', 'revised_control_rating')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Residual Risk Rating</label>
+                                                        <input type="number" min="1" value={formData.risk_revision.residual_risk_rating} onChange={(e) => handleNumericChange(e, 'risk_revision', 'residual_risk_rating')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900" disabled />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Revised Risk Acceptable to Owner? (Y/N)</label>
+                                                        <select value={formData.risk_revision.acceptable_to_risk_owner} onChange={(e) => handleSelectChange(e, 'risk_revision', 'acceptable_to_risk_owner')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} >
+                                                             <option value="Y">Yes</option>
+                                                             <option value="N">No</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Mitigation Task - Updated */}
+                                            <div className="bg-green-50 p-4 rounded-md">
+                                                <h4 className="text-lg font-medium mb-4 text-green-800">Mitigation Plan</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Added Further Planned Action Textarea */}
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Further Planned Action</label>
+                                                        <textarea value={formData.mitigation_task.further_planned_action} onChange={(e) => handleFormChange(e, 'mitigation_task', 'further_planned_action')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="2" placeholder="Detail further actions..." disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Task ID</label>
+                                                        <input type="text" value={formData.mitigation_task.task_id} onChange={(e) => handleFormChange(e, 'mitigation_task', 'task_id')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Task Description</label>
+                                                        <textarea value={formData.mitigation_task.task_description} onChange={(e) => handleFormChange(e, 'mitigation_task', 'task_description')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="2" disabled={modalType === 'view'} ></textarea>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Task Owner</label>
+                                                        <input type="text" value={formData.mitigation_task.task_owner} onChange={(e) => handleFormChange(e, 'mitigation_task', 'task_owner')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Ongoing Task? (Y/N)</label>
+                                                        <select value={formData.mitigation_task.is_ongoing} onChange={(e) => handleSelectChange(e, 'mitigation_task', 'is_ongoing')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} >
+                                                             <option value="Y">Yes</option>
+                                                             <option value="N">No</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Planned Completion Date</label>
+                                                        <input type="date" value={formData.mitigation_task.planned_completion_date} onChange={(e) => handleFormChange(e, 'mitigation_task', 'planned_completion_date')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view' || formData.mitigation_task.is_ongoing === 'Y'} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Recurrent Task? (Y/N)</label>
+                                                        <select value={formData.mitigation_task.is_recurrent} onChange={(e) => handleSelectChange(e, 'mitigation_task', 'is_recurrent')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={modalType === 'view'} >
+                                                             <option value="Y">Yes</option>
+                                                             <option value="N">No</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency (if recurrent)</label>
+                                                        <input type="text" value={formData.mitigation_task.frequency} onChange={(e) => handleFormChange(e, 'mitigation_task', 'frequency')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Monthly" disabled={modalType === 'view' || formData.mitigation_task.is_recurrent === 'N'} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             {/* Submit Buttons */}
                                             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                                                    onClick={closeModal}
-                                                >
-                                                    Cancel
-                                                </button>
+                                                 <button type="button" className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50" onClick={closeModal} > Cancel </button>
                                                 {modalType !== 'view' && (
-                                                    <button
-                                                        type="button"
-                                                        className="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                                                        onClick={modalType === 'edit' ? handleRiskUpdate : handleRiskSubmit}
-                                                    >
+                                                     <button type="button" className="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700" onClick={modalType === 'edit' ? handleRiskUpdate : handleRiskSubmit} >
                                                         {modalType === 'edit' ? 'Update Risk Assessment' : 'Save Risk Assessment'}
                                                     </button>
                                                 )}
