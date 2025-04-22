@@ -194,14 +194,7 @@ const CarouselHorizontalStepper = () => {
                             } 
                             group-hover:scale-110 group-hover:shadow-md`}
                         >
-                          {isLoading && status === "current" ? (
-                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          ) : (
-                            actualIndex + 1
-                          )}
+                          {actualIndex + 1}
                         </div>
                         <span className="mt-2 text-sm text-center w-20 truncate">
                           {step.title}
@@ -234,13 +227,13 @@ const CarouselHorizontalStepper = () => {
 
           {/* Step Content - Dynamic Sizing */}
           <div className="flex-grow relative overflow-hidden bg-white rounded-lg shadow-md">
-            {isLoading && <LoadingIndicator />}
+            {/* Removed loading indicator from here */}
 
             {/* Previous button - gray background */}
             <button
               onClick={handlePrev}
               className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-gray-200 rounded-full shadow-md p-3 text-blue-600 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
-              disabled={currentStep === 0 || isTransitioning || isLoading}
+              disabled={currentStep === 0 || isTransitioning}
               aria-label="Previous step"
             >
               <ChevronLeft size={24} strokeWidth={2.5} />
@@ -250,7 +243,7 @@ const CarouselHorizontalStepper = () => {
             <button
               onClick={handleNext}
               className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-gray-200 rounded-full shadow-md p-3 text-blue-600 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
-              disabled={currentStep === steps.length - 1 || isTransitioning || isLoading}
+              disabled={currentStep === steps.length - 1 || isTransitioning}
               aria-label="Next step"
             >
               <ChevronRight size={24} strokeWidth={2.5} />
@@ -297,7 +290,7 @@ const CarouselHorizontalStepper = () => {
               return () => {
                 window.removeEventListener('keydown', handleKeyDown);
               };
-            }, [currentStep, isTransitioning, isLoading])}
+            }, [currentStep, isTransitioning])}
           </div>
         </div>
       </div>
