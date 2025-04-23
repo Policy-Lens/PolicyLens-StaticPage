@@ -12,7 +12,7 @@ const LegendsModal = ({ isOpen, onClose }) => {
         {/* Modal panel */}
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
           <div className="bg-indigo-50 px-4 py-3 border-b border-gray-200 flex justify-between">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Legends</h3>
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Legend</h3>
             <button 
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
