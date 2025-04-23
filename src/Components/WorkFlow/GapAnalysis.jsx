@@ -129,16 +129,20 @@ const GapAnalysis = () => {
 
   const getTaskAssignment = async (step_id) => {
     try {
+      console.log("GapAnalysis: Fetching task assignment for step ID:", step_id);
       const assignmentData = await getStepAssignment(step_id);
+      console.log("GapAnalysis: Task assignment data received:", assignmentData);
       if (assignmentData.status === 200 && assignmentData.data.length > 0) {
+        console.log("GapAnalysis: Setting task assignment:", assignmentData.data[0]);
         setTaskAssignment(assignmentData.data[0]); // Access the first element
         // console.log(assignmentData.data[0]);
       } else {
+        console.log("GapAnalysis: No task assignment found");
         setTaskAssignment(null);
         // console.log("No assignment data found");
       }
     } catch (error) {
-      console.error("Error fetching task assignment:", error);
+      console.error("GapAnalysis: Error fetching task assignment:", error);
       setTaskAssignment(null);
     }
   };
@@ -461,13 +465,12 @@ const GapAnalysis = () => {
           <div className="flex items-center gap-2">
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium
-              ${
-                stepStatus === "completed"
+              ${stepStatus === "completed"
                   ? "bg-green-100 text-green-800"
                   : stepStatus === "in_progress"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-yellow-100 text-yellow-800"
-              }`}
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
             >
               {stepStatus.charAt(0).toUpperCase() +
                 stepStatus.slice(1).replace("_", " ")}
@@ -525,8 +528,9 @@ const GapAnalysis = () => {
               type="default"
               onClick={() => {
                 get_members();
-                setIsAssignTaskVisible(true);
+                handleAssignTask();
               }}
+              className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
             >
               Assign Task
             </Button>
@@ -797,114 +801,155 @@ const GapAnalysis = () => {
         ]}
         width={800}
       >
-        <div className="mb-4">
-          <label className="block mb-2 font-medium text-gray-700">
-            Gap Analysis Plan
-          </label>
-          <TextArea
-            rows={8}
-            value={gapAnalysisText}
-            onChange={(e) => setGapAnalysisText(e.target.value)}
-            placeholder="Enter gap analysis plan details..."
-          />
-        </div>
-
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="includeStakeholder"
-                checked={includeStakeholderData}
-                onChange={(e) => {
-                  setIncludeStakeholderData(e.target.checked);
-                  if (e.target.checked && !stakeholderData) {
-                    getStakeholderData();
-                  }
-                }}
-                className="mr-2"
-              />
-              <label htmlFor="includeStakeholder" className="cursor-pointer">
-                Include reference to stakeholder interview data
-              </label>
+        <div className="p-4 mb-4">
+          {/* Template Download Section */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">Download Template</h3>
+                <div className="mt-2 text-sm text-blue-600">
+                  <p>Please download and fill in the template below before submitting your gap analysis plan.</p>
+                </div>
+                <div className="mt-3">
+                  <a
+                    href="/temp.txt"
+                    download="gap_analysis_template.txt"
+                    className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <svg className="-ml-1 mr-2 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Gap Analysis Template
+                  </a>
+                </div>
+              </div>
             </div>
-
-            <Button
-              type="link"
-              onClick={toggleInsightsPanel}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              {showInsightsPanel ? "Hide Insights" : "View Key Insights"}
-            </Button>
           </div>
 
-          {/* Show loading indicator when fetching data */}
-          {fetchingStakeholderData && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-md flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2"></div>
-              <span className="text-sm text-gray-600">
-                Loading stakeholder data...
-              </span>
+          <div className="space-y-4">
+            {/* Gap analysis text field */}
+            <div>
+              <label
+                htmlFor="gapAnalysisDescription"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Gap Analysis Plan Description
+              </label>
+              <div className="flex">
+                <div className="flex-grow">
+                  <TextArea
+                    id="gapAnalysisDescription"
+                    value={gapAnalysisText}
+                    onChange={(e) => setGapAnalysisText(e.target.value)}
+                    placeholder="Enter your gap analysis plan"
+                    rows={10}
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Show insights panel when requested */}
-          {showInsightsPanel && stakeholderData?.text_data ? (
-            <div className="mt-3 border rounded-md p-3 bg-blue-50">
-              <h4 className="font-medium mb-2">Key Stakeholder Insights</h4>
-              <div className="max-h-60 overflow-y-auto">
-                {extractKeyInsights(stakeholderData.text_data).map(
-                  (insight, idx) => (
-                    <div
-                      key={idx}
-                      className="mb-2 p-2 bg-white rounded shadow-sm"
-                    >
-                      <p className="text-sm mb-1">{insight}</p>
-                      <Button
-                        size="small"
-                        type="primary"
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => incorporateInsight(insight)}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="includeStakeholder"
+                  checked={includeStakeholderData}
+                  onChange={(e) => {
+                    setIncludeStakeholderData(e.target.checked);
+                    if (e.target.checked && !stakeholderData) {
+                      getStakeholderData();
+                    }
+                  }}
+                  className="mr-2"
+                />
+                <label htmlFor="includeStakeholder" className="cursor-pointer">
+                  Include reference to stakeholder interview data
+                </label>
+              </div>
+
+              <Button
+                type="link"
+                onClick={toggleInsightsPanel}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                {showInsightsPanel ? "Hide Insights" : "View Key Insights"}
+              </Button>
+            </div>
+
+            {/* Show loading indicator when fetching data */}
+            {fetchingStakeholderData && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-md flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2"></div>
+                <span className="text-sm text-gray-600">
+                  Loading stakeholder data...
+                </span>
+              </div>
+            )}
+
+            {/* Show insights panel when requested */}
+            {showInsightsPanel && stakeholderData?.text_data ? (
+              <div className="mt-3 border rounded-md p-3 bg-blue-50">
+                <h4 className="font-medium mb-2">Key Stakeholder Insights</h4>
+                <div className="max-h-60 overflow-y-auto">
+                  {extractKeyInsights(stakeholderData.text_data).map(
+                    (insight, idx) => (
+                      <div
+                        key={idx}
+                        className="mb-2 p-2 bg-white rounded shadow-sm"
                       >
-                        Add to Analysis
-                      </Button>
-                    </div>
-                  )
-                )}
+                        <p className="text-sm mb-1">{insight}</p>
+                        <Button
+                          size="small"
+                          type="primary"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => incorporateInsight(insight)}
+                        >
+                          Add to Analysis
+                        </Button>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            showInsightsPanel && (
-              <div className="mt-3 border rounded-md p-3 bg-gray-50">
-                <p className="text-sm text-gray-500 italic">
-                  No stakeholder insights available. Complete the stakeholder
-                  interviews first.
-                </p>
-              </div>
-            )
-          )}
+            ) : (
+              showInsightsPanel && (
+                <div className="mt-3 border rounded-md p-3 bg-gray-50">
+                  <p className="text-sm text-gray-500 italic">
+                    No stakeholder insights available. Complete the stakeholder
+                    interviews first.
+                  </p>
+                </div>
+              )
+            )}
 
-          {/* Show reference preview when including data */}
-          {includeStakeholderData && stakeholderData && (
-            <div className="mt-2 p-3 bg-gray-50 rounded-md">
-              <h4 className="text-sm font-medium mb-1">
-                Stakeholder Data Reference
-              </h4>
-              <p className="text-xs text-gray-600">
-                Latest interview data from{" "}
-                {formatDate(
-                  stakeholderData.created_at || stakeholderData.saved_at
-                )}{" "}
-                will be linked
-              </p>
-              <div className="mt-2 text-xs bg-blue-50 p-2 rounded">
-                <strong>Preview:</strong>{" "}
-                {stakeholderData.text_data
-                  ? stakeholderData.text_data.substring(0, 100) + "..."
-                  : "No text content available"}
+            {/* Show reference preview when including data */}
+            {includeStakeholderData && stakeholderData && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <h4 className="text-sm font-medium mb-1">
+                  Stakeholder Data Reference
+                </h4>
+                <p className="text-xs text-gray-600">
+                  Latest interview data from{" "}
+                  {formatDate(
+                    stakeholderData.created_at || stakeholderData.saved_at
+                  )}{" "}
+                  will be linked
+                </p>
+                <div className="mt-2 text-xs bg-blue-50 p-2 rounded">
+                  <strong>Preview:</strong>{" "}
+                  {stakeholderData.text_data
+                    ? stakeholderData.text_data.substring(0, 100) + "..."
+                    : "No text content available"}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="mb-4">

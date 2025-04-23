@@ -16,6 +16,7 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
   const [isEyeOpen, setIsEyeOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,10 +95,17 @@ const LoginPage = () => {
           secure: true,
           sameSite: "Strict",
         });
-        setUser(res.data.user)
+        setUser(res.data.user);
         setMessage("Login successful!");
         setErrors({});
-        navigate('/dashboard')
+
+        // Set loading state to true after successful login
+        setIsLoading(true);
+
+        // Use setTimeout to delay navigation, allowing the loading indicator to be displayed
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
       }
     } catch (error) {
       console.error("Error during login:", error.error);
@@ -114,6 +122,16 @@ const LoginPage = () => {
         {message && <p className="text-green-600 text-center">{message}</p>}
         {errors.server && (
           <p className="text-red-600 text-center">{errors.server}</p>
+        )}
+
+        {/* Loading indicator - shown only when isLoading is true */}
+        {isLoading && (
+          <div className="mt-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="bg-blue-600 h-2.5 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+            </div>
+            <p className="text-center text-gray-600 mt-2">Loading dashboard...</p>
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -165,8 +183,9 @@ const LoginPage = () => {
           <button
             type="submit"
             className="w-full bg-blue-600 text-white p-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
           >
-            Login
+            {isLoading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>
