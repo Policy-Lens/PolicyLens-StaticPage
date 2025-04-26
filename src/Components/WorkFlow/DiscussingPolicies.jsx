@@ -233,8 +233,15 @@ const DiscussingPolicies = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Discussing Policies</h2>
         <div className="flex gap-2">
-          {projectRole.includes("admin") && !taskAssignment && (
-            <Button type="default" onClick={() => { get_members(); handleAssignTask(); }}>
+          {projectRole.includes("admin") && (
+            <Button
+              type="default"
+              onClick={() => {
+                get_members();
+                handleAssignTask();
+              }}
+              className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
+            >
               Assign Task
             </Button>
           )}

@@ -19,7 +19,8 @@ const AdminLayout = () => {
     location.pathname.includes('/calender') ||
     location.pathname.includes('/myevidences') ||
     location.pathname.includes('/askforhelp') ||
-    location.pathname.includes('/myreports');
+    location.pathname.includes('/myreports') ||
+    location.pathname.includes('/policylibrary');
 
   // Define tabs with their icons
   const tabIcons = {
@@ -49,6 +50,7 @@ const AdminLayout = () => {
     else if (path.includes('myevidences')) setActiveTab('My Evidences');
     else if (path.includes('askforhelp')) setActiveTab('Ask for Help');
     else if (path.includes('myreports')) setActiveTab('My Reports');
+    else if (path.includes('policylibrary')) setActiveTab('Policy Library');
     else setActiveTab('Workflow');
   }, [window.location.pathname]);
 
@@ -77,6 +79,8 @@ const AdminLayout = () => {
       navigate(`/project/${projectid}/askforhelp`);
     } else if (tab === "My Reports") {
       navigate(`/project/${projectid}/myreports`);
+    } else if (tab === "Policy Library") {
+      navigate(`/project/${projectid}/policylibrary`);
     } else if (tab === "Workflow") {
       navigate(`/project/${projectid}`);
     }

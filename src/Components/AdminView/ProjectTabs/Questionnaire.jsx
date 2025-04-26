@@ -31,11 +31,12 @@ import { ProjectContext } from "../../../Context/ProjectContext";
 import { AuthContext } from "../../../AuthContext";
 import { apiRequest, BASE_URL } from "../../../utils/api";
 import { useParams } from "react-router-dom";
-import { message } from "antd";
+import { message, Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 
 const Questionnaire = () => {
   const { projectid } = useParams();
-  const { projectRole, project,getMembers } = useContext(ProjectContext);
+  const { projectRole, project, getMembers } = useContext(ProjectContext);
   const { user } = useContext(AuthContext);
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [isEvidenceUploading, setIsEvidenceUploading] = useState(false); // Keep for direct upload in view mode if needed?
@@ -162,18 +163,18 @@ const Questionnaire = () => {
       );
 
       if (answerResponse.status === 200) {
-        if (answerResponse.data.message === "Not yet answered"){
+        if (answerResponse.data.message === "Not yet answered") {
           setActiveQuestion((prev) =>
             prev && prev.id === question.id ? { ...prev, answer: null } : prev
           );
         }
-        else{
+        else {
           console.log(answerResponse.data);
-        setActiveQuestion((prev) =>
-          prev && prev.id === question.id
-            ? { ...prev, answer: answerResponse.data }
-            : prev
-        );
+          setActiveQuestion((prev) =>
+            prev && prev.id === question.id
+              ? { ...prev, answer: answerResponse.data }
+              : prev
+          );
         }
       }
     } catch (error) {
@@ -740,6 +741,7 @@ const Questionnaire = () => {
 
   // Questions data state
   const [questions, setQuestions] = useState([]);
+  const [isQuestionsLoading, setIsQuestionsLoading] = useState(true);
 
   // Handle Excel file selection
   const handleFileSelect = (e) => {
@@ -748,7 +750,7 @@ const Questionnaire = () => {
     if (file) {
       if (
         file.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
         file.type === "application/vnd.ms-excel"
       ) {
         setSelectedFile(file);
@@ -879,6 +881,7 @@ const Questionnaire = () => {
 
   // Fetch questions based on tab, filters, search
   const handleGetQuestions = async () => {
+    setIsQuestionsLoading(true);
     let endpoint = `/api/questionnaire/projects/${projectid}/questions/list/?`;
     const params = new URLSearchParams();
     if (activeQuestionTab === "assigned_for_answering")
@@ -902,6 +905,8 @@ const Questionnaire = () => {
       console.error("Failed to fetch questions:", error);
       message.error("Failed to fetch questions.");
       setQuestions([]);
+    } finally {
+      setIsQuestionsLoading(false);
     }
   };
 
@@ -989,9 +994,9 @@ const Questionnaire = () => {
       );
       console.log(response.data);
       if (response.status === 200) {
-        const filteredRes = response.data.filter(cr=>{
+        const filteredRes = response.data.filter(cr => {
           return !activeQuestion.assignments.some(
-            e=>e.assigned_to===cr.id
+            e => e.assigned_to === cr.id
           )
         })
         setCompanyRepresentatives(filteredRes);
@@ -1005,55 +1010,57 @@ const Questionnaire = () => {
     }
   };
 
-  const [members,setMembers] = useState([]);
-  const [selectedMember,setSelectedMember] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [selectedMember, setSelectedMember] = useState(null);
 
-  const fetchMembers = async () =>{
-    try{
+  const fetchMembers = async () => {
+    try {
       const response = await getMembers(projectid);
       const reviewAssignments = activeQuestion.answer.review_assignments || [];
       console.log(reviewAssignments);
-      
-    
-      let filteredRes = response.filter(member =>{return !reviewAssignments.some(
-        (assignment) => assignment.assigned_to === member.id
-      )});
-      filteredRes = filteredRes.filter(member => user.id!=member.id)
+
+
+      let filteredRes = response.filter(member => {
+        return !reviewAssignments.some(
+          (assignment) => assignment.assigned_to === member.id
+        )
+      });
+      filteredRes = filteredRes.filter(member => user.id != member.id)
       setMembers(filteredRes);
-    }catch(error){
+    } catch (error) {
       console.error("Error fetching members:", error);
       message.error("Failed to fetch members.");
       setMembers([]);
     }
   }
 
- const assignMemberForReview = async (answerId) =>{
-  setIsAssigning(true)
-  try{
-    const response = await apiRequest(
-      "POST",
-      `/api/questionnaire/answers/${answerId}/assign-review/`,
-      {assigned_to_ids:[selectedMember.id]},
-      true
-    );
-    if(response.status === 200 || response.status === 201){
-      message.success("Member assigned for review successfully");
-      await fetchMembers();
-      selectQuestion(activeQuestion);
-    }else{
-      throw new Error(`Failed with status: ${response.status}`);
-      
+  const assignMemberForReview = async (answerId) => {
+    setIsAssigning(true)
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/questionnaire/answers/${answerId}/assign-review/`,
+        { assigned_to_ids: [selectedMember.id] },
+        true
+      );
+      if (response.status === 200 || response.status === 201) {
+        message.success("Member assigned for review successfully");
+        await fetchMembers();
+        selectQuestion(activeQuestion);
+      } else {
+        throw new Error(`Failed with status: ${response.status}`);
+
+      }
+    } catch (error) {
+      console.error("Error assigning member for review:", error);
+      message.error(
+        `Failed to assign member for review: ${error.message || "Unknown error"}`
+      );
+    } finally {
+      setIsAssignMemberDropdownOpen(false);
+      setIsAssigning(false)
     }
-  }catch(error){
-    console.error("Error assigning member for review:", error);
-    message.error(
-      `Failed to assign member for review: ${error.message || "Unknown error"}`
-    );
-  }finally{
-   setIsAssignMemberDropdownOpen(false);
-  setIsAssigning(false)
- }
-}
+  }
 
   // Assign representative to question
   const assignRepresentativeToQuestion = async (
@@ -1075,8 +1082,8 @@ const Questionnaire = () => {
         // Optional: Refresh the main list if assignment count is shown there
         // handleGetQuestions();
         await fetchCompanyRepresentatives();
-      selectQuestion(activeQuestion);
-      setIsAssignDropdownOpen(false);
+        selectQuestion(activeQuestion);
+        setIsAssignDropdownOpen(false);
       } else {
         throw new Error(`Failed with status: ${response.status}`);
       }
@@ -1099,7 +1106,7 @@ const Questionnaire = () => {
     }
     setIsAssignDropdownOpen(!isAssignDropdownOpen);
   };
-  const [isAssignMemberDropdownOpen,setIsAssignMemberDropdownOpen] = useState(false);
+  const [isAssignMemberDropdownOpen, setIsAssignMemberDropdownOpen] = useState(false);
   const toggleAssignMemberDropdown = () => {
     if (!isAssignMemberDropdownOpen) {
       fetchMembers(); // Fetch only when opening
@@ -1171,9 +1178,9 @@ const Questionnaire = () => {
     }
   };
 
-  const [isDeletingReviewerAssignment,setIsDeletingReviewerAssignment] = useState(false);
-  const [showDeleteConfirmationReviewer,setShowDeleteConfirmationReviewer] = useState(false);
-  const [reviewerToDelete,setReviewerToDelete] = useState(null);
+  const [isDeletingReviewerAssignment, setIsDeletingReviewerAssignment] = useState(false);
+  const [showDeleteConfirmationReviewer, setShowDeleteConfirmationReviewer] = useState(false);
+  const [reviewerToDelete, setReviewerToDelete] = useState(null);
   // Remove Reviewer Assignment from question
   const removeReviewerAssignment = async (assignmentId) => {
     // ... (keep existing logic, ensure error handling) ...
@@ -1246,9 +1253,8 @@ const Questionnaire = () => {
       <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg ">
         {/* Left Panel: Questions List */}
         <div
-          className={`flex flex-col ${
-            activeQuestion ? "w-3/4" : "w-full"
-          } bg-white border-r border-slate-200 transition-width duration-300 ease-in-out`} // Added transition
+          className={`flex flex-col ${activeQuestion ? "w-3/4" : "w-full"
+            } bg-white border-r border-slate-200 transition-width duration-300 ease-in-out`} // Added transition
         >
           {/* Top Bar: Tabs and Actions */}
           <div className="flex items-center border-b border-slate-200 p-4 bg-white sticky top-0 z-10">
@@ -1256,11 +1262,10 @@ const Questionnaire = () => {
             <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
               {/* All Questions Tab (Always visible) */}
               <button
-                className={`flex items-center px-4 py-1.5 rounded-md text-sm transition-colors ${
-                  activeQuestionTab === "all"
+                className={`flex items-center px-4 py-1.5 rounded-md text-sm transition-colors ${activeQuestionTab === "all"
                     ? "bg-white text-indigo-700 font-semibold shadow-sm"
                     : "text-slate-600 hover:text-slate-800"
-                }`}
+                  }`}
                 onClick={() => setActiveQuestionTab("all")}
               >
                 <FileText size={14} className="mr-1.5" />
@@ -1270,11 +1275,10 @@ const Questionnaire = () => {
               {/* Assigned for Answering Tab (Company Representative) */}
               {projectRole === "company_representative" && (
                 <button
-                  className={`flex items-center px-4 py-1.5 rounded-md text-sm transition-colors ${
-                    activeQuestionTab === "assigned_for_answering"
+                  className={`flex items-center px-4 py-1.5 rounded-md text-sm transition-colors ${activeQuestionTab === "assigned_for_answering"
                       ? "bg-white text-indigo-700 font-semibold shadow-sm"
                       : "text-slate-600 hover:text-slate-800"
-                  }`}
+                    }`}
                   onClick={() => setActiveQuestionTab("assigned_for_answering")}
                 >
                   <User size={14} className="mr-1.5" />
@@ -1285,11 +1289,10 @@ const Questionnaire = () => {
               {/* Assigned for Review Tab (Consultant/Auditor) */}
               {(projectRole === "consultant" || projectRole === "auditor") && (
                 <button
-                  className={`flex items-center px-4 py-1.5 rounded-md text-sm transition-colors ${
-                    activeQuestionTab === "assigned_for_review"
+                  className={`flex items-center px-4 py-1.5 rounded-md text-sm transition-colors ${activeQuestionTab === "assigned_for_review"
                       ? "bg-white text-indigo-700 font-semibold shadow-sm"
                       : "text-slate-600 hover:text-slate-800"
-                  }`}
+                    }`}
                   onClick={() => setActiveQuestionTab("assigned_for_review")}
                 >
                   <CheckCircle size={14} className="mr-1.5" />
@@ -1311,37 +1314,35 @@ const Questionnaire = () => {
               </div>
               <div className="relative">
                 <button
-                  className={`px-4 py-2.5 border ${
-                    filterDropdownOpen
+                  className={`px-4 py-2.5 border ${filterDropdownOpen
                       ? "border-indigo-300 ring-2 ring-indigo-300"
                       : "border-slate-200"
-                  } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
+                    } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
                   onClick={toggleFilterDropdown}
                 >
                   <Filter
                     size={16}
-                    className={`mr-2 ${
-                      Object.values(filters).some((f) => f !== "") ||
-                      searchQuery
+                    className={`mr-2 ${Object.values(filters).some((f) => f !== "") ||
+                        searchQuery
                         ? "text-indigo-500" // Active if any filter or search is set
                         : "text-slate-400"
-                    }`}
+                      }`}
                   />
                   <span>Filter</span>
                   {(filters.control_theme ||
                     filters.function ||
                     searchQuery) && (
-                    <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
-                      {
-                        [
-                          filters.control_theme && "Theme",
-                          filters.function && "Function",
-                          searchQuery && "Search",
-                        ].filter(Boolean).length
-                      }{" "}
-                      Active
-                    </span>
-                  )}
+                      <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {
+                          [
+                            filters.control_theme && "Theme",
+                            filters.function && "Function",
+                            searchQuery && "Search",
+                          ].filter(Boolean).length
+                        }{" "}
+                        Active
+                      </span>
+                    )}
                 </button>
 
                 {/* Filter Dropdown Content */}
@@ -1353,10 +1354,10 @@ const Questionnaire = () => {
                       {(filters.control_theme ||
                         filters.function ||
                         searchQuery) && (
-                        <span className="text-xs text-indigo-600">
-                          {/* Display count if needed */}
-                        </span>
-                      )}
+                          <span className="text-xs text-indigo-600">
+                            {/* Display count if needed */}
+                          </span>
+                        )}
                     </div>
                     {/* Scrollable Filters */}
                     <div className="overflow-y-auto">
@@ -1382,11 +1383,10 @@ const Questionnaire = () => {
                               onClick={() =>
                                 handleFilterChange("control_theme", theme)
                               }
-                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                filters.control_theme === theme
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.control_theme === theme
                                   ? "bg-indigo-50 text-indigo-700 font-medium"
                                   : "text-slate-600 hover:bg-slate-50"
-                              }`}
+                                }`}
                             >
                               {theme}
                             </button>
@@ -1413,11 +1413,10 @@ const Questionnaire = () => {
                               onClick={() =>
                                 handleFilterChange("function", func.label)
                               }
-                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                filters.function === func.label
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.function === func.label
                                   ? "bg-indigo-50 text-indigo-700 font-medium"
                                   : "text-slate-600 hover:bg-slate-50"
-                              }`}
+                                }`}
                             >
                               {func.label}
                             </button>
@@ -1428,51 +1427,51 @@ const Questionnaire = () => {
                       {(filters.control_theme ||
                         filters.function ||
                         searchQuery) && (
-                        <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
-                          <h4 className="text-xs font-medium text-slate-600 mb-1">
-                            Active Filters:
-                          </h4>
-                          <div className="flex flex-wrap gap-1">
-                            {filters.control_theme && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Theme: {filters.control_theme}
-                                <button
-                                  onClick={() =>
-                                    handleFilterChange("control_theme", "")
-                                  }
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            )}
-                            {filters.function && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Function: {filters.function}
-                                <button
-                                  onClick={() =>
-                                    handleFilterChange("function", "")
-                                  }
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            )}
-                            {searchQuery && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Search: {searchQuery}
-                                <button
-                                  onClick={() => setSearchQuery("")}
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            )}
+                          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                            <h4 className="text-xs font-medium text-slate-600 mb-1">
+                              Active Filters:
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                              {filters.control_theme && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  Theme: {filters.control_theme}
+                                  <button
+                                    onClick={() =>
+                                      handleFilterChange("control_theme", "")
+                                    }
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                              {filters.function && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  Function: {filters.function}
+                                  <button
+                                    onClick={() =>
+                                      handleFilterChange("function", "")
+                                    }
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                              {searchQuery && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  Search: {searchQuery}
+                                  <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                     {/* Footer Actions */}
                     <div className="flex p-3 border-t border-slate-200 bg-slate-50 gap-2 sticky bottom-0 z-10">
@@ -1524,151 +1523,159 @@ const Questionnaire = () => {
 
           {/* Questions Table */}
           <div className="flex-1 overflow-auto">
-            {/* ... (Keep existing table structure: thead, tbody) ... */}
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="w-12 p-4 text-left font-semibold text-slate-600"></th>
-                  <th className="w-24 p-4 text-left font-semibold text-slate-600">
-                    Control #
-                  </th>
-                  <th className="w-52 p-4 text-left font-semibold text-slate-600">
-                    Control Name
-                  </th>
-                  <th className="p-4 text-left font-semibold text-slate-600">
-                    Audit Question
-                  </th>
-                  {/* Conditionally render Assigned To header */}
-                  {projectRole === "company" && (
-                    <th className="w-32 p-4 text-left font-semibold text-slate-600">
-                      Assigned To
+            {isQuestionsLoading ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <Spin 
+                  indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />} 
+                  tip="Loading questions..." 
+                  className="text-center"
+                />
+              </div>
+            ) : (
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="w-12 p-4 text-left font-semibold text-slate-600"></th>
+                    <th className="w-24 p-4 text-left font-semibold text-slate-600">
+                      Control #
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {questionsToDisplay.map((question) => (
-                  <tr
-                    key={question.id}
-                    className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${
-                      activeQuestion?.id === question.id
-                        ? "bg-indigo-50/70" // Slightly stronger highlight
-                        : ""
-                    }`}
-                    onClick={() => selectQuestion(question)}
-                  >
-                    <td className="p-4">
-                      {/* Checkbox (keep styling) */}
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                        onClick={(e) => e.stopPropagation()} // Prevent row click
-                      />
-                    </td>
-                    <td className="p-4">
-                      {/* Control Number */}
-                      <span className="text-indigo-600 font-semibold">
-                        {question.control_number}
-                      </span>
-                    </td>
-                    {/* Control Name */}
-                    <td className="p-4 text-slate-700 font-medium">
-                      {question.control_name}
-                    </td>
-                    {/* Audit Question & Actions */}
-                    <td className="p-4 pr-6 text-slate-600">
-                      <div className="flex justify-between items-start">
-                        {/* Question Text (Truncated) */}
-                        <div
-                          className="line-clamp-2"
-                          title={question.audit_question}
-                        >
-                          {question.audit_question}
-                        </div>
-                        {/* Actions (Edit/Delete Question) - Conditional */}
-                        <div className="flex items-center ml-2 flex-shrink-0">
-                          {(projectRole === "admin" ||
-                            projectRole === "consultant") && (
-                            <>
-                              {/* Edit Button */}
-                              <button
-                                className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-slate-100" // Added padding/bg
-                                onClick={(e) =>
-                                  handleEditQuestion(question.id, e)
-                                }
-                                title="Edit Question"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              {/* Delete Button */}
-                              <button
-                                className="text-slate-400 hover:text-red-600 transition-colors ml-1 p-1 rounded hover:bg-slate-100" // Added padding/bg
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setQuestionToDelete(question.id);
-                                  setDeleteConfirmVisible(true);
-                                }}
-                                title="Delete Question"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    {/* Assigned To Cell (Conditional) */}
+                    <th className="w-52 p-4 text-left font-semibold text-slate-600">
+                      Control Name
+                    </th>
+                    <th className="p-4 text-left font-semibold text-slate-600">
+                      Audit Question
+                    </th>
+                    {/* Conditionally render Assigned To header */}
                     {projectRole === "company" && (
-                      <td className="p-4">
-                        {question.assignments &&
-                        question.assignments.length > 0 ? (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-600 font-medium">
-                              {question.assignments.length} assigned
-                            </span>
-                            <button
-                              className="ml-2 px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveQuestion(question); // Set context
-                                toggleAssignDropdown(); // Open dropdown
-                              }}
-                              title="Assign more representatives"
-                            >
-                              Assign More
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveQuestion(question);
-                              toggleAssignDropdown();
-                            }}
-                          >
-                            Assign
-                          </button>
-                        )}
-                      </td>
+                      <th className="w-32 p-4 text-left font-semibold text-slate-600">
+                        Assigned To
+                      </th>
                     )}
                   </tr>
-                ))}
-                {/* No Questions Message */}
-                {questionsToDisplay.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={projectRole === "company" ? 5 : 4}
-                      className="text-center p-10 text-slate-500"
+                </thead>
+                <tbody>
+                  {questionsToDisplay.map((question) => (
+                    <tr
+                      key={question.id}
+                      className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${activeQuestion?.id === question.id
+                          ? "bg-indigo-50/70" // Slightly stronger highlight
+                          : ""
+                        }`}
+                      onClick={() => selectQuestion(question)}
                     >
-                      {" "}
-                      {/* Adjusted colspan */}
-                      No questions found matching your criteria.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      <td className="p-4">
+                        {/* Checkbox (keep styling) */}
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          onClick={(e) => e.stopPropagation()} // Prevent row click
+                        />
+                      </td>
+                      <td className="p-4">
+                        {/* Control Number */}
+                        <span className="text-indigo-600 font-semibold">
+                          {question.control_number}
+                        </span>
+                      </td>
+                      {/* Control Name */}
+                      <td className="p-4 text-slate-700 font-medium">
+                        {question.control_name}
+                      </td>
+                      {/* Audit Question & Actions */}
+                      <td className="p-4 pr-6 text-slate-600">
+                        <div className="flex justify-between items-start">
+                          {/* Question Text (Truncated) */}
+                          <div
+                            className="line-clamp-2"
+                            title={question.audit_question}
+                          >
+                            {question.audit_question}
+                          </div>
+                          {/* Actions (Edit/Delete Question) - Conditional */}
+                          <div className="flex items-center ml-2 flex-shrink-0">
+                            {(projectRole === "admin" ||
+                              projectRole === "consultant") && (
+                                <>
+                                  {/* Edit Button */}
+                                  <button
+                                    className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-slate-100" // Added padding/bg
+                                    onClick={(e) =>
+                                      handleEditQuestion(question.id, e)
+                                    }
+                                    title="Edit Question"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  {/* Delete Button */}
+                                  <button
+                                    className="text-slate-400 hover:text-red-600 transition-colors ml-1 p-1 rounded hover:bg-slate-100" // Added padding/bg
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setQuestionToDelete(question.id);
+                                      setDeleteConfirmVisible(true);
+                                    }}
+                                    title="Delete Question"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </>
+                              )}
+                          </div>
+                        </div>
+                      </td>
+                      {/* Assigned To Cell (Conditional) */}
+                      {projectRole === "company" && (
+                        <td className="p-4">
+                          {question.assignments &&
+                            question.assignments.length > 0 ? (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600 font-medium">
+                                {question.assignments.length} assigned
+                              </span>
+                              <button
+                                className="ml-2 px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveQuestion(question); // Set context
+                                  toggleAssignDropdown(); // Open dropdown
+                                }}
+                                title="Assign more representatives"
+                              >
+                                Assign More
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveQuestion(question);
+                                toggleAssignDropdown();
+                              }}
+                            >
+                              Assign
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                  {/* No Questions Message */}
+                  {questionsToDisplay.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={projectRole === "company" ? 5 : 4}
+                        className="text-center p-10 text-slate-500"
+                      >
+                        {" "}
+                        {/* Adjusted colspan */}
+                        No questions found matching your criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -1703,21 +1710,19 @@ const Questionnaire = () => {
               {/* Adjust top based on header height */}
               <div className="flex px-2 pt-2">
                 <button
-                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${
-                    activeSidebarTab === "question"
+                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${activeSidebarTab === "question"
                       ? "border-indigo-600 text-indigo-600 font-semibold"
                       : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                  }`}
+                    }`}
                   onClick={() => setActiveSidebarTab("question")}
                 >
                   Question Details
                 </button>
                 <button
-                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${
-                    activeSidebarTab === "answer"
+                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${activeSidebarTab === "answer"
                       ? "border-indigo-600 text-indigo-600 font-semibold"
                       : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                  }`}
+                    }`}
                   onClick={() => setActiveSidebarTab("answer")}
                 >
                   Answer & Evidence
@@ -1768,11 +1773,10 @@ const Questionnaire = () => {
                                     {companyRepresentatives.map((rep) => (
                                       <button
                                         key={rep.id}
-                                        className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${
-                                          selectedRepresentative?.id === rep.id
+                                        className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${selectedRepresentative?.id === rep.id
                                             ? "bg-indigo-50 text-indigo-700"
                                             : "text-slate-700"
-                                        }`}
+                                          }`}
                                         onClick={() =>
                                           setSelectedRepresentative(rep)
                                         }
@@ -1787,11 +1791,11 @@ const Questionnaire = () => {
                                         </div>
                                         {selectedRepresentative?.id ===
                                           rep.id && (
-                                          <CheckCircle
-                                            size={16}
-                                            className="text-indigo-600"
-                                          />
-                                        )}
+                                            <CheckCircle
+                                              size={16}
+                                              className="text-indigo-600"
+                                            />
+                                          )}
                                       </button>
                                     ))}
                                     {/* Assign Actions */}
@@ -2016,11 +2020,10 @@ const Questionnaire = () => {
                                   {members.map((member) => (
                                     <button
                                       key={member.id}
-                                      className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${
-                                        selectedMember?.id === member.id
+                                      className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${selectedMember?.id === member.id
                                           ? "bg-indigo-50 text-indigo-700"
                                           : "text-slate-700"
-                                      }`}
+                                        }`}
                                       onClick={() => setSelectedMember(member)}
                                     >
                                       <div>
@@ -2116,16 +2119,15 @@ const Questionnaire = () => {
                         Status:{" "}
                         {activeQuestion.answer?.status ? (
                           <span
-                            className={`inline-flex items-center ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              activeQuestion.answer.status === "Accepted"
+                            className={`inline-flex items-center ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${activeQuestion.answer.status === "Accepted"
                                 ? "bg-emerald-100 text-emerald-700"
                                 : activeQuestion.answer.status === "Rejected"
-                                ? "bg-red-100 text-red-700"
-                                : activeQuestion.answer.status ===
-                                  "Needs More Info"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-blue-100 text-blue-700" // Default for Submitted, etc.
-                            }`}
+                                  ? "bg-red-100 text-red-700"
+                                  : activeQuestion.answer.status ===
+                                    "Needs More Info"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-blue-100 text-blue-700" // Default for Submitted, etc.
+                              }`}
                           >
                             {activeQuestion.answer.status === "Accepted" && (
                               <CheckCircle size={12} className="mr-1" />
@@ -2135,8 +2137,8 @@ const Questionnaire = () => {
                             )}
                             {activeQuestion.answer.status ===
                               "Needs More Info" && (
-                              <AlertCircle size={12} className="mr-1" />
-                            )}
+                                <AlertCircle size={12} className="mr-1" />
+                              )}
                             {activeQuestion.answer.status}
                           </span>
                         ) : (
@@ -2549,55 +2551,55 @@ const Questionnaire = () => {
                                 edit_newlyAddedEvidences.length > 0) ||
                                 (!isEditingAnswerId &&
                                   uploadedEvidences.length > 0)) && (
-                                <div className="mt-3">
-                                  <h5 className="text-xs font-medium text-slate-700 mb-2">
-                                    Files to Upload:
-                                  </h5>
-                                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                                    {(isEditingAnswerId
-                                      ? edit_newlyAddedEvidences
-                                      : uploadedEvidences
-                                    ).map((evidence) => (
-                                      <div
-                                        key={evidence.id}
-                                        className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200"
-                                      >
-                                        <div className="flex items-center max-w-[70%]">
-                                          <div className="bg-indigo-100 p-1.5 rounded flex-shrink-0 mr-2">
-                                            <FileText className="text-indigo-500 h-4 w-4" />
-                                          </div>
-                                          <p
-                                            className="text-sm font-medium text-slate-700 truncate"
-                                            title={evidence.displayName}
-                                          >
-                                            {evidence.displayName}
-                                          </p>
-                                        </div>
-                                        {/* Remove button for newly added files */}
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            if (isEditingAnswerId) {
-                                              handleRemoveNewEvidence(
-                                                evidence.id
-                                              );
-                                            } else {
-                                              setUploadedEvidences((prev) =>
-                                                prev.filter(
-                                                  (e) => e.id !== evidence.id
-                                                )
-                                              );
-                                            }
-                                          }}
-                                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                                  <div className="mt-3">
+                                    <h5 className="text-xs font-medium text-slate-700 mb-2">
+                                      Files to Upload:
+                                    </h5>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                      {(isEditingAnswerId
+                                        ? edit_newlyAddedEvidences
+                                        : uploadedEvidences
+                                      ).map((evidence) => (
+                                        <div
+                                          key={evidence.id}
+                                          className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200"
                                         >
-                                          <X size={16} />
-                                        </button>
-                                      </div>
-                                    ))}
+                                          <div className="flex items-center max-w-[70%]">
+                                            <div className="bg-indigo-100 p-1.5 rounded flex-shrink-0 mr-2">
+                                              <FileText className="text-indigo-500 h-4 w-4" />
+                                            </div>
+                                            <p
+                                              className="text-sm font-medium text-slate-700 truncate"
+                                              title={evidence.displayName}
+                                            >
+                                              {evidence.displayName}
+                                            </p>
+                                          </div>
+                                          {/* Remove button for newly added files */}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (isEditingAnswerId) {
+                                                handleRemoveNewEvidence(
+                                                  evidence.id
+                                                );
+                                              } else {
+                                                setUploadedEvidences((prev) =>
+                                                  prev.filter(
+                                                    (e) => e.id !== evidence.id
+                                                  )
+                                                );
+                                              }
+                                            }}
+                                            className="text-xs text-red-600 hover:text-red-800 font-medium"
+                                          >
+                                            <X size={16} />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
 
                             {/* Action Buttons */}
@@ -2965,9 +2967,8 @@ const Questionnaire = () => {
                         </span>
                         <ChevronRight
                           size={16}
-                          className={`text-slate-400 transform transition-transform ${
-                            dropdownOpen ? "rotate-90" : ""
-                          }`}
+                          className={`text-slate-400 transform transition-transform ${dropdownOpen ? "rotate-90" : ""
+                            }`}
                         />{" "}
                         {/* Better icon */}
                       </button>
@@ -3167,11 +3168,10 @@ const Questionnaire = () => {
                     <button
                       onClick={handleUploadQuestions}
                       disabled={!selectedFile}
-                      className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
-                        selectedFile
+                      className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${selectedFile
                           ? "bg-indigo-600 hover:bg-indigo-700"
                           : "bg-gray-300 cursor-not-allowed"
-                      }`}
+                        }`}
                     >
                       Save
                     </button>

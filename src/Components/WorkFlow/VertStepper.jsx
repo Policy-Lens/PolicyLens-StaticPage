@@ -154,11 +154,11 @@ const CarouselHorizontalStepper = () => {
 
   return (
     <LoadingContext.Provider value={{ isLoading, setIsLoading }}>
-      <div className="flex h-screen">
-        <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col">
+      <div className="flex h-[calc(100vh-65px)] overflow-hidden">
+        <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col overflow-hidden">
 
           {/* Scrollable Navigation with Arrow Controls */}
-          <div className="relative mb-4">
+          <div className="relative mb-4 flex-shrink-0">
             <button
               onClick={() => handleScroll('left')}
               className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
@@ -170,7 +170,7 @@ const CarouselHorizontalStepper = () => {
             <div className="overflow-hidden mx-12">
               <div
                 ref={containerRef}
-                className="flex flex-col items-center"
+                className="flex flex-col items-center pt-[2px]"
               >
                 <div className="flex items-center justify-between space-x-4 px-4 transition-transform duration-300">
                   {steps.slice(visibleRange.start, visibleRange.end + 1).map((step, visibleIndex) => {
@@ -189,7 +189,7 @@ const CarouselHorizontalStepper = () => {
                             ${status === "completed"
                               ? "bg-green-500 text-white"
                               : status === "current"
-                                ? "bg-blue-500 text-white scale-110"
+                                ? "bg-blue-500 text-white transform scale-110 translate-y-[1px]"
                                 : "bg-gray-300"
                             } 
                             group-hover:scale-110 group-hover:shadow-md`}
@@ -256,9 +256,9 @@ const CarouselHorizontalStepper = () => {
               {steps.map((step, index) => (
                 <div
                   key={index}
-                  className="min-w-full h-full overflow-auto"
+                  className="min-w-full h-full overflow-y-auto"
                 >
-                  <div className="px-6 py-4 mx-auto max-w-5xl h-full">
+                  <div className="px-6 py-4 mx-auto max-w-5xl">
                     {step.content}
                   </div>
                 </div>

@@ -523,7 +523,7 @@ const GapAnalysis = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          {projectRole.includes("admin") && !taskAssignment && (
+          {projectRole.includes("admin") && (
             <Button
               type="default"
               onClick={() => {

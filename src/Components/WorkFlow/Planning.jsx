@@ -355,13 +355,14 @@ const Planning = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          {projectRole.includes("admin") && !taskAssignment && (
+          {projectRole.includes("admin") && (
             <Button
               type="default"
               onClick={() => {
                 get_members();
                 handleAssignTask();
               }}
+              className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
             >
               Assign Task
             </Button>

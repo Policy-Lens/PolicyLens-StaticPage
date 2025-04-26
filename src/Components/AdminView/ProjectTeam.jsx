@@ -4,17 +4,21 @@ import { apiRequest } from "../../utils/api";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { Pointer } from "lucide-react";
+import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 
 const ProjectTeamPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const { project } = useContext(ProjectContext);
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState();
   const [addedMembers, setAddedMembers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const { projectid } = useParams();
   const roles = ["Consultant", "Auditor", "Manager"]; // Example roles
   const [users, setUsers] = useState([
@@ -59,15 +63,22 @@ const ProjectTeamPage = () => {
   };
 
   const getMembers = async () => {
-    const res = await apiRequest(
-      "GET",
-      `/api/project/${projectid}/members/`,
-      null,
-      true
-    );
-    if (res.status === 200) {
-      setMembers(res.data);
-      console.log(res.data);
+    setLoading(true);
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/project/${projectid}/members/`,
+        null,
+        true
+      );
+      if (res.status === 200) {
+        setMembers(res.data);
+        console.log(res.data);
+      }
+    } catch (error) {
+      console.error("Error fetching members:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,7 +125,7 @@ const ProjectTeamPage = () => {
     }
   };
 
-  const handleFinishAdding = async() => {
+  const handleFinishAdding = async () => {
     console.log(
       "Final members list:",
       admins.map((admin) => admin.id),
@@ -144,15 +155,23 @@ const ProjectTeamPage = () => {
   const getUsers = async (e) => {
     const role = e.target.value;
     if (role === "") return;
-    const res = await apiRequest(
-      "GET",
-      `/api/auth/users/?role=${role === "admin" ? "consultant" : role}`,
-      null,
-      true
-    );
-    console.log(res);
-    if (res.status == 200) {
-      setUsers(res.data);
+
+    setUsersLoading(true);
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/auth/users/?role=${role === "admin" ? "consultant" : role}`,
+        null,
+        true
+      );
+      console.log(res);
+      if (res.status == 200) {
+        setUsers(res.data);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -165,59 +184,83 @@ const ProjectTeamPage = () => {
       <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <div
-        className={`p-10 bg-gray-100 transition-all duration-300 ${
-          collapsed ? "ml-16" : "ml-56"
-        } flex-1`}
+        className={`p-10 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-56"
+          } flex-1`}
       >
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Project Team</h1>
-        <div className="bg-white p-4 rounded-lg shadow-xl w-full flex flex-col justify-between border border-gray-200 hover:shadow-2xl transition-shadow">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold mb-4 text-center border-b-2 pb-2 text-blue-600">
-              {project.name}
-            </h2>
-            <div className="flex gap-4">
-              {!isEditing ? (
-                <button
-                  onClick={toggleEdit}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
-                >
-                  Edit
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition"
-                  >
-                    Add Member
-                  </button>
-                  <button className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">
-                    Delete Member
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
 
-          <div className="flex flex-col gap-3">
-            {members.map((member, idx) => (
-              <div
-                key={idx}
-                className="flex justify-between items-center p-2 rounded-md shadow-sm hover:shadow-md transition-shadow"
-              >
-                <span className="text-base font-medium text-gray-800">
-                  {member.name}
-                </span>
-                <span className="text-base font-medium text-gray-800">
-                  {member.email}
-                </span>
-                <span className="text-sm font-semibold text-gray-600">
-                  {member.project_role}
-                </span>
-              </div>
-            ))}
+        {loading ? (
+          <div className="bg-white p-10 rounded-lg shadow-xl w-full flex flex-col items-center justify-center min-h-[300px]">
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />}
+              tip="Loading team members..."
+              className="text-center"
+            />
           </div>
-        </div>
+        ) : (
+          <div className="bg-white p-4 rounded-lg shadow-xl w-full flex flex-col justify-between border border-gray-200 hover:shadow-2xl transition-shadow">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold mb-4 text-center border-b-2 pb-2 text-blue-600">
+                {project.name}
+              </h2>
+              <div className="flex gap-4">
+                {!isEditing ? (
+                  <button
+                    onClick={toggleEdit}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition"
+                    >
+                      Add Member
+                    </button>
+                    <button className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">
+                      Delete Member
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {members.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {members.map((member, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-2 rounded-md shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <span className="text-base font-medium text-gray-800">
+                      {member.name}
+                    </span>
+                    <span className="text-base font-medium text-gray-800">
+                      {member.email}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-600">
+                      {member.project_role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-700">No team members yet</h3>
+                <p className="mt-1 text-sm text-gray-500 max-w-md">
+                  This project doesn't have any team members. Click "Edit" and then "Add Member" to add people to this project.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Add Member Modal */}
@@ -277,19 +320,26 @@ const ProjectTeamPage = () => {
             </select>
 
             {/* Name Selection */}
-            <select
-              className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              disabled={!selectedRole}
-            >
-              <option value="">Select Name</option>
-              {users.map((user) => (
-                <option value={JSON.stringify(user)} key={user.id}>
-                  {user.name} - {user.email}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                disabled={!selectedRole || usersLoading}
+              >
+                <option value="">Select Name</option>
+                {users.map((user) => (
+                  <option value={JSON.stringify(user)} key={user.id}>
+                    {user.name} - {user.email}
+                  </option>
+                ))}
+              </select>
+              {usersLoading && (
+                <div className="absolute right-3 top-3">
+                  <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} spin />} />
+                </div>
+              )}
+            </div>
 
             {/* Add Member Button */}
             <button

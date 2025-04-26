@@ -22,6 +22,7 @@ import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
+import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -119,7 +120,12 @@ const router = createBrowserRouter([
       {
         path: "myreports",
         element: <MyReports />
-      }
+      },
+      {
+        path: "policylibrary",
+        element: <PolicyLibrary/>
+      },
+
     ]
   }
 
