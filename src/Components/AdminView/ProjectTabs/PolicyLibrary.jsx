@@ -86,6 +86,17 @@ const PolicyLibrary = () => {
         { key: 'status', label: 'Status' }
     ];
 
+    // Templates tab columns (without assignment and status columns)
+    const templateColumns = [
+        { key: 'id', label: 'No.' },
+        { key: 'fileName', label: 'File Name' },
+        { key: 'fileType', label: 'File Type' },
+        { key: 'regulationStandard', label: 'Regulation Standard' },
+        { key: 'controlNo', label: 'Regulation Control No.' },
+        { key: 'controlName', label: 'Regulation Control Name' },
+        { key: 'dateModified', label: 'Date Modified' }
+    ];
+
     // Get status badge style
     const getStatusBadgeStyle = (status) => {
         switch (status) {
@@ -192,7 +203,7 @@ const PolicyLibrary = () => {
                         <table className="min-w-full bg-white divide-y divide-gray-200">
                             <thead>
                                 <tr className="bg-gray-50">
-                                    {columns.map((column) => (
+                                    {templateColumns.map((column) => (
                                         <th
                                             key={column.key}
                                             className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b"
@@ -225,14 +236,6 @@ const PolicyLibrary = () => {
                                                 <Clock size={14} className="text-gray-400 mr-1.5" />
                                                 {item.dateModified}
                                             </div>
-                                        </td>
-                                        <td className="px-3 py-2.5 text-sm text-gray-900">{item.assignedBy}</td>
-                                        <td className="px-3 py-2.5 text-sm text-gray-900">{item.editedBy}</td>
-                                        <td className="px-3 py-2.5 text-sm text-gray-900">{item.assignedTo}</td>
-                                        <td className="px-3 py-2.5 text-sm text-gray-900">
-                                            <span className={`px-3 py-1 rounded-md text-xs font-medium inline-block min-w-[90px] text-center ${getStatusBadgeStyle(item.status)}`}>
-                                                {item.status}
-                                            </span>
                                         </td>
                                         <td className="px-3 py-2.5 text-sm text-gray-900">
                                             <div className="flex space-x-2">
