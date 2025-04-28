@@ -1,10 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button, Input } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { Worker, Viewer, ScrollMode } from "@react-pdf-viewer/core";
-import { pageNavigationPlugin } from "@react-pdf-viewer/page-navigation";
-import "@react-pdf-viewer/core/lib/styles/index.css";
-import "@react-pdf-viewer/page-navigation/lib/styles/index.css";
+import WebViewer from '@pdftron/webviewer';
 
 const ManualReport = ({ selectedControls }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -12,14 +9,90 @@ const ManualReport = ({ selectedControls }) => {
     const [responses, setResponses] = useState([]);
     const [feedbacks, setFeedbacks] = useState({});
     const [showFullKeyPoint, setShowFullKeyPoint] = useState(false);
-    const [controlResult, setControlResult] = useState(null); 
+    const [controlResult, setControlResult] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
+    const viewerDiv = useRef(null);
+    const viewerInstance = useRef(null);
 
     const currentControl = selectedControls[currentIndex];
     const currentKeyPoint = currentControl?.keyPoints?.[currentKeyPointIndex];
 
-    const pageNavigationPluginInstance = pageNavigationPlugin();
-    const { jumpToNextPage, jumpToPreviousPage, CurrentPageLabel, NumberOfPages } =
-        pageNavigationPluginInstance;
+    // Initialize the PDFTron viewer
+    useEffect(() => {
+        if (!viewerDiv.current) return;
+
+        const initWebViewer = async () => {
+            try {
+                // Initialize PDFTron WebViewer
+                const instance = await WebViewer(
+                    {
+                        path: '/lib',
+                        licenseKey: 'demo:1745828072801:611d0a550300000000bd7a20b30087cff7b07798aba974b478971f4722',
+                        fullAPI: true,
+                        enableFilePicker: false,
+                        css: `
+                            .HeaderItems { background-color: #f8fafc; }
+                            .DocumentContainer { background-color: #f1f5f9; }
+                            .pageText { color: #1e293b; }
+                            .Button.active { background-color: #e0f2fe; color: #0284c7; }
+                            .Document { height: 100%; }
+                        `,
+                    },
+                    viewerDiv.current
+                );
+
+                // Get the UI and Core instances
+                const { UI, Core } = instance;
+                UI.setTheme('light');
+
+                // Set initial document
+                Core.documentViewer.addEventListener('documentLoaded', () => {
+                    // Get total pages
+                    setTotalPages(Core.documentViewer.getPageCount());
+                    // Set initial page
+                    setCurrentPage(Core.documentViewer.getCurrentPage());
+                });
+
+                // Set up page change event
+                Core.documentViewer.addEventListener('pageNumberUpdated', (pageNumber) => {
+                    setCurrentPage(pageNumber);
+                });
+
+                // Load document
+                Core.documentViewer.loadDocument('/Document1.pdf');
+
+                // Store the instance for later use
+                viewerInstance.current = instance;
+            } catch (error) {
+                console.error('Error initializing PDFTron WebViewer:', error);
+            }
+        };
+
+        initWebViewer();
+
+        // Cleanup function
+        return () => {
+            if (viewerInstance.current) {
+                try {
+                    const { Core } = viewerInstance.current;
+                    if (Core && Core.documentViewer) {
+                        Core.documentViewer.closeDocument();
+                    }
+
+                    // Clear the viewer div content
+                    if (viewerDiv.current) {
+                        while (viewerDiv.current.firstChild) {
+                            viewerDiv.current.removeChild(viewerDiv.current.firstChild);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error during cleanup:', e);
+                }
+            }
+        };
+    }, []);
 
     const handleNextControl = () => {
         if (currentIndex < selectedControls.length - 1) {
@@ -28,7 +101,7 @@ const ManualReport = ({ selectedControls }) => {
             setResponses([]);
             setFeedbacks({});
             setShowFullKeyPoint(false);
-            setControlResult(null); 
+            setControlResult(null);
         }
     };
 
@@ -39,7 +112,7 @@ const ManualReport = ({ selectedControls }) => {
             setResponses([]);
             setFeedbacks({});
             setShowFullKeyPoint(false);
-            setControlResult(null); 
+            setControlResult(null);
         }
     };
 
@@ -65,6 +138,20 @@ const ManualReport = ({ selectedControls }) => {
         setShowFullKeyPoint(false);
     };
 
+    const handlePreviousPage = () => {
+        if (viewerInstance.current && currentPage > 1) {
+            const { Core } = viewerInstance.current;
+            Core.documentViewer.setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (viewerInstance.current && currentPage < totalPages) {
+            const { Core } = viewerInstance.current;
+            Core.documentViewer.setCurrentPage(currentPage + 1);
+        }
+    };
+
     const yesCount = responses.filter((r) => r === "Yes").length;
     const noCount = responses.filter((r) => r === "No").length;
 
@@ -78,30 +165,26 @@ const ManualReport = ({ selectedControls }) => {
             <div className="w-4/5 bg-white pr-4 relative">
                 <h2 className="text-xl font-bold mb-4 ml-12 mt-2">Document Viewer</h2>
                 <div className="h-[650px] flex flex-col mt-8 items-center justify-center relative">
-                    <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.0.279/build/pdf.worker.min.js">
-                        <Viewer
-                            fileUrl={"/Document1.pdf"}
-                            plugins={[pageNavigationPluginInstance]}
-                            scrollMode={ScrollMode.Page}
-                        />
-                    </Worker>
+                    {/* PDFTron WebViewer */}
+                    <div ref={viewerDiv} className="h-full w-full relative"></div>
+
                     <button
                         type="button"
-                        onClick={jumpToPreviousPage}
-                        className="absolute left-10 top-1/2 transform -translate-y-1/2 text-xl font-bold hover:text-blue-500"
+                        onClick={handlePreviousPage}
+                        className="absolute left-10 top-1/2 transform -translate-y-1/2 text-xl font-bold hover:text-blue-500 z-10"
                     >
                         <LeftOutlined />
                     </button>
                     <button
                         type="button"
-                        onClick={jumpToNextPage}
-                        className="absolute right-10 top-1/2 transform -translate-y-1/2 text-xl font-bold hover:text-blue-500"
+                        onClick={handleNextPage}
+                        className="absolute right-10 top-1/2 transform -translate-y-1/2 text-xl font-bold hover:text-blue-500 z-10"
                     >
                         <RightOutlined />
                     </button>
-                    <div className="flex items-center gap-4 mt-1">
+                    <div className="flex items-center gap-4 mt-1 absolute bottom-4 z-10 bg-white px-2 py-1 rounded">
                         <span className="text-xs font-bold">
-                            Page <CurrentPageLabel /> of <NumberOfPages />
+                            Page {currentPage} of {totalPages}
                         </span>
                     </div>
                 </div>
@@ -168,7 +251,7 @@ const ManualReport = ({ selectedControls }) => {
                                     </Button>
                                 </div>
 
-                                
+
                                 {responses[currentKeyPointIndex] === "No" && (
                                     <div className="mt-4">
                                         <Input.TextArea
@@ -252,7 +335,7 @@ const ManualReport = ({ selectedControls }) => {
                         </div>
                     </div>
                 ) : (
-                    <p className="text-gray-600">No controls selected.</p>
+                    <p className="text-gray-500">No control selected.</p>
                 )}
             </div>
         </div>

@@ -1,81 +1,114 @@
-import React, { useState } from 'react';
-import { Worker, Viewer } from '@react-pdf-viewer/core';
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
-
-// Import styles
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import React, { useState, useRef, useEffect } from 'react';
+import WebViewer from '@pdftron/webviewer';
 
 const Vapt = () => {
     // PDF viewer state
-    const [pdfFile, setPdfFile] = useState('/VAPTSummary.pdf');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const pdfFile = '/VAPTSummary.pdf'; // Fixed file path
 
-    // Create default layout plugin instance
-    const defaultLayoutPluginInstance = defaultLayoutPlugin({
-        sidebarTabs: (defaultTabs) => [
-            // Displays thumbnails of pages
-            defaultTabs[0],
-        ],
-    });
+    const viewerDiv = useRef(null);
+    const instance = useRef(null);
 
-    // Handle document selection
-    const handleDocumentChange = (document) => {
-        setLoading(true);
-        setPdfFile(document);
-        setTimeout(() => setLoading(false), 500);
-    };
+    // Initialize PDFTron WebViewer
+    useEffect(() => {
+        if (!viewerDiv.current) return;
+
+        const initWebViewer = async () => {
+            setLoading(true);
+
+            try {
+                // Initialize PDFTron WebViewer
+                instance.current = await WebViewer(
+                    {
+                        path: '/lib',
+                        licenseKey: 'demo:1745828072801:611d0a550300000000bd7a20b30087cff7b07798aba974b478971f4722',
+                        fullAPI: true,
+                        enableFilePicker: false,
+                        disabledElements: [
+                            'ribbons',
+                            'toolsHeader',
+                        ],
+                        css: `
+                            .HeaderItems { background-color: #f8fafc; }
+                            .DocumentContainer { background-color: #f1f5f9; }
+                            .pageText { color: #1e293b; }
+                            .Button.active { background-color: #e0f2fe; color: #0284c7; }
+                            .Document { height: 100%; }
+                        `,
+                    },
+                    viewerDiv.current
+                );
+
+                // Get the UI instance and set theme
+                const { UI, Core } = instance.current;
+                UI.setTheme('light');
+
+                // Set up document loaded event
+                Core.documentViewer.addEventListener('documentLoaded', () => {
+                    console.log('Document loaded successfully');
+                    setLoading(false);
+                });
+
+                // Load the default document
+                Core.documentViewer.loadDocument(pdfFile);
+            } catch (error) {
+                console.error('Error initializing PDFTron WebViewer:', error);
+                setLoading(false);
+            }
+        };
+
+        initWebViewer();
+
+        // Clean up
+        return () => {
+            if (instance.current) {
+                try {
+                    // Try to close any open documents first
+                    if (instance.current.Core && instance.current.Core.documentViewer) {
+                        try {
+                            instance.current.Core.documentViewer.closeDocument();
+                        } catch (e) {
+                            console.warn('Error closing document:', e);
+                        }
+                    }
+
+                    // Clear the viewer div content
+                    if (viewerDiv.current) {
+                        try {
+                            while (viewerDiv.current.firstChild) {
+                                viewerDiv.current.removeChild(viewerDiv.current.firstChild);
+                            }
+                        } catch (e) {
+                            console.warn('Error cleaning viewer div:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error during cleanup:', e);
+                }
+            }
+        };
+    }, []);
 
     return (
         <div className="w-full h-full flex flex-col overflow-hidden">
-            {/* Document selection */}
+            {/* Header */}
             <div className="flex items-center justify-between p-4 bg-white">
-                <h2 className="text-2xl font-bold text-slate-800">Document Viewer</h2>
-                <div className="flex space-x-3">
-                    <button
-                        onClick={() => handleDocumentChange('/Document1.pdf')}
-                        className={`px-4 py-2 rounded-md transition-all duration-200 ${pdfFile === '/Document1.pdf'
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                    >
-                        Document 1
-                    </button>
-                    <button
-                        onClick={() => handleDocumentChange('/VAPTSummary.pdf')}
-                        className={`px-4 py-2 rounded-md transition-all duration-200 ${pdfFile === '/VAPTSummary.pdf'
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                    >
-                        VAPT Summary
-                    </button>
-                </div>
+                <h2 className="text-2xl font-bold text-slate-800">VAPT Summary</h2>
             </div>
 
-            {/* PDF Viewer with react-pdf-viewer */}
-            <div className="flex-1 overflow-hidden border-t border-gray-200">
-                {loading ? (
+            {/* PDFTron WebViewer */}
+            <div className="flex-1 overflow-hidden border-t border-gray-200 relative">
+                {loading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
                         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                ) : null}
+                )}
 
-                <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
-                    <div
-                        style={{
-                            height: 'calc(100vh - 80px)',
-                            width: '100%'
-                        }}
-                    >
-                        <Viewer
-                            fileUrl={pdfFile}
-                            plugins={[defaultLayoutPluginInstance]}
-                            defaultScale={1}
-                            onDocumentLoad={() => setLoading(false)}
-                        />
-                    </div>
-                </Worker>
+                <div
+                    ref={viewerDiv}
+                    className="h-full w-full"
+                    style={{ height: 'calc(100vh - 80px)' }}
+                ></div>
             </div>
         </div>
     );
