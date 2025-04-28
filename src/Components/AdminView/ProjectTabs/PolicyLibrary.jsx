@@ -391,7 +391,7 @@ const FilterDropdown = ({ options, value, onChange, label }) => {
 };
 
 const PolicyLibrary = () => {
-  const [activeTab, setActiveTab] = useState("allFiles");
+  const [activeTab, setActiveTab] = useState("templates");
   const [viewerModal, setViewerModal] = useState({
     isOpen: false,
     fileUrl: "",
@@ -426,11 +426,11 @@ const PolicyLibrary = () => {
   const { projectRole } = useContext(ProjectContext);
 
   // Set the initial active tab based on projectRole
-  useEffect(() => {
-    if (projectRole) {
-      setActiveTab("allFiles");
-    }
-  }, [projectRole]);
+  // useEffect(() => {
+  //   if (projectRole) {
+  //     setActiveTab("templates");
+  //   }
+  // }, [projectRole]);
 
   // Check user role in the project
   const isAdmin = projectRole === "admin";
@@ -506,9 +506,12 @@ const PolicyLibrary = () => {
     if (activeTab === "templates") {
       fetchTemplates();
     } else if (activeTab === "myFiles") {
-      fetchProjectFiles({ assigned_to_me: true });
-    } else if (activeTab === "assignedByMe") {
-      fetchProjectFiles({ assigned_by_me: true });
+      if (isConsultant) {
+        fetchProjectFiles({ assigned_to_me: true });
+      }
+      if (isAdmin) {
+        fetchProjectFiles({ assigned_by_me: true });
+      }
     } else if (activeTab === "allFiles") {
       fetchProjectFiles();
     }
@@ -530,9 +533,9 @@ const PolicyLibrary = () => {
       fetchTemplates(newSearchTerm, controlNameFilter);
     } else {
       fetchProjectFiles(
-        activeTab === "myFiles"
+        activeTab === "myFiles" && projectRole == "consultant"
           ? { assigned_to_me: true }
-          : activeTab === "assignedByMe"
+          : activeTab === "myFiles" && projectRole == "admin"
           ? { assigned_by_me: true }
           : {},
         newSearchTerm,
@@ -549,9 +552,9 @@ const PolicyLibrary = () => {
       fetchTemplates(searchTerm, value);
     } else {
       fetchProjectFiles(
-        activeTab === "myFiles"
+        activeTab === "myFiles" && projectRole == "consultant"
           ? { assigned_to_me: true }
-          : activeTab === "assignedByMe"
+          : activeTab === "myFiles" && projectRole == "admin"
           ? { assigned_by_me: true }
           : {},
         searchTerm,
@@ -570,9 +573,9 @@ const PolicyLibrary = () => {
       fetchTemplates("", "");
     } else {
       fetchProjectFiles(
-        currentActiveTab === "myFiles"
+        activeTab === "myFiles" && projectRole == "consultant"
           ? { assigned_to_me: true }
-          : currentActiveTab === "assignedByMe"
+          : activeTab === "myFiles" && projectRole == "admin"
           ? { assigned_by_me: true }
           : {},
         "",
@@ -587,9 +590,9 @@ const PolicyLibrary = () => {
       fetchTemplates();
     } else {
       fetchProjectFiles(
-        activeTab === "myFiles"
+        activeTab === "myFiles" && projectRole == "consultant"
           ? { assigned_to_me: true }
-          : activeTab === "assignedByMe"
+          : activeTab === "myFiles" && projectRole == "admin"
           ? { assigned_by_me: true }
           : {}
       );
@@ -599,7 +602,7 @@ const PolicyLibrary = () => {
   // Column headers configuration for templates
   const templateColumns = [
     { key: "select", label: "" },
-    { key: "id", label: "No." },
+    // { key: "id", label: "No." },
     { key: "file_name", label: "File Name" },
     { key: "file_type", label: "File Type" },
     { key: "regulation_standard", label: "Regulation Standard" },
@@ -609,7 +612,7 @@ const PolicyLibrary = () => {
 
   // Column headers for project files
   const projectFileColumns = [
-    { key: "id", label: "No." },
+    // { key: "id", label: "No." },
     { key: "file_name", label: "File Name" },
     { key: "file_type", label: "File Type" },
     { key: "regulation_standard", label: "Regulation Standard" },
@@ -817,7 +820,7 @@ const PolicyLibrary = () => {
 
       {/* Tabs */}
       <div className="flex border-b mb-4 bg-gradient-to-r from-indigo-50 to-white rounded-t-lg">
-        <button
+        {/* <button
           className={`py-3 px-6 font-medium relative transition-all ${
             activeTab === "allFiles"
               ? "text-blue-600 font-semibold"
@@ -829,9 +832,9 @@ const PolicyLibrary = () => {
           {activeTab === "allFiles" && (
             <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
           )}
-        </button>
+        </button> */}
 
-        {/* Only show My Files tab to consultants or admins */}
+        {/* My Files tab - visible to admin & consultant, fetches different data based on role */}
         {(isConsultant || isAdmin) && (
           <button
             className={`py-3 px-6 font-medium relative transition-all ${
@@ -848,22 +851,22 @@ const PolicyLibrary = () => {
           </button>
         )}
 
-        {/* Only show Files Assigned by Me tab to admins */}
-        {isAdmin && (
+        {/* Removed Assigned By Me Tab */}
+        {/* {isAdmin && (
           <button
             className={`py-3 px-6 font-medium relative transition-all ${
-              activeTab === "assignedByMe"
-                ? "text-blue-600 font-semibold"
-                : "text-gray-600 hover:text-gray-800"
+              activeTab === 'assignedByMe'
+                ? 'text-blue-600 font-semibold'
+                : 'text-gray-600 hover:text-gray-800'
             }`}
-            onClick={() => setActiveTab("assignedByMe")}
+            onClick={() => setActiveTab('assignedByMe')}
           >
             Files Assigned by Me
-            {activeTab === "assignedByMe" && (
+            {activeTab === 'assignedByMe' && (
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
             )}
           </button>
-        )}
+        )} */}
 
         <button
           className={`py-3 px-6 font-medium relative transition-all ${
@@ -929,17 +932,19 @@ const PolicyLibrary = () => {
           </div>
 
           {/* Action buttons for Template tab - Only show Assign button when files are selected */}
-          {activeTab === "templates" && selectedFileIds.length > 0 && (
-            <div className="flex space-x-3">
-              <button
-                onClick={() => openConsultantModal()}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
-              >
-                <Users size={16} />
-                <span>Assign Templates ({selectedFileIds.length})</span>
-              </button>
-            </div>
-          )}
+          {activeTab === "templates" &&
+            isAdmin &&
+            selectedFileIds.length > 0 && (
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => openConsultantModal()}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
+                >
+                  <Users size={16} />
+                  <span>Assign Templates ({selectedFileIds.length})</span>
+                </button>
+              </div>
+            )}
         </div>
 
         {/* Loading state */}
@@ -977,16 +982,18 @@ const PolicyLibrary = () => {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-3 py-2.5 text-sm text-gray-900">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        checked={selectedFileIds.includes(item.id)}
-                        onChange={() => toggleFileSelection(item.id)}
-                      />
+                      {isAdmin && (
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          checked={selectedFileIds.includes(item.id)}
+                          onChange={() => toggleFileSelection(item.id)}
+                        />
+                      )}
                     </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                    {/* <td className="px-3 py-2.5 text-sm text-gray-900">
                       {item.id}
-                    </td>
+                    </td> */}
                     <td className="px-3 py-2.5 text-sm font-medium text-blue-600">
                       {item.file_name}
                     </td>
@@ -1020,13 +1027,15 @@ const PolicyLibrary = () => {
                         >
                           <Download size={16} className="text-green-600" />
                         </button>
-                        <button
-                          className="p-1 bg-purple-100 rounded-md hover:bg-purple-200 transition-colors"
-                          title="Assign File"
-                          onClick={() => openConsultantModal([item.id])}
-                        >
-                          <Users size={16} className="text-purple-600" />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            className="p-1 bg-purple-100 rounded-md hover:bg-purple-200 transition-colors"
+                            title="Assign File"
+                            onClick={() => openConsultantModal([item.id])}
+                          >
+                            <Users size={16} className="text-purple-600" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1036,119 +1045,116 @@ const PolicyLibrary = () => {
           </div>
         )}
 
-        {/* Project Files Table (All Files, My Files, Files Assigned by Me) */}
-        {!isLoading &&
-          ["allFiles", "myFiles", "assignedByMe"].includes(activeTab) && (
-            <div className="rounded-lg border border-gray-200 shadow-lg">
-              <table className="min-w-full bg-white divide-y divide-gray-200">
-                <thead>
-                  <tr className="bg-gray-50">
-                    {projectFileColumns.map((column) => (
-                      <th
-                        key={column.key}
-                        className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b"
-                      >
-                        <div className="flex items-center">
-                          <span>{column.label}</span>
-                        </div>
-                      </th>
-                    ))}
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {projectFilesData.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50 transition-colors"
+        {/* Project Files Table (My Files tab handles both roles) */}
+        {!isLoading && activeTab === "myFiles" && (
+          <div className="rounded-lg border border-gray-200 shadow-lg">
+            <table className="min-w-full bg-white divide-y divide-gray-200">
+              <thead>
+                <tr className="bg-gray-50">
+                  {projectFileColumns.map((column) => (
+                    <th
+                      key={column.key}
+                      className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b"
                     >
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {item.id}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm font-medium text-blue-600">
-                        {item.file_name}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {item.file_type}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {item.regulation_standard}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {item.regulation_control_no}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {item.regulation_control_name}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {item.assigned_by?.name || "None"}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {renderAssignedTo(item.assigned_to_details)}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        <div className="flex items-center">
-                          <Clock size={14} className="text-gray-400 mr-1.5" />
-                          {formatDate(item.created_at)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        {formatDate(item.updated_at)}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-900">
-                        <div className="flex space-x-2">
-                          <button
-                            className="p-1 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
-                            title="Open File"
-                            onClick={() => openFileViewer(item)}
-                          >
-                            <Eye size={16} className="text-blue-600" />
-                          </button>
-                          <button
-                            className="p-1 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
-                            title="Download File"
-                            onClick={() => handleDownload(item)}
-                          >
-                            <Download size={16} className="text-green-600" />
-                          </button>
-                          {/* Show Upload button only in My Files tab */}
-                          {activeTab === "myFiles" && (
-                            <button
-                              className="p-1 bg-orange-100 rounded-md hover:bg-orange-200 transition-colors"
-                              title="Upload New Version"
-                              onClick={() => openUploadModal(item)}
-                            >
-                              <Upload size={16} className="text-orange-600" />
-                            </button>
-                          )}
-                          {/* Show Delete button only in Assigned By Me tab */}
-                          {activeTab === "assignedByMe" && (
-                            <button
-                              className="p-1 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
-                              title="Delete Assignment"
-                              onClick={() => openDeleteModal(item)}
-                            >
-                              <Trash2 size={16} className="text-red-600" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                      <div className="flex items-center">
+                        <span>{column.label}</span>
+                      </div>
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {projectFilesData.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    {/* <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {item.id}
+                    </td> */}
+                    <td className="px-3 py-2.5 text-sm font-medium text-blue-600">
+                      {item.file_name}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {item.file_type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {item.regulation_standard}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {item.regulation_control_no}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {item.regulation_control_name}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {item.assigned_by?.name || "None"}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {renderAssignedTo(item.assigned_to_details)}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      <div className="flex items-center">
+                        <Clock size={14} className="text-gray-400 mr-1.5" />
+                        {formatDate(item.created_at)}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {formatDate(item.updated_at)}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      <div className="flex space-x-2">
+                        <button
+                          className="p-1 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
+                          title="Open File"
+                          onClick={() => openFileViewer(item)}
+                        >
+                          <Eye size={16} className="text-blue-600" />
+                        </button>
+                        <button
+                          className="p-1 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
+                          title="Download File"
+                          onClick={() => handleDownload(item)}
+                        >
+                          <Download size={16} className="text-green-600" />
+                        </button>
+                        {/* Show Upload for Consultants, Delete for Admins in My Files tab */}
+                        {activeTab === "myFiles" && isConsultant && (
+                          <button
+                            className="p-1 bg-orange-100 rounded-md hover:bg-orange-200 transition-colors"
+                            title="Upload New Version"
+                            onClick={() => openUploadModal(item)}
+                          >
+                            <Upload size={16} className="text-orange-600" />
+                          </button>
+                        )}
+                        {activeTab === "myFiles" && isAdmin && (
+                          <button
+                            className="p-1 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+                            title="Delete Assignment"
+                            onClick={() => openDeleteModal(item)}
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Empty state */}
         {!isLoading &&
           ((activeTab === "templates" && templatesData.length === 0) ||
-            (["allFiles", "myFiles", "assignedByMe"].includes(activeTab) &&
-              projectFilesData.length === 0)) && (
+            (activeTab === "myFiles" && projectFilesData.length === 0)) && (
             <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 rounded-lg bg-white shadow min-h-[300px]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1171,9 +1177,9 @@ const PolicyLibrary = () => {
                 {activeTab === "templates"
                   ? "No templates are available at the moment."
                   : activeTab === "myFiles"
-                  ? "You have no files assigned to you yet."
-                  : activeTab === "assignedByMe"
-                  ? "You have not assigned any files yet."
+                  ? isAdmin
+                    ? "You have not assigned any files yet."
+                    : "You have no files assigned to you yet."
                   : "No files have been added to this project yet."}
               </p>
               {(searchTerm || controlNameFilter) && (
@@ -1188,7 +1194,7 @@ const PolicyLibrary = () => {
           )}
       </div>
 
-      {/* File Viewer Modal */}
+      {/* Modals */}
       <FileViewerModal
         isOpen={viewerModal.isOpen}
         onClose={closeFileViewer}
@@ -1196,8 +1202,6 @@ const PolicyLibrary = () => {
         fileType={viewerModal.fileType}
         fileName={viewerModal.fileName}
       />
-
-      {/* Consultant Selection Modal */}
       <ConsultantSelectionModal
         isOpen={consultantModal.isOpen}
         onClose={closeConsultantModal}
@@ -1205,8 +1209,6 @@ const PolicyLibrary = () => {
         projectId={projectid}
         selectedFileIds={consultantModal.fileIds}
       />
-
-      {/* File Upload Modal */}
       <FileUploadModal
         isOpen={uploadModal.isOpen}
         onClose={closeUploadModal}
@@ -1214,8 +1216,6 @@ const PolicyLibrary = () => {
         fileName={uploadModal.fileName}
         fileId={uploadModal.fileId}
       />
-
-      {/* Confirmation Modal for Delete */}
       <ConfirmationModal
         isOpen={confirmDeleteModal.isOpen}
         onClose={closeDeleteModal}
