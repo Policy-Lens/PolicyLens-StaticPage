@@ -1,6 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
-import WebViewer from '@pdftron/webviewer';
+// Remove the WebViewer import from @pdftron/webviewer
+// import WebViewer from '@pdftron/webviewer';
 import { FileText, Download, FileSpreadsheet, AlertCircle } from 'lucide-react';
+
+// Add a script loader function to dynamically load WebViewer from CDN
+const loadWebViewerScript = () => {
+    return new Promise((resolve, reject) => {
+        // Check if script is already loaded
+        if (window.WebViewer) {
+            resolve(window.WebViewer);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        // Use the CDN URL for the latest version
+        script.src = 'https://cdn.jsdelivr.net/npm/@pdftron/webviewer@11.4.0/webviewer.min.js';
+        script.async = true;
+        script.onload = () => resolve(window.WebViewer);
+        script.onerror = (error) => reject(new Error(`Failed to load WebViewer script: ${error}`));
+        document.head.appendChild(script);
+    });
+};
 
 const PDFTronViewer = ({ fileUrl, fileType }) => {
     const viewerDiv = useRef(null);
@@ -20,10 +41,14 @@ const PDFTronViewer = ({ fileUrl, fileType }) => {
             setError(null);
 
             try {
+                // Load WebViewer script from CDN
+                const WebViewer = await loadWebViewerScript();
+
                 // Initialize PDFTron WebViewer
                 viewer.current = await WebViewer(
                     {
-                        path: '/lib',
+                        // Use CDN path for library assets
+                        path: 'https://cdn.jsdelivr.net/npm/@pdftron/webviewer@11.4.0/public',
                         // Add the license key provided
                         licenseKey: 'demo:1745828072801:611d0a550300000000bd7a20b30087cff7b07798aba974b478971f4722',
                         // Enable necessary features for different file types

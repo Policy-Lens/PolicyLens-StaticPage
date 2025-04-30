@@ -12,6 +12,7 @@ import {
     X,
     Upload,
     Trash2,
+    Plus,
 } from "lucide-react";
 import FileViewerModal from "../../FileViewer/FileViewerModal";
 import { useParams } from "react-router-dom";
@@ -160,8 +161,8 @@ const ConsultantSelectionModal = ({
                                 onClick={handleSubmit}
                                 disabled={selectedConsultants.length === 0}
                                 className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${selectedConsultants.length === 0
-                                        ? "bg-blue-400 cursor-not-allowed"
-                                        : "bg-blue-600 hover:bg-blue-700"
+                                    ? "bg-blue-400 cursor-not-allowed"
+                                    : "bg-blue-600 hover:bg-blue-700"
                                     }`}
                             >
                                 Assign
@@ -265,8 +266,8 @@ const FileUploadModal = ({ isOpen, onClose, onSubmit, fileName, fileId }) => {
                         onClick={handleSubmit}
                         disabled={!selectedFile || isUploading}
                         className={`flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${!selectedFile || isUploading
-                                ? "bg-blue-400 cursor-not-allowed"
-                                : "bg-blue-600 hover:bg-blue-700"
+                            ? "bg-blue-400 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700"
                             }`}
                     >
                         {isUploading ? (
@@ -387,6 +388,194 @@ const FilterDropdown = ({ options, value, onChange, label }) => {
     );
 };
 
+// Modal for uploading a new template
+const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [formData, setFormData] = useState({
+        regulation_standard: "",
+        regulation_control_no: "",
+        regulation_control_name: "",
+    });
+    const fileInputRef = useRef(null);
+
+    const handleFileChange = (event) => {
+        setSelectedFile(event.target.files[0]);
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            [name]: value,
+        });
+    };
+
+    const handleSubmit = async () => {
+        if (!selectedFile) {
+            message.warning("Please select a file to upload.");
+            return;
+        }
+
+        if (!formData.regulation_standard || !formData.regulation_control_no || !formData.regulation_control_name) {
+            message.warning("Please fill all required fields.");
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            await onSubmit(selectedFile, formData);
+            // Reset state on success
+            setSelectedFile(null);
+            setFormData({
+                regulation_standard: "",
+                regulation_control_no: "",
+                regulation_control_name: "",
+            });
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+            onClose(); // Close modal after successful submission
+        } catch (error) {
+            // Error handling is done in the parent onSubmit
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setSelectedFile(null);
+        setFormData({
+            regulation_standard: "",
+            regulation_control_no: "",
+            regulation_control_name: "",
+        });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-lg p-6 shadow-lg">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Upload New Template</h3>
+                    <button
+                        onClick={handleCancel}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="mb-4">
+                    <label
+                        htmlFor="file-upload-input"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Select File *
+                    </label>
+                    <input
+                        ref={fileInputRef}
+                        id="file-upload-input"
+                        type="file"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    {selectedFile && (
+                        <p className="mt-2 text-sm text-green-600">
+                            Selected: {selectedFile.name}
+                        </p>
+                    )}
+                </div>
+
+                <div className="mb-4">
+                    <label
+                        htmlFor="regulation_standard"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Regulation Standard *
+                    </label>
+                    <input
+                        type="text"
+                        id="regulation_standard"
+                        name="regulation_standard"
+                        value={formData.regulation_standard}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter regulation standard"
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label
+                        htmlFor="regulation_control_no"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Regulation Control No. *
+                    </label>
+                    <input
+                        type="text"
+                        id="regulation_control_no"
+                        name="regulation_control_no"
+                        value={formData.regulation_control_no}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter regulation control number"
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label
+                        htmlFor="regulation_control_name"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Regulation Control Name *
+                    </label>
+                    <input
+                        type="text"
+                        id="regulation_control_name"
+                        name="regulation_control_name"
+                        value={formData.regulation_control_name}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter regulation control name"
+                    />
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                    <button
+                        onClick={handleCancel}
+                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={!selectedFile || isUploading}
+                        className={`flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${!selectedFile || isUploading
+                            ? "bg-blue-400 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+                    >
+                        {isUploading ? (
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Uploading...
+                            </>
+                        ) : (
+                            "Upload Template"
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const PolicyLibrary = () => {
     const [activeTab, setActiveTab] = useState("templates");
     const [viewerModal, setViewerModal] = useState({
@@ -418,9 +607,19 @@ const PolicyLibrary = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [controlNameFilter, setControlNameFilter] = useState("");
     const [showFilters, setShowFilters] = useState(false);
+    const [uploadTemplateModal, setUploadTemplateModal] = useState({
+        isOpen: false
+    });
     const { projectid } = useParams();
     const { user } = useContext(AuthContext);
     const { projectRole } = useContext(ProjectContext);
+
+    // Log roles for debugging
+    useEffect(() => {
+        console.log("Project Role:", projectRole);
+        console.log("User:", user);
+        console.log("User Role:", user?.role);
+    }, [projectRole, user]);
 
     // Set the initial active tab based on projectRole
     // useEffect(() => {
@@ -430,8 +629,10 @@ const PolicyLibrary = () => {
     // }, [projectRole]);
 
     // Check user role in the project
-    const isAdmin = projectRole === "admin";
-    const isConsultant = projectRole === "consultant";
+    // Using user.role from AuthContext as the primary source of truth
+    const isAdmin = user?.role === "admin";
+    // Fallback to projectRole if needed
+    const isConsultant = user?.role === "consultant" || projectRole === "consultant";
 
     // Fetch templates data with filters
     const fetchTemplates = async (
@@ -811,6 +1012,44 @@ const PolicyLibrary = () => {
         return assignedToDetails.map((user) => user.name).join(", ");
     };
 
+    // Open upload template modal
+    const openUploadTemplateModal = () => {
+        setUploadTemplateModal({
+            isOpen: true
+        });
+    };
+
+    // Close upload template modal
+    const closeUploadTemplateModal = () => {
+        setUploadTemplateModal({
+            isOpen: false
+        });
+    };
+
+    // Handle template upload submission
+    const handleTemplateUpload = async (fileToUpload, formData) => {
+        const uploadData = new FormData();
+        uploadData.append("file_path", fileToUpload);
+        uploadData.append("regulation_standard", formData.regulation_standard);
+        uploadData.append("regulation_control_no", formData.regulation_control_no);
+        uploadData.append("regulation_control_name", formData.regulation_control_name);
+
+        try {
+            await apiRequest(
+                "POST",
+                "/api/controlfiles/all-control-files/",
+                uploadData,
+                true
+            );
+            message.success("Template uploaded successfully!");
+            fetchTemplates(); // Refresh templates data
+        } catch (error) {
+            console.error("Error uploading template:", error);
+            message.error(error.detail || "Failed to upload template. Please try again.");
+            throw error; // Re-throw error so modal knows it failed
+        }
+    };
+
     return (
         <div className="p-4">
             <h1 className="text-2xl font-bold mb-4 text-gray-800">Policy Library</h1>
@@ -835,8 +1074,8 @@ const PolicyLibrary = () => {
                 {(isConsultant || isAdmin) && (
                     <button
                         className={`py-3 px-6 font-medium relative transition-all ${activeTab === "myFiles"
-                                ? "text-blue-600 font-semibold"
-                                : "text-gray-600 hover:text-gray-800"
+                            ? "text-blue-600 font-semibold"
+                            : "text-gray-600 hover:text-gray-800"
                             }`}
                         onClick={() => setActiveTab("myFiles")}
                     >
@@ -866,8 +1105,8 @@ const PolicyLibrary = () => {
 
                 <button
                     className={`py-3 px-6 font-medium relative transition-all ${activeTab === "templates"
-                            ? "text-blue-600 font-semibold"
-                            : "text-gray-600 hover:text-gray-800"
+                        ? "text-blue-600 font-semibold"
+                        : "text-gray-600 hover:text-gray-800"
                         }`}
                     onClick={() => setActiveTab("templates")}
                 >
@@ -876,6 +1115,17 @@ const PolicyLibrary = () => {
                         <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
                     )}
                 </button>
+
+                {/* Upload Template button in the top tab area if admin */}
+                {activeTab === "templates" && isAdmin && (
+                    <button
+                        onClick={openUploadTemplateModal}
+                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm ml-auto mr-2 my-auto"
+                    >
+                        <UploadCloud size={16} />
+                        <span>Upload Template</span>
+                    </button>
+                )}
             </div>
 
             {/* Common content for all tabs */}
@@ -925,20 +1175,21 @@ const PolicyLibrary = () => {
                         </div>
                     </div>
 
-                    {/* Action buttons for Template tab - Only show Assign button when files are selected */}
-                    {activeTab === "templates" &&
-                        isAdmin &&
-                        selectedFileIds.length > 0 && (
-                            <div className="flex space-x-3">
-                                <button
-                                    onClick={() => openConsultantModal()}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
-                                >
-                                    <Users size={16} />
-                                    <span>Assign Templates ({selectedFileIds.length})</span>
-                                </button>
-                            </div>
+                    {/* Action buttons container - Upload & Assign */}
+                    <div className="flex space-x-3">
+                        {/* Upload Template button removed from here since it's now in the tab bar */}
+
+                        {/* Action buttons for Template tab - Only show Assign button when files are selected */}
+                        {activeTab === "templates" && isAdmin && selectedFileIds.length > 0 && (
+                            <button
+                                onClick={() => openConsultantModal()}
+                                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
+                            >
+                                <Users size={16} />
+                                <span>Assign Templates ({selectedFileIds.length})</span>
+                            </button>
                         )}
+                    </div>
                 </div>
 
                 {/* Loading state */}
@@ -1217,6 +1468,11 @@ const PolicyLibrary = () => {
                 title="Confirm Deletion"
                 message={`Are you sure you want to delete the assignment for '${confirmDeleteModal.fileName}'?`}
                 isLoading={isDeleting}
+            />
+            <UploadTemplateModal
+                isOpen={uploadTemplateModal.isOpen}
+                onClose={closeUploadTemplateModal}
+                onSubmit={handleTemplateUpload}
             />
         </div>
     );

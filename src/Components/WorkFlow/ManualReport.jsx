@@ -1,7 +1,26 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from 'react';
 import { Button, Input } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import WebViewer from '@pdftron/webviewer';
+
+// Add a script loader function to dynamically load WebViewer from CDN
+const loadWebViewerScript = () => {
+    return new Promise((resolve, reject) => {
+        // Check if script is already loaded
+        if (window.WebViewer) {
+            resolve(window.WebViewer);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        // Use the CDN URL for the latest version
+        script.src = 'https://cdn.jsdelivr.net/npm/@pdftron/webviewer@11.4.0/webviewer.min.js';
+        script.async = true;
+        script.onload = () => resolve(window.WebViewer);
+        script.onerror = (error) => reject(new Error(`Failed to load WebViewer script: ${error}`));
+        document.head.appendChild(script);
+    });
+};
 
 const ManualReport = ({ selectedControls }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -25,10 +44,14 @@ const ManualReport = ({ selectedControls }) => {
 
         const initWebViewer = async () => {
             try {
+                // Load WebViewer script from CDN
+                const WebViewer = await loadWebViewerScript();
+
                 // Initialize PDFTron WebViewer
                 const instance = await WebViewer(
                     {
-                        path: '/lib',
+                        // Use CDN path for library assets
+                        path: 'https://cdn.jsdelivr.net/npm/@pdftron/webviewer@11.4.0/public',
                         licenseKey: 'demo:1745828072801:611d0a550300000000bd7a20b30087cff7b07798aba974b478971f4722',
                         fullAPI: true,
                         enableFilePicker: false,
