@@ -846,7 +846,7 @@ const ASISReport = () => {
               ))}
               <option value="create">+ Create New Report</option>
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+            {/* <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
               <svg
                 className="w-5 h-5 text-gray-400"
                 fill="none"
@@ -861,7 +861,7 @@ const ASISReport = () => {
                   d="M19 9l-7 7-7-7"
                 />
               </svg>
-            </div>
+            </div> */}
           </div>
 
           {/* Delete Report Button */}
@@ -1705,8 +1705,9 @@ const ASISReport = () => {
                             <option value="Organizational">
                               Organizational
                             </option>
-                            <option value="Technical">Technical</option>
+                            <option value="Technological">Technological</option>
                             <option value="Physical">Physical</option>
+                            <option value="People">People</option>
                           </select>
                         </div>
                       </div>
