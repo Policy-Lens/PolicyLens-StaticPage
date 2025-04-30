@@ -180,6 +180,9 @@ const ASISReport = () => {
     },
   });
 
+  // State for functions list
+  const [functions, setFunctions] = useState([]);
+
   // Get project ID from URL
   const { projectid } = useParams();
 
@@ -284,6 +287,27 @@ const ASISReport = () => {
       setIsLoading(false);
     }
   };
+
+  // Fetch functions on component mount
+  useEffect(() => {
+    const fetchFunctions = async () => {
+      try {
+        const response = await apiRequest(
+          "GET",
+          "/api/questionnaire/functions/",
+          null,
+          true
+        );
+        if (Array.isArray(response.data)) {
+          setFunctions(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching functions:", err);
+        message.error("Failed to fetch associated functions");
+      }
+    };
+    fetchFunctions();
+  }, []);
 
   // =================== CRUD OPERATIONS =================== //
 
@@ -550,7 +574,7 @@ const ASISReport = () => {
     } else if (type === "excel") {
       setExcelFile(null);
     }
-
+    console.log("Modal opened with type:", type);
     setShowModal(true);
   };
 
@@ -638,7 +662,7 @@ const ASISReport = () => {
         true
       );
 
-      if (response.status === 200 || response.status === 201) {
+      if (response.data) {
         message.success("Control created successfully");
         await fetchControlsForReport(selectedReport.id);
         closeModal();
@@ -805,7 +829,7 @@ const ASISReport = () => {
           {/* Report Selector Dropdown */}
           <div className="relative">
             <select
-              className="px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={selectedReport ? selectedReport.id : ""}
               onChange={(e) => handleReportChange(e.target.value)}
               disabled={isLoading}
@@ -1557,7 +1581,7 @@ const ASISReport = () => {
                 <div className="mt-2">
                   <input
                     type="text"
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Report Name"
                     value={newReportName}
                     onChange={(e) => setNewReportName(e.target.value)}
@@ -1587,11 +1611,12 @@ const ASISReport = () => {
       )}
 
       {/* Add/Edit Control Form Modal */}
-      {showModal && modalType === "form" && (
+      {showModal && (modalType === "form" || modalType === "edit") && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div
               className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              aria-hidden="true"
               onClick={closeModal}
             ></div>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
@@ -1599,275 +1624,351 @@ const ASISReport = () => {
                 onSubmit={
                   editingControl ? handleControlUpdate : handleControlSubmit
                 }
+                className="bg-white"
               >
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    {editingControl ? "Edit Control" : "Add New Control"}
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="space-y-6">
                     {/* Basic Information */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Control ID
-                      </label>
-                      <input
-                        type="text"
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        value={formData.control_id}
-                        onChange={(e) =>
-                          handleFormChange(e, null, "control_id")
-                        }
-                        required
-                      />
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Basic Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Control ID
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.control_id}
+                            onChange={(e) =>
+                              handleFormChange(e, null, "control_id")
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Control Name
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.control_name}
+                            onChange={(e) =>
+                              handleFormChange(e, null, "control_name")
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Associated Functions
+                          </label>
+                          <select
+                            multiple
+                            value={formData.associated_functions.split(",")}
+                            onChange={(e) => {
+                              const selected = Array.from(
+                                e.target.selectedOptions
+                              ).map((option) => option.value);
+                              handleFormChange(
+                                { target: { value: selected.join(",") } },
+                                null,
+                                "associated_functions"
+                              );
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            {functions.map((func) => (
+                              <option key={func.id} value={func.name}>
+                                {func.name}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Hold Ctrl/Cmd to select multiple
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Control Theme
+                          </label>
+                          <select
+                            value={formData.control_theme}
+                            onChange={(e) =>
+                              handleFormChange(e, null, "control_theme")
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Organizational">
+                              Organizational
+                            </option>
+                            <option value="Technical">Technical</option>
+                            <option value="Physical">Physical</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Control Name
-                      </label>
-                      <input
-                        type="text"
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        value={formData.control_name}
-                        onChange={(e) =>
-                          handleFormChange(e, null, "control_name")
-                        }
-                        required
-                      />
+
+                    {/* Control Type */}
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Control Type
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Object.keys(formData.control_type).map((key) => (
+                          <div
+                            key={key}
+                            className="flex items-center space-x-3"
+                          >
+                            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                              {key}
+                            </label>
+                            <select
+                              value={formData.control_type[key]}
+                              onChange={(e) =>
+                                handleSelectChange(e, "control_type", key)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Associated Functions (comma separated)
-                      </label>
-                      <input
-                        type="text"
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        value={formData.associated_functions}
-                        onChange={(e) =>
-                          handleFormChange(e, null, "associated_functions")
-                        }
-                      />
+
+                    {/* Control Property */}
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Control Property
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Object.keys(formData.control_property).map((key) => (
+                          <div
+                            key={key}
+                            className="flex items-center space-x-3"
+                          >
+                            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                              {key.split("_").join(" ")}
+                            </label>
+                            <select
+                              value={formData.control_property[key]}
+                              onChange={(e) =>
+                                handleSelectChange(e, "control_property", key)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Control Theme
-                      </label>
-                      <input
-                        type="text"
-                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        value={formData.control_theme}
-                        onChange={(e) =>
-                          handleFormChange(e, null, "control_theme")
-                        }
-                      />
+
+                    {/* Cybersecurity Concept */}
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Cybersecurity Concept
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Object.keys(formData.cybersecurity_concept).map(
+                          (key) => (
+                            <div
+                              key={key}
+                              className="flex items-center space-x-3"
+                            >
+                              <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                                {key}
+                              </label>
+                              <select
+                                value={formData.cybersecurity_concept[key]}
+                                onChange={(e) =>
+                                  handleSelectChange(
+                                    e,
+                                    "cybersecurity_concept",
+                                    key
+                                  )
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              >
+                                <option value="Y">Yes</option>
+                                <option value="N">No</option>
+                              </select>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Security Domain */}
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Security Domain
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Object.keys(formData.security_domain).map((key) => (
+                          <div
+                            key={key}
+                            className="flex items-center space-x-3"
+                          >
+                            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                              {key.split("_").join(" ")}
+                            </label>
+                            <select
+                              value={formData.security_domain[key]}
+                              onChange={(e) =>
+                                handleSelectChange(e, "security_domain", key)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Operational Capability */}
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Operational Capability
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Object.keys(formData.operational_capability).map(
+                          (key) => (
+                            <div
+                              key={key}
+                              className="flex items-center space-x-3"
+                            >
+                              <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                                {key.split("_").join(" ")}
+                              </label>
+                              <select
+                                value={formData.operational_capability[key]}
+                                onChange={(e) =>
+                                  handleSelectChange(
+                                    e,
+                                    "operational_capability",
+                                    key
+                                  )
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              >
+                                <option value="Y">Yes</option>
+                                <option value="N">No</option>
+                              </select>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className="bg-white px-4 py-5 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Additional Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Related To
+                          </label>
+                          <select
+                            value={formData.additional_info.related_to}
+                            onChange={(e) =>
+                              handleSelectChange(
+                                e,
+                                "additional_info",
+                                "related_to"
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Plan">Plan</option>
+                            <option value="Do">Do</option>
+                            <option value="Check">Check</option>
+                            <option value="Act">Act</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Must Have
+                          </label>
+                          <select
+                            value={formData.additional_info.must_have}
+                            onChange={(e) =>
+                              handleSelectChange(
+                                e,
+                                "additional_info",
+                                "must_have"
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Y">Yes</option>
+                            <option value="N">No</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Nice to Have
+                          </label>
+                          <select
+                            value={formData.additional_info.nice_to_have}
+                            onChange={(e) =>
+                              handleSelectChange(
+                                e,
+                                "additional_info",
+                                "nice_to_have"
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Y">Yes</option>
+                            <option value="N">No</option>
+                          </select>
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Sample Audit Questions
+                          </label>
+                          <textarea
+                            value={
+                              formData.additional_info.sample_audit_questions
+                            }
+                            onChange={(e) =>
+                              handleFormChange(
+                                e,
+                                "additional_info",
+                                "sample_audit_questions"
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                            rows={3}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Section Headers */}
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <h4 className="text-md font-medium text-gray-900 mb-2">
-                      Control Type
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Preventive
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={formData.control_type.preventive}
-                          onChange={(e) =>
-                            handleSelectChange(e, "control_type", "preventive")
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Detective
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={formData.control_type.detective}
-                          onChange={(e) =>
-                            handleSelectChange(e, "control_type", "detective")
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Corrective
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={formData.control_type.corrective}
-                          onChange={(e) =>
-                            handleSelectChange(e, "control_type", "corrective")
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <h4 className="text-md font-medium text-gray-900 mb-2">
-                      Control Property
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Confidentiality
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={formData.control_property.confidentiality}
-                          onChange={(e) =>
-                            handleSelectChange(
-                              e,
-                              "control_property",
-                              "confidentiality"
-                            )
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Integrity
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={formData.control_property.integrity}
-                          onChange={(e) =>
-                            handleSelectChange(
-                              e,
-                              "control_property",
-                              "integrity"
-                            )
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Availability
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={formData.control_property.availability}
-                          onChange={(e) =>
-                            handleSelectChange(
-                              e,
-                              "control_property",
-                              "availability"
-                            )
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Covers Intent
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={
-                            formData.control_property.does_control_cover_intent
-                          }
-                          onChange={(e) =>
-                            handleSelectChange(
-                              e,
-                              "control_property",
-                              "does_control_cover_intent"
-                            )
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Covers Implementation
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={
-                            formData.control_property
-                              .does_control_cover_implementation
-                          }
-                          onChange={(e) =>
-                            handleSelectChange(
-                              e,
-                              "control_property",
-                              "does_control_cover_implementation"
-                            )
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Covers Effectiveness
-                        </label>
-                        <select
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                          value={
-                            formData.control_property
-                              .does_control_cover_effectiveness
-                          }
-                          onChange={(e) =>
-                            handleSelectChange(
-                              e,
-                              "control_property",
-                              "does_control_cover_effectiveness"
-                            )
-                          }
-                        >
-                          <option value="Y">Yes</option>
-                          <option value="N">No</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional fields would go here - omitted for brevity */}
-                  {/* The form includes more sections for cybersecurity_concept, security_domain, operational_capability, and additional_info */}
                 </div>
+
                 <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                   <button
                     type="submit"
-                    disabled={isLoading}
                     className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
                   >
-                    {isLoading
-                      ? "Saving..."
-                      : editingControl
-                      ? "Update"
-                      : "Create"}
+                    {editingControl ? "Update Control" : "Add Control"}
                   </button>
                   <button
                     type="button"
-                    onClick={closeModal}
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={closeModal}
                   >
                     Cancel
                   </button>
