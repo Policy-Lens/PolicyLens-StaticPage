@@ -1373,7 +1373,6 @@ const MyReports = () => {
             },
             // Mitigation plan - construct from available data or use defaults
             mitigationPlan: {
-              furtherPlannedAction: "Yes",
               taskId: risk.ra_mitigation_task?.task_id || "",
               taskDescription: risk.ra_mitigation_task?.task_description || "",
               taskOwner: risk.ra_mitigation_task?.task_owner || "",
