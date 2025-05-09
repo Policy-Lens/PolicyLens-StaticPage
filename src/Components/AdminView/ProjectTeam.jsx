@@ -184,8 +184,9 @@ const ProjectTeamPage = () => {
       <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <div
-        className={`p-10 bg-gray-100 transition-all duration-300 ${collapsed ? "ml-16" : "ml-56"
-          } flex-1`}
+        className={`p-10 bg-gray-100 transition-all duration-300 ${
+          collapsed ? "ml-16" : "ml-56"
+        } flex-1`}
       >
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Project Team</h1>
 
@@ -249,13 +250,27 @@ const ProjectTeamPage = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-700">No team members yet</h3>
+                <h3 className="text-lg font-medium text-gray-700">
+                  No team members yet
+                </h3>
                 <p className="mt-1 text-sm text-gray-500 max-w-md">
-                  This project doesn't have any team members. Click "Edit" and then "Add Member" to add people to this project.
+                  This project doesn't have any team members. Click "Edit" and
+                  then "Add Member" to add people to this project.
                 </p>
               </div>
             )}
@@ -336,7 +351,11 @@ const ProjectTeamPage = () => {
               </select>
               {usersLoading && (
                 <div className="absolute right-3 top-3">
-                  <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} spin />} />
+                  <Spin
+                    indicator={
+                      <LoadingOutlined style={{ fontSize: 20 }} spin />
+                    }
+                  />
                 </div>
               )}
             </div>
@@ -367,7 +386,7 @@ const ProjectTeamPage = () => {
                 className="w-full bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition mt-2 shadow-md"
                 onClick={() => {
                   setIsModalOpen(false);
-                  setSelectedRole('')
+                  setSelectedRole("");
                   setAdmins([]);
                   setConsultants([]);
                   setAuditors([]);

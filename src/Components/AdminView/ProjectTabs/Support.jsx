@@ -26,7 +26,7 @@ import {
   ClipboardEdit,
   Edit3,
   Edit2,
-  Edit
+  Edit,
 } from "lucide-react";
 import { apiRequest, BASE_URL } from "../../../utils/api";
 import { ProjectContext } from "../../../Context/ProjectContext";
@@ -454,7 +454,9 @@ const Support = () => {
 
   // Check if user can update status
   const canUpdateStatus = (ticket) => {
-    return projectRole === "admin" || activeTab === "assigned-tickets";
+    return (
+      projectRole === "consultant admin" || activeTab === "assigned-tickets"
+    );
   };
   // Status update components display check
   const canShowStatusUpdate = (ticket) => {
@@ -980,10 +982,7 @@ const Support = () => {
                                         className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-100 flex items-center gap-2"
                                         onClick={() => handleEditTicket(ticket)}
                                       >
-                                        <Edit
-                                          size={14}
-                                          className="mr-2"
-                                        />
+                                        <Edit size={14} className="mr-2" />
                                         Edit Ticket
                                       </button>
                                     )}
@@ -1010,7 +1009,7 @@ const Support = () => {
                                     )}
 
                                     {/* Mark as Technical Issue - only show for admin and non-closed tickets */}
-                                    {projectRole === "admin" &&
+                                    {projectRole === "consultant admin" &&
                                       !ticket.is_technical &&
                                       ticket.status !== "closed" && (
                                         <button
@@ -1415,7 +1414,7 @@ const Support = () => {
 
               {/* Mark as Technical button */}
               {!selectedTicket.is_technical &&
-                projectRole === "admin" &&
+                projectRole === "consultant admin" &&
                 selectedTicket !== "closed" && (
                   <button
                     onClick={() => handleMarkTechnicalIssue(selectedTicket.id)}

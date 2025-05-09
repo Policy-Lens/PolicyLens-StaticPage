@@ -1,8 +1,8 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://backend.prolense.in";
-// const BASE_URL = "http://localhost:8000";
+// const BASE_URL = "https://backend.prolense.in";
+const BASE_URL = "http://localhost:8000";
 
 const apiRequest = async (
   method,

@@ -1,5 +1,13 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Button, Modal, Input, Upload, message, DatePicker, Select } from "antd";
+import {
+  Button,
+  Modal,
+  Input,
+  Upload,
+  message,
+  DatePicker,
+  Select,
+} from "antd";
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
@@ -33,7 +41,7 @@ function ImplementPolicies() {
     checkStepAuth,
     getMembers,
     assignStep,
-    getStepAssignment
+    getStepAssignment,
   } = useContext(ProjectContext);
   const [implementPoliciesData, setImplementPoliciesData] = useState([]);
   const [stepId, setStepId] = useState(null);
@@ -46,13 +54,13 @@ function ImplementPolicies() {
   };
 
   const handleRemoveFile = (fileUrl) => {
-    setOldFilesNeeded(prev => prev.filter(file => file !== fileUrl));
-    setRemovedOldFiles(prev => [...prev, fileUrl]);
+    setOldFilesNeeded((prev) => prev.filter((file) => file !== fileUrl));
+    setRemovedOldFiles((prev) => [...prev, fileUrl]);
   };
 
   const handleRestoreFile = (fileUrl) => {
-    setRemovedOldFiles(prev => prev.filter(file => file !== fileUrl));
-    setOldFilesNeeded(prev => [...prev, fileUrl]);
+    setRemovedOldFiles((prev) => prev.filter((file) => file !== fileUrl));
+    setOldFilesNeeded((prev) => [...prev, fileUrl]);
   };
 
   // Check if user is assigned to this step
@@ -96,7 +104,7 @@ function ImplementPolicies() {
     if (implementPoliciesData && implementPoliciesData.length > 0) {
       const latestData = implementPoliciesData[0];
       setFeedbackText(latestData.text_data);
-      const existingFiles = latestData.documents.map(doc => doc.file);
+      const existingFiles = latestData.documents.map((doc) => doc.file);
       setOldFilesNeeded(existingFiles);
       setRemovedOldFiles([]);
     } else {
@@ -169,7 +177,7 @@ function ImplementPolicies() {
       assigned_to: selectedTeamMembers,
       description: taskDescription,
       deadline: taskDeadline.format("YYYY-MM-DD"),
-      references: taskReferences
+      references: taskReferences,
     };
 
     try {
@@ -198,7 +206,7 @@ function ImplementPolicies() {
 
   // Helper function to extract filename from path
   const getFileName = (filePath) => {
-    return filePath.split('/').pop();
+    return filePath.split("/").pop();
   };
 
   // Helper function to format date
@@ -225,26 +233,32 @@ function ImplementPolicies() {
 
   // Add getViewerUrl helper function
   const getViewerUrl = (filePath) => {
-    const extension = filePath.split('.').pop().toLowerCase();
+    const extension = filePath.split(".").pop().toLowerCase();
 
-    if (extension === 'pdf') {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
+    if (extension === "pdf") {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(
+        `${BASE_URL}${filePath}`
+      )}&embedded=true`;
     }
 
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(extension)) {
+    if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(extension)) {
       return `${BASE_URL}${filePath}`;
     }
 
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(`${BASE_URL}${filePath}`)}&embedded=true`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(
+      `${BASE_URL}${filePath}`
+    )}&embedded=true`;
   };
 
   return (
     <div className="bg-gray-50 min-h-full p-6">
       {/* Simple header with no background */}
       <div className="mb-8 flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800">Implement Policies</h2>
+        <h2 className="text-xl font-semibold text-gray-800">
+          Implement Policies
+        </h2>
         <div className="flex gap-2">
-          {projectRole.includes("admin") && (
+          {projectRole.includes("consultant admin") && (
             <Button
               type="default"
               onClick={() => {
@@ -256,7 +270,7 @@ function ImplementPolicies() {
               Assign Task
             </Button>
           )}
-          {(projectRole.includes("admin") || isAssignedUser) && (
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button
               type="primary"
               onClick={handleAddData}
@@ -275,15 +289,29 @@ function ImplementPolicies() {
             {/* Header with metadata */}
             <div className="flex flex-wrap justify-between items-center mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">Implementation Information</h3>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  Implementation Information
+                </h3>
                 {implementPoliciesData[0].saved_at && (
                   <div className="flex items-center mt-1">
                     <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3 w-3 text-blue-600"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
-                    <span className="text-xs text-gray-500">Last updated {formatDate(implementPoliciesData[0].saved_at)}</span>
+                    <span className="text-xs text-gray-500">
+                      Last updated{" "}
+                      {formatDate(implementPoliciesData[0].saved_at)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -293,12 +321,18 @@ function ImplementPolicies() {
                 <div className="flex items-center bg-gray-50 px-3 py-1 rounded-lg">
                   <div className="flex-shrink-0">
                     <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
-                      {implementPoliciesData[0].saved_by.name.charAt(0).toUpperCase()}
+                      {implementPoliciesData[0].saved_by.name
+                        .charAt(0)
+                        .toUpperCase()}
                     </div>
                   </div>
                   <div className="ml-2">
-                    <p className="text-sm font-medium text-gray-800">{implementPoliciesData[0].saved_by.name}</p>
-                    <p className="text-xs text-gray-500">{implementPoliciesData[0].saved_by.email}</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      {implementPoliciesData[0].saved_by.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {implementPoliciesData[0].saved_by.email}
+                    </p>
                   </div>
                 </div>
               )}
@@ -307,9 +341,14 @@ function ImplementPolicies() {
             {/* Implementation data with documents on the right */}
             <div className="space-y-4 mb-6">
               {implementPoliciesData.map((item) => (
-                <div key={item.id} className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
+                <div
+                  key={item.id}
+                  className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden"
+                >
                   <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">{item.field_name}</h4>
+                    <h4 className="text-sm font-medium text-gray-500 uppercase">
+                      {item.field_name}
+                    </h4>
                   </div>
                   <div className="flex flex-col md:flex-row">
                     <div className="px-4 py-3 flex-grow">
@@ -319,7 +358,9 @@ function ImplementPolicies() {
                     {/* Documents for this item */}
                     {item.documents && item.documents.length > 0 && (
                       <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">ATTACHED FILES</h5>
+                        <h5 className="text-xs font-medium text-gray-500 mb-2">
+                          ATTACHED FILES
+                        </h5>
                         <div className="space-y-2">
                           {item.documents.map((doc) => (
                             <div key={doc.id} className="flex items-center">
@@ -327,7 +368,9 @@ function ImplementPolicies() {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
+                                <p className="text-xs font-medium text-gray-700 truncate">
+                                  {getFileName(doc.file)}
+                                </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
                                   target="_blank"
@@ -352,13 +395,27 @@ function ImplementPolicies() {
         <div className="bg-white rounded-xl shadow-md p-10 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-10 w-10 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Implementation Data</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              No Implementation Data
+            </h3>
             <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-              Start implementing policies by adding your implementation details and progress.
+              Start implementing policies by adding your implementation details
+              and progress.
             </p>
             <Button
               onClick={handleAddData}
@@ -366,8 +423,17 @@ function ImplementPolicies() {
               size="large"
               className="bg-blue-600 hover:bg-blue-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
               </svg>
               Add Data
             </Button>
@@ -378,17 +444,25 @@ function ImplementPolicies() {
       {/* Task Assignment section */}
       {taskAssignment && (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Task Assignment</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Task Assignment
+          </h3>
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="mb-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-medium text-gray-700">Assignment Details</h4>
-                <p className="text-xs text-gray-500">{formatDate(taskAssignment.assigned_at)}</p>
+                <h4 className="font-medium text-gray-700">
+                  Assignment Details
+                </h4>
+                <p className="text-xs text-gray-500">
+                  {formatDate(taskAssignment.assigned_at)}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Assigned To:</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Assigned To:
+                  </p>
                   <ul className="list-disc list-inside mt-2">
                     {taskAssignment.assigned_to.map((user) => (
                       <li key={user.id} className="text-sm text-gray-600">
@@ -399,25 +473,37 @@ function ImplementPolicies() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">Deadline:</p>
-                  <p className="text-sm text-gray-600 mt-2">{formatDate(taskAssignment.deadline)}</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {formatDate(taskAssignment.deadline)}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-4">
-                <p className="text-sm font-medium text-gray-700">Description:</p>
-                <p className="text-sm text-gray-600 mt-2">{taskAssignment.description}</p>
+                <p className="text-sm font-medium text-gray-700">
+                  Description:
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {taskAssignment.description}
+                </p>
               </div>
 
               {taskAssignment.references && (
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700">References:</p>
-                  <p className="text-sm text-gray-600 mt-2">{taskAssignment.references}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    References:
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {taskAssignment.references}
+                  </p>
                 </div>
               )}
             </div>
 
             <div className="text-xs text-gray-500 mt-2">
-              <p><b>Status:</b> {taskAssignment.status}</p>
+              <p>
+                <b>Status:</b> {taskAssignment.status}
+              </p>
             </div>
           </div>
         </div>
@@ -425,11 +511,18 @@ function ImplementPolicies() {
 
       {/* Data Modal */}
       <Modal
-        title={implementPoliciesData.length > 0 ? "Update Feedback" : "Add Feedback"}
+        title={
+          implementPoliciesData.length > 0 ? "Update Feedback" : "Add Feedback"
+        }
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={[
-          <Button key="save" type="primary" onClick={handleSubmit} className="bg-blue-500">
+          <Button
+            key="save"
+            type="primary"
+            onClick={handleSubmit}
+            className="bg-blue-500"
+          >
             Save
           </Button>,
         ]}
@@ -438,14 +531,28 @@ function ImplementPolicies() {
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
           <div className="flex items-start">
             <div className="flex-shrink-0 mt-0.5">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-blue-600"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">Download Template</h3>
+              <h3 className="text-sm font-medium text-blue-800">
+                Download Template
+              </h3>
               <div className="mt-2 text-sm text-blue-600">
-                <p>Please download and fill in the template below before submitting your policy implementation feedback.</p>
+                <p>
+                  Please download and fill in the template below before
+                  submitting your policy implementation feedback.
+                </p>
               </div>
               <div className="mt-3">
                 <a
@@ -453,8 +560,19 @@ function ImplementPolicies() {
                   download="implement_policies_template.txt"
                   className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  <svg className="-ml-1 mr-2 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <svg
+                    className="-ml-1 mr-2 h-5 w-5 text-blue-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
                   </svg>
                   Download Implementation Template
                 </a>
@@ -475,13 +593,20 @@ function ImplementPolicies() {
         {/* Existing Files */}
         {oldFilesNeeded.length > 0 && (
           <div className="mt-4 mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Files</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Existing Files
+            </h4>
             <div className="space-y-2">
               {oldFilesNeeded.map((fileUrl) => (
-                <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <div
+                  key={fileUrl}
+                  className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                >
                   <div className="flex items-center">
                     <FileTextOutlined className="text-blue-500 mr-2" />
-                    <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
+                    <span className="text-sm text-gray-600">
+                      {getFileName(fileUrl)}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <a
@@ -509,13 +634,20 @@ function ImplementPolicies() {
         {/* Removed Files */}
         {removedOldFiles.length > 0 && (
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Removed Files</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Removed Files
+            </h4>
             <div className="space-y-2">
               {removedOldFiles.map((fileUrl) => (
-                <div key={fileUrl} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <div
+                  key={fileUrl}
+                  className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                >
                   <div className="flex items-center">
                     <FileTextOutlined className="text-red-500 mr-2" />
-                    <span className="text-sm text-gray-600">{getFileName(fileUrl)}</span>
+                    <span className="text-sm text-gray-600">
+                      {getFileName(fileUrl)}
+                    </span>
                   </div>
                   <Button
                     type="text"
@@ -549,9 +681,14 @@ function ImplementPolicies() {
         open={isAssignTaskVisible}
         onCancel={() => setIsAssignTaskVisible(false)}
         footer={[
-          <Button key="assign" type="primary" onClick={handleSubmitAssignment} className="bg-blue-500">
+          <Button
+            key="assign"
+            type="primary"
+            onClick={handleSubmitAssignment}
+            className="bg-blue-500"
+          >
             Assign
-          </Button>
+          </Button>,
         ]}
       >
         <div className="mb-4">
@@ -563,15 +700,18 @@ function ImplementPolicies() {
             onChange={setSelectedTeamMembers}
             style={{ width: "100%" }}
           >
-            {members && members.map((member) => (
-              <Option key={member.id} value={member.id}>
-                {member.name}
-              </Option>
-            ))}
+            {members &&
+              members.map((member) => (
+                <Option key={member.id} value={member.id}>
+                  {member.name}
+                </Option>
+              ))}
           </Select>
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Team Deadline</label>
+          <label className="block text-sm font-medium mb-2">
+            Team Deadline
+          </label>
           <DatePicker
             style={{ width: "100%" }}
             value={taskDeadline}
@@ -579,7 +719,9 @@ function ImplementPolicies() {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Task Description</label>
+          <label className="block text-sm font-medium mb-2">
+            Task Description
+          </label>
           <Input
             placeholder="Enter task description"
             value={taskDescription}
@@ -587,7 +729,9 @@ function ImplementPolicies() {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Task References</label>
+          <label className="block text-sm font-medium mb-2">
+            Task References
+          </label>
           <Input
             placeholder="Add reference URLs"
             value={taskReferences}

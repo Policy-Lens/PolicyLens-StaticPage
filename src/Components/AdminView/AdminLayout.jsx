@@ -1,8 +1,15 @@
-import SideNav from '../WorkFlow/SideNav';
-import React, { useContext, useEffect, useState } from 'react';
-import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { AuthContext } from '../../AuthContext';
-import { Calendar, HelpCircle, FileText, Shield, CheckCircle, Database } from 'lucide-react';
+import SideNav from "../WorkFlow/SideNav";
+import React, { useContext, useEffect, useState } from "react";
+import { Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
+import { AuthContext } from "../../AuthContext";
+import {
+  Calendar,
+  HelpCircle,
+  FileText,
+  Shield,
+  CheckCircle,
+  Database,
+} from "lucide-react";
 
 const AdminLayout = () => {
   const { checkLogin } = useContext(AuthContext);
@@ -13,14 +20,15 @@ const AdminLayout = () => {
   const location = useLocation();
 
   // Check if current path is the Project Lifecycle page or any top nav tab page
-  const isTopNavVisible = location.pathname === `/project/${projectid}/` ||
+  const isTopNavVisible =
+    location.pathname === `/project/${projectid}/` ||
     location.pathname === `/project/${projectid}` ||
-    location.pathname.includes('/questionbank') ||
-    location.pathname.includes('/calender') ||
-    location.pathname.includes('/myevidences') ||
-    location.pathname.includes('/askforhelp') ||
-    location.pathname.includes('/myreports') ||
-    location.pathname.includes('/policylibrary');
+    location.pathname.includes("/questionbank") ||
+    location.pathname.includes("/calender") ||
+    location.pathname.includes("/myevidences") ||
+    location.pathname.includes("/askforhelp") ||
+    location.pathname.includes("/myreports") ||
+    location.pathname.includes("/policylibrary");
 
   // Define tabs with their icons
   const tabIcons = {
@@ -39,19 +47,19 @@ const AdminLayout = () => {
     "Question Bank",
     "My Evidences",
     "My Reports",
-    "Policy Library"
+    "Policy Library",
   ];
 
   useEffect(() => {
     // Set active tab based on current path
     const path = window.location.pathname;
-    if (path.includes('questionbank')) setActiveTab('Question Bank');
-    else if (path.includes('calender')) setActiveTab('Calendar');
-    else if (path.includes('myevidences')) setActiveTab('My Evidences');
-    else if (path.includes('askforhelp')) setActiveTab('Ask for Help');
-    else if (path.includes('myreports')) setActiveTab('My Reports');
-    else if (path.includes('policylibrary')) setActiveTab('Policy Library');
-    else setActiveTab('Workflow');
+    if (path.includes("questionbank")) setActiveTab("Question Bank");
+    else if (path.includes("calender")) setActiveTab("Calendar");
+    else if (path.includes("myevidences")) setActiveTab("My Evidences");
+    else if (path.includes("askforhelp")) setActiveTab("Ask for Help");
+    else if (path.includes("myreports")) setActiveTab("My Reports");
+    else if (path.includes("policylibrary")) setActiveTab("Policy Library");
+    else setActiveTab("Workflow");
   }, [window.location.pathname]);
 
   useEffect(() => {
@@ -93,7 +101,11 @@ const AdminLayout = () => {
       <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 overflow-auto bg-gray-100 p-0 ${collapsed ? "ml-16" : "ml-56"}`}>
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 overflow-auto bg-gray-100 p-0 ${
+          collapsed ? "ml-16" : "ml-56"
+        }`}
+      >
         {/* Project Tabs Navigation - Show on Project Lifecycle and all top nav tab pages */}
         {isTopNavVisible && (
           <div className="bg-white border-b border-gray-200 shadow-sm">
@@ -103,7 +115,11 @@ const AdminLayout = () => {
                   key={tab}
                   onClick={() => handleTabClick(tab)}
                   className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 
-                    ${activeTab === tab ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    ${
+                      activeTab === tab
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
                 >
                   {tabIcons[tab] || null}
                   <span>{tab}</span>
@@ -123,4 +139,3 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
-
