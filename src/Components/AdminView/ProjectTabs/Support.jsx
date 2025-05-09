@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { message } from "antd";
 import {
   Search,
   Plus,
@@ -21,10 +22,12 @@ import {
   ChevronRight,
   Trash2,
   ExternalLink,
+  Eye,
 } from "lucide-react";
 import { apiRequest, BASE_URL } from "../../../utils/api";
 import { ProjectContext } from "../../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
+import { AuthContext } from "../../../AuthContext";
 
 const Support = () => {
   const { projectid } = useParams();
@@ -44,6 +47,15 @@ const Support = () => {
   });
   const [projectMembers, setProjectMembers] = useState([]);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [statusConfirmation, setStatusConfirmation] = useState({
+    visible: false,
+    ticketId: null,
+    newStatus: null,
+  });
+  const [technicalConfirmation, setTechnicalConfirmation] = useState({
+    visible: false,
+    ticketId: null,
+  });
   const [tickets, setTickets] = useState([]);
   const [myTickets, setMyTickets] = useState([]);
   const [allTickets, setAllTickets] = useState([]);
@@ -56,7 +68,7 @@ const Support = () => {
   });
   const { project, getMembers, projectRole } = useContext(ProjectContext);
   const [isLoading, setIsLoading] = useState(false);
-
+  const {user} = useContext(AuthContext);
   // Fetch tickets data based on active tab
   useEffect(() => {
     if (project && projectid) {
@@ -96,7 +108,7 @@ const Support = () => {
   const fetchProjectMembers = async () => {
     try {
       const members = await getMembers(projectid);
-      setProjectMembers(members || []);
+      setProjectMembers(members.filter(member => member.id !== user.id) || []);
     } catch (error) {
       console.error("Error fetching project members:", error);
     }
@@ -331,12 +343,11 @@ const Support = () => {
         if (activeTab === "all-tickets") fetchAllTickets();
         if (activeTab === "assigned-tickets") fetchAssignedTickets();
 
-        // Show success message
-        alert("Ticket submitted successfully!");
+        message.success("Ticket submitted successfully!");
       }
     } catch (error) {
       console.error("Error submitting ticket:", error);
-      alert("Failed to submit ticket. Please try again.");
+      message.error("Failed to submit ticket. Please try again.");
     }
   };
 
@@ -363,19 +374,42 @@ const Support = () => {
       if (response.status === 204) {
         // Refresh the tickets list
         fetchMyTickets();
-        alert("Ticket deleted successfully");
+        message.success("Ticket deleted successfully");
       }
     } catch (error) {
       console.error("Error deleting ticket:", error);
-      alert("Failed to delete ticket");
+      message.error("Failed to delete ticket");
     }
 
     setActiveDropdown(null);
   };
 
-  // Update ticket status
+  // Check if user can update status
+  const canUpdateStatus = (ticket) => {
+    return (
+      projectRole === "admin" ||
+      (activeTab === "assigned-tickets" && ticket.status !== "closed")
+    );
+  };
+
+  // Status update components display check
+  const canShowStatusUpdate = (ticket) => {
+    return canUpdateStatus(ticket);
+  };
+
+  // Update ticket status with confirmation
   const handleUpdateStatus = async (ticketId, newStatus) => {
+    const ticket = tickets.find((t) => t.id === ticketId);
+    if (!canUpdateStatus(ticket)) {
+      message.error("You don't have permission to update this ticket's status");
+      return;
+    }
+    setStatusConfirmation({ visible: true, ticketId, newStatus });
+  };
+
+  const confirmStatusUpdate = async () => {
     try {
+      const { ticketId, newStatus } = statusConfirmation;
       const response = await apiRequest(
         "PATCH",
         `/api/support/ticket/${ticketId}/update/`,
@@ -396,12 +430,55 @@ const Support = () => {
           });
         }
 
-        alert("Ticket status updated successfully");
+        message.success("Ticket status updated successfully");
         setActiveDropdown(null);
       }
     } catch (error) {
       console.error("Error updating ticket status:", error);
-      alert("Failed to update ticket status");
+      message.error("Failed to update ticket status");
+    } finally {
+      setStatusConfirmation({
+        visible: false,
+        ticketId: null,
+        newStatus: null,
+      });
+    }
+  };
+
+  // Handle marking ticket as technical issue with confirmation
+  const handleMarkTechnicalIssue = async (ticketId) => {
+    setTechnicalConfirmation({ visible: true, ticketId });
+  };
+
+  const confirmMarkTechnical = async () => {
+    try {
+      const { ticketId } = technicalConfirmation;
+      const response = await apiRequest(
+        "POST",
+        `/api/support/ticket/${ticketId}/mark-technical-issue/`,
+        null,
+        true
+      );
+
+      if (response.status === 200) {
+        // Refresh the tickets list
+        if (activeTab === "my-tickets") fetchMyTickets();
+        if (activeTab === "all-tickets") fetchAllTickets();
+        if (activeTab === "assigned-tickets") fetchAssignedTickets();
+        if (selectedTicket && selectedTicket.id === ticketId) {
+          setSelectedTicket({
+            ...selectedTicket,
+            is_technical: true,
+          });
+        }
+        message.success("Ticket marked as technical issue successfully");
+        setActiveDropdown(null);
+      }
+    } catch (error) {
+      console.error("Error marking ticket as technical issue:", error);
+      message.error("Failed to mark ticket as technical issue");
+    } finally {
+      setTechnicalConfirmation({ visible: false, ticketId: null });
     }
   };
 
@@ -439,21 +516,19 @@ const Support = () => {
         <div className="flex flex-col w-full">
           {/* Tabs - Enhanced Design */}
           <div className="flex border-b border-slate-200 px-6 bg-gradient-to-r from-indigo-50 to-white">
-            {projectRole === "company" && (
-              <button
-                className={`py-5 px-6 font-medium transition-colors relative ${
-                  activeTab === "my-tickets"
-                    ? "text-indigo-600 font-semibold"
-                    : "text-slate-600 hover:text-slate-800"
-                }`}
-                onClick={() => setActiveTab("my-tickets")}
-              >
-                My Tickets
-                {activeTab === "my-tickets" && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></span>
-                )}
-              </button>
-            )}
+            <button
+              className={`py-5 px-6 font-medium transition-colors relative ${
+                activeTab === "my-tickets"
+                  ? "text-indigo-600 font-semibold"
+                  : "text-slate-600 hover:text-slate-800"
+              }`}
+              onClick={() => setActiveTab("my-tickets")}
+            >
+              My Tickets
+              {activeTab === "my-tickets" && (
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></span>
+              )}
+            </button>
             {projectRole !== "company" && (
               <button
                 className={`py-5 px-6 font-medium transition-colors relative ${
@@ -672,7 +747,7 @@ const Support = () => {
                   </div>
                 </>
               )}
-              {activeTab !== "faqs" && projectRole === "company" && (
+              {activeTab !== "faqs" && (
                 <button
                   className="px-5 py-3 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm font-medium"
                   onClick={toggleNewTicket}
@@ -711,6 +786,9 @@ const Support = () => {
                       </th>
                       <th className="w-32 p-4 text-left font-semibold text-slate-600">
                         Priority
+                      </th>
+                      <th className="w-32 p-4 text-left font-semibold text-slate-600">
+                        Technical Issue
                       </th>
                       <th className="w-40 p-4 text-left font-semibold text-slate-600">
                         Created
@@ -776,6 +854,17 @@ const Support = () => {
                               {priorityBadge.label}
                             </div>
                           </td>
+                          <td className="p-4">
+                            <div
+                              className={`${
+                                ticket.is_technical
+                                  ? "text-red-600"
+                                  : "text-slate-600"
+                              } font-medium`}
+                            >
+                              {ticket.is_technical ? "Yes" : "No"}
+                            </div>
+                          </td>
                           <td className="p-4 text-slate-600">
                             {formatDate(ticket.created_at)}
                           </td>
@@ -802,7 +891,7 @@ const Support = () => {
                                 title="View ticket"
                                 onClick={() => viewTicketDetails(ticket)}
                               >
-                                <MessageCircle size={18} />
+                                <Eye size={18} />
                               </button>
                               <div className="relative">
                                 <button
@@ -831,9 +920,8 @@ const Support = () => {
                                       View Details
                                     </button>
 
-                                    {/* Status update dropdown - only show for admin or consultant */}
-                                    {(projectRole === "admin" ||
-                                      projectRole === "consultant") && (
+                                    {/* Status update dropdown - only show if user has permission */}
+                                    {canShowStatusUpdate(ticket) && (
                                       <div className="px-4 py-2 border-t border-slate-100">
                                         <div className="text-xs font-semibold text-slate-500 mb-1.5">
                                           Change Status
@@ -881,6 +969,25 @@ const Support = () => {
                                         </div>
                                       </div>
                                     )}
+
+                                    {/* Mark as Technical Issue - only show for admin and non-closed tickets */}
+                                    {projectRole === "admin" &&
+                                      !ticket.is_technical &&
+                                      ticket.status !== "closed" && (
+                                        <button
+                                          className="w-full px-4 py-2 text-left text-sm text-red-600
+                                          hover:bg-red-100 flex items-center border-t border-slate-100"
+                                          onClick={() =>
+                                            handleMarkTechnicalIssue(ticket.id)
+                                          }
+                                        >
+                                          <AlertCircle
+                                            size={14}
+                                            className="mr-2"
+                                          />
+                                          Mark as Technical Issue
+                                        </button>
+                                      )}
 
                                     {/* Delete button - only show in "my-tickets" tab */}
                                     {activeTab === "my-tickets" && (
@@ -1225,6 +1332,21 @@ const Support = () => {
                   </div>
                 </div>
                 <div className="flex gap-3">
+                  {/* Technical Issue badge */}
+                  <div
+                    className={`py-1.5 px-3 rounded-full text-xs font-medium uppercase flex items-center gap-1.5 ${
+                      selectedTicket.is_technical
+                        ? "bg-red-50 text-red-600"
+                        : "bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    <AlertCircle size={14} />
+                    <span>
+                      {selectedTicket.is_technical
+                        ? "Technical Issue"
+                        : "Non-Technical"}
+                    </span>
+                  </div>
                   {/* Status badge */}
                   <div
                     className={`${getStatusInfo(selectedTicket.status).bg} ${
@@ -1252,227 +1374,266 @@ const Support = () => {
                 </div>
               </div>
 
-              {/* Ticket details in sections */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                {/* Creator info */}
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-slate-500 mb-3">
-                    Created By
-                  </h4>
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mr-3 font-medium">
-                      {selectedTicket.created_by_details.name
-                        .split(" ")
-                        .map((name) => name[0])
-                        .join("")}
-                    </div>
-                    <div>
-                      <div className="font-medium text-slate-700">
-                        {selectedTicket.created_by_details.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {selectedTicket.created_by_details.email}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* Mark as Technical button */}
+              {!selectedTicket.is_technical && projectRole === "admin" && selectedTicket!=='closed' &&(
+                <button
+                  onClick={() => handleMarkTechnicalIssue(selectedTicket.id)}
+                  className="mb-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <AlertCircle size={16} className="mr-2" />
+                  Mark as Technical Issue
+                </button>
+              )}
 
-                {/* Assigned to info */}
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-slate-500 mb-3">
-                    Assigned To
-                  </h4>
-                  {selectedTicket.assigned_to_details &&
-                  selectedTicket.assigned_to_details.length > 0 ? (
-                    <div className="flex flex-col gap-3 max-h-[150px] overflow-y-auto">
-                      {selectedTicket.assigned_to_details.map((member) => (
-                        <div key={member.id} className="flex items-center">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mr-2 font-medium text-xs">
-                            {member.name
-                              .split(" ")
-                              .map((name) => name[0])
-                              .join("")}
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-700">
-                              {member.name}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {member.email}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-slate-500 text-sm">No assignees</div>
-                  )}
-                </div>
-
-                {/* Step info */}
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-slate-500 mb-3">
-                    Related Step
-                  </h4>
-                  {selectedTicket.step ? (
-                    <div className="font-medium text-slate-700">
-                      Step {selectedTicket.step}
-                    </div>
-                  ) : (
-                    <div className="text-slate-500 text-sm">
-                      Not related to any specific step
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-slate-500 mb-3">
-                  Description
-                </h4>
-                <div className="bg-slate-50 p-4 rounded-lg text-slate-700 whitespace-pre-line">
-                  {selectedTicket.description}
-                </div>
-              </div>
-
-              {/* Attachments */}
-              {selectedTicket.attachments &&
-                selectedTicket.attachments.length > 0 && (
-                  <div>
+              <div className="prose prose-slate max-w-none">
+                {/* Ticket details in sections */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  {/* Creator info */}
+                  <div className="bg-slate-50 p-4 rounded-lg">
                     <h4 className="text-sm font-medium text-slate-500 mb-3">
-                      Attachments
+                      Created By
                     </h4>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {selectedTicket.attachments.map((attachment) => {
-                          const fileName = attachment.file.split("/").pop();
-                          const fileExtension = fileName
-                            .split(".")
-                            .pop()
-                            .toLowerCase();
-                          const isImage = [
-                            "jpg",
-                            "jpeg",
-                            "png",
-                            "gif",
-                          ].includes(fileExtension);
-                          const isPdf = fileExtension === "pdf";
-                          const isDoc = ["doc", "docx"].includes(fileExtension);
-
-                          return (
-                            <a
-                              key={attachment.id}
-                              href={`${BASE_URL}${attachment.file}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center p-3 border border-slate-200 rounded-lg hover:border-indigo-300 hover:shadow-sm transition-all group bg-white"
-                            >
-                              <div className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-lg mr-3 text-slate-500 group-hover:text-indigo-600 transition-colors">
-                                {isImage ? (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <rect
-                                      x="3"
-                                      y="3"
-                                      width="18"
-                                      height="18"
-                                      rx="2"
-                                      ry="2"
-                                    ></rect>
-                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                    <polyline points="21 15 16 10 5 21"></polyline>
-                                  </svg>
-                                ) : isPdf ? (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
-                                  </svg>
-                                ) : isDoc ? (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                                    <polyline points="13 2 13 9 20 9"></polyline>
-                                  </svg>
-                                )}
-                              </div>
-                              <div className="overflow-hidden">
-                                <div className="text-sm font-medium text-slate-700 truncate group-hover:text-indigo-600 transition-colors">
-                                  {fileName}
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  {new Date(
-                                    attachment.uploaded_at
-                                  ).toLocaleDateString()}
-                                </div>
-                              </div>
-                              <div className="ml-auto">
-                                <ExternalLink
-                                  size={16}
-                                  className="text-slate-400 group-hover:text-indigo-500"
-                                />
-                              </div>
-                            </a>
-                          );
-                        })}
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mr-3 font-medium">
+                        {selectedTicket.created_by_details.name
+                          .split(" ")
+                          .map((name) => name[0])
+                          .join("")}
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-700">
+                          {selectedTicket.created_by_details.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {selectedTicket.created_by_details.email}
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
+
+                  {/* Assigned to info */}
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-slate-500 mb-3">
+                      Assigned To
+                    </h4>
+                    {selectedTicket.assigned_to_details &&
+                    selectedTicket.assigned_to_details.length > 0 ? (
+                      <div className="flex flex-col gap-3 max-h-[150px] overflow-y-auto">
+                        {selectedTicket.assigned_to_details.map((member) => (
+                          <div key={member.id} className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mr-2 font-medium text-xs">
+                              {member.name
+                                .split(" ")
+                                .map((name) => name[0])
+                                .join("")}
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-700">
+                                {member.name}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {member.email}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-slate-500 text-sm">No assignees</div>
+                    )}
+                  </div>
+
+                  {/* Step info */}
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-slate-500 mb-3">
+                      Related Step
+                    </h4>
+                    {selectedTicket.step_details ? (
+                      <div className="font-medium text-slate-700">
+                        Step {selectedTicket.step_details.step_no}
+                      </div>
+                    ) : (
+                      <div className="text-slate-500 text-sm">
+                        Not related to any specific step
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-slate-500 mb-3">
+                    Description
+                  </h4>
+                  <div className="bg-slate-50 p-4 rounded-lg text-slate-700 whitespace-pre-line">
+                    {selectedTicket.description}
+                  </div>
+                </div>
+
+                {/* Attachments */}
+                {selectedTicket.attachments &&
+                  selectedTicket.attachments.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-500 mb-3">
+                        Attachments
+                      </h4>
+                      <div className="bg-slate-50 p-4 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedTicket.attachments.map((attachment) => {
+                            const fileName = attachment.file.split("/").pop();
+                            const fileExtension = fileName
+                              .split(".")
+                              .pop()
+                              .toLowerCase();
+                            const isImage = [
+                              "jpg",
+                              "jpeg",
+                              "png",
+                              "gif",
+                            ].includes(fileExtension);
+                            const isPdf = fileExtension === "pdf";
+                            const isDoc = ["doc", "docx"].includes(
+                              fileExtension
+                            );
+
+                            return (
+                              <a
+                                key={attachment.id}
+                                href={`${BASE_URL}${attachment.file}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center p-3 border border-slate-200 rounded-lg hover:border-indigo-300 hover:shadow-sm transition-all group bg-white"
+                              >
+                                <div className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-lg mr-3 text-slate-500 group-hover:text-indigo-600 transition-colors">
+                                  {isImage ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <rect
+                                        x="3"
+                                        y="3"
+                                        width="18"
+                                        height="18"
+                                        rx="2"
+                                        ry="2"
+                                      ></rect>
+                                      <circle
+                                        cx="8.5"
+                                        cy="8.5"
+                                        r="1.5"
+                                      ></circle>
+                                      <polyline points="21 15 16 10 5 21"></polyline>
+                                    </svg>
+                                  ) : isPdf ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                      <polyline points="14 2 14 8 20 8"></polyline>
+                                      <line
+                                        x1="16"
+                                        y1="13"
+                                        x2="8"
+                                        y2="13"
+                                      ></line>
+                                      <line
+                                        x1="16"
+                                        y1="17"
+                                        x2="8"
+                                        y2="17"
+                                      ></line>
+                                      <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                  ) : isDoc ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                      <polyline points="14 2 14 8 20 8"></polyline>
+                                      <line
+                                        x1="16"
+                                        y1="13"
+                                        x2="8"
+                                        y2="13"
+                                      ></line>
+                                      <line
+                                        x1="16"
+                                        y1="17"
+                                        x2="8"
+                                        y2="17"
+                                      ></line>
+                                      <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                      <polyline points="13 2 13 9 20 9"></polyline>
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="overflow-hidden">
+                                  <div className="text-sm font-medium text-slate-700 truncate group-hover:text-indigo-600 transition-colors">
+                                    {fileName}
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    {new Date(
+                                      attachment.uploaded_at
+                                    ).toLocaleDateString()}
+                                  </div>
+                                </div>
+                                <div className="ml-auto">
+                                  <ExternalLink
+                                    size={16}
+                                    className="text-slate-400 group-hover:text-indigo-500"
+                                  />
+                                </div>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
             </div>
 
             <div className="border-t border-slate-200 p-5 flex justify-end space-x-3 bg-slate-50 rounded-b-xl">
-              {/* Status update buttons - only show for admin or consultant */}
-              {(projectRole === "admin" || projectRole === "consultant") && (
+              {/* Status update buttons - only show if user has permission */}
+              {canShowStatusUpdate(selectedTicket) && (
                 <div className="mr-auto">
                   <div className="text-sm font-medium text-slate-600 mb-2">
                     Update Status:
@@ -1632,7 +1793,7 @@ const Support = () => {
                         required={newTicket.isRelatedToStep}
                       >
                         <option value="">Select a step</option>
-                        {[...Array(11)].map((_, i) => (
+                        {[...Array(9)].map((_, i) => (
                           <option key={i + 1} value={i + 1}>
                             Step {i + 1}
                           </option>
@@ -1752,6 +1913,77 @@ const Support = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Status Update Confirmation Modal */}
+      {statusConfirmation.visible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scale-in">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              Confirm Status Update
+            </h3>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to update the status of this ticket to{" "}
+              <span className="font-medium">
+                {statusConfirmation.newStatus?.replace("_", " ")}
+              </span>
+              ?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                onClick={() =>
+                  setStatusConfirmation({
+                    visible: false,
+                    ticketId: null,
+                    newStatus: null,
+                  })
+                }
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                onClick={confirmStatusUpdate}
+              >
+                Update Status
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technical Issue Confirmation Modal */}
+      {technicalConfirmation.visible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scale-in">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              Mark as Technical Issue
+            </h3>
+            <p className="text-slate-600 mb-2">
+              Are you sure you want to mark this ticket as a technical issue?
+            </p>
+            <p className="text-red-600 text-sm mb-6">
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                onClick={() =>
+                  setTechnicalConfirmation({ visible: false, ticketId: null })
+                }
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                onClick={confirmMarkTechnical}
+              >
+                Mark as Technical Issue
+              </button>
+            </div>
           </div>
         </div>
       )}
