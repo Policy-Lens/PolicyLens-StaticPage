@@ -4,6 +4,283 @@ import { apiRequest } from "../../../../utils/api";
 import { useParams } from "react-router-dom";
 import { message } from "antd";
 
+// Detailed View Modal Component for viewing control details
+const DetailedViewModal = ({ isOpen, onClose, control }) => {
+  if (!isOpen || !control) return null;
+
+  // Helper function to render Yes/No fields consistently
+  const renderYesNo = (value) => (
+    <div className={`px-3 py-2 rounded-md ${value === 'Y' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+      {value === 'Y' ? 'Yes' : 'No'}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        {/* Background overlay */}
+        <div
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          aria-hidden="true"
+          onClick={onClose}
+        ></div>
+
+        {/* Modal panel */}
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+          {/* Header */}
+          <div className="bg-indigo-600 px-4 py-3 sm:px-6 flex justify-between items-center">
+            <h3 className="text-lg leading-6 font-medium text-white">
+              Control Details: {control.control_id}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-200 focus:outline-none"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="bg-white p-6 overflow-y-auto max-h-[70vh]">
+            {/* Basic Information */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Basic Information</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Control ID</label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                  {control.control_id}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Control Theme</label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                  {control.control_theme || "Not Specified"}
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Control Name</label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                {control.control_name}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Associated Functions</label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                {control.associated_functions?.map(f => f.name).join(", ") || "None"}
+              </div>
+            </div>
+
+            {/* Control Type */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Control Type</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preventive</label>
+                {renderYesNo(control.control_type?.preventive)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Detective</label>
+                {renderYesNo(control.control_type?.detective)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Corrective</label>
+                {renderYesNo(control.control_type?.corrective)}
+              </div>
+            </div>
+
+            {/* Control Property */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Control Property</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confidentiality</label>
+                {renderYesNo(control.control_property?.confidentiality)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Integrity</label>
+                {renderYesNo(control.control_property?.integrity)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+                {renderYesNo(control.control_property?.availability)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Covers Intent</label>
+                {renderYesNo(control.control_property?.does_control_cover_intent)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Covers Implementation</label>
+                {renderYesNo(control.control_property?.does_control_cover_implementation)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Covers Effectiveness</label>
+                {renderYesNo(control.control_property?.does_control_cover_effectiveness)}
+              </div>
+            </div>
+
+            {/* Cybersecurity Concept */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Cybersecurity Concept</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Identify</label>
+                {renderYesNo(control.cybersecurity_concept?.identify)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Protect</label>
+                {renderYesNo(control.cybersecurity_concept?.protect)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Detect</label>
+                {renderYesNo(control.cybersecurity_concept?.detect)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Respond</label>
+                {renderYesNo(control.cybersecurity_concept?.respond)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recover</label>
+                {renderYesNo(control.cybersecurity_concept?.recover)}
+              </div>
+            </div>
+
+            {/* Security Domain */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Security Domain</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Governance and Ecosystem</label>
+                {renderYesNo(control.security_domain?.governance_and_ecosystem)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Protection</label>
+                {renderYesNo(control.security_domain?.protection)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Defence</label>
+                {renderYesNo(control.security_domain?.defence)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Resilience</label>
+                {renderYesNo(control.security_domain?.resilience)}
+              </div>
+            </div>
+
+            {/* Operational Capability */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Operational Capability</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Governance</label>
+                {renderYesNo(control.operational_capability?.governance)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asset Management</label>
+                {renderYesNo(control.operational_capability?.asset_management)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Information Protection</label>
+                {renderYesNo(control.operational_capability?.information_protection)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Human Resource Security</label>
+                {renderYesNo(control.operational_capability?.human_resource_security)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Physical Security</label>
+                {renderYesNo(control.operational_capability?.physical_security)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">System and Network Security</label>
+                {renderYesNo(control.operational_capability?.system_and_network_security)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Application Security</label>
+                {renderYesNo(control.operational_capability?.application_security)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Secure Configuration</label>
+                {renderYesNo(control.operational_capability?.secure_configuration)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Identity and Access Management</label>
+                {renderYesNo(control.operational_capability?.identity_and_access_management)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Threat and Vulnerability Management</label>
+                {renderYesNo(control.operational_capability?.threat_and_vulnerability_management)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Continuity</label>
+                {renderYesNo(control.operational_capability?.continuity)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Relationship Security</label>
+                {renderYesNo(control.operational_capability?.supplier_relationship_security)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Legal and Compliance</label>
+                {renderYesNo(control.operational_capability?.legal_and_compliance)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Information Security Event Management</label>
+                {renderYesNo(control.operational_capability?.information_security_event_management)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Information Security Assurance</label>
+                {renderYesNo(control.operational_capability?.information_security_assurance)}
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Additional Information</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Related To</label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                  {control.additional_info?.related_to || "Not Specified"}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Must Have</label>
+                {renderYesNo(control.additional_info?.must_have)}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nice to Have</label>
+                {renderYesNo(control.additional_info?.nice_to_have)}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sample Audit Questions</label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md min-h-[80px]">
+                  {control.additional_info?.sample_audit_questions || "None provided"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button
+              type="button"
+              className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Reusable Confirmation Modal Component
 const ConfirmationModal = ({
   isOpen,
@@ -118,7 +395,7 @@ const ASISReport = () => {
   // Confirmation modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState({
-    onConfirm: () => {},
+    onConfirm: () => { },
     title: "Confirm Action",
     message: "Are you sure?",
   });
@@ -186,6 +463,10 @@ const ASISReport = () => {
   // Get project ID from URL
   const { projectid } = useParams();
 
+  // Add state for detailed view modal
+  const [showDetailedView, setShowDetailedView] = useState(false);
+  const [selectedControlForView, setSelectedControlForView] = useState(null);
+
   // Toggle group expansion
   const toggleGroup = (groupName) => {
     setExpandedGroups((prev) => ({
@@ -197,9 +478,8 @@ const ASISReport = () => {
   // Helper function to render expand/collapse icon
   const renderExpandIcon = (isExpanded) => (
     <span
-      className={`ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-opacity-50 transition-transform duration-300 ${
-        isExpanded ? "rotate-90" : ""
-      }`}
+      className={`ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-opacity-50 transition-transform duration-300 ${isExpanded ? "rotate-90" : ""
+        }`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -802,7 +1082,7 @@ const ASISReport = () => {
   const closeConfirmModal = () => {
     setShowConfirmModal(false);
     setConfirmModalProps({
-      onConfirm: () => {},
+      onConfirm: () => { },
       title: "Confirm Action",
       message: "Are you sure?",
     });
@@ -813,85 +1093,31 @@ const ASISReport = () => {
     fetchReports();
   }, [projectid]);
 
+  // Add function to handle viewing a control
+  const handleViewControl = (control) => {
+    setSelectedControlForView(control);
+    setShowDetailedView(true);
+  };
+
+  // Add function to close the detailed view modal
+  const closeDetailedView = () => {
+    setShowDetailedView(false);
+    setSelectedControlForView(null);
+  };
+
   return (
     <>
       {/* Header with Buttons */}
-      <div className="flex items-center justify-between border-b border-slate-200 p-5 bg-white sticky top-0 z-10 shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 p-2 bg-white sticky top-0 z-10 shadow-sm">
         <div className="flex items-center">
-          <h2 className="text-xl font-bold text-slate-800">ASIS Report</h2>
+          <h2 className="text-xl font-bold text-slate-800">ASIS Control Reports</h2>
           <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
             {controls.length}
           </div>
         </div>
 
-        {/* Actions and Report Selector */}
+        {/* Actions */}
         <div className="flex space-x-3 items-center">
-          {/* Report Selector Dropdown */}
-          <div className="relative">
-            <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={selectedReport ? selectedReport.id : ""}
-              onChange={(e) => handleReportChange(e.target.value)}
-              disabled={isLoading}
-            >
-              {reports.length === 0 && (
-                <option value="" disabled>
-                  No reports available
-                </option>
-              )}
-              {reports.map((report) => (
-                <option key={report.id} value={report.id}>
-                  {report.name}
-                </option>
-              ))}
-              <option value="create">+ Create New Report</option>
-            </select>
-            {/* <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-              <svg
-                className="w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div> */}
-          </div>
-
-          {/* Delete Report Button */}
-          <button
-            className={`p-2.5 rounded-lg text-red-600 hover:bg-red-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed transition-colors`}
-            onClick={() =>
-              deleteReport(
-                selectedReport?.id,
-                selectedReport?.name,
-                controls.length
-              )
-            }
-            disabled={!selectedReport || isLoading}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
-
           {/* Action buttons */}
           <button
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md flex items-center"
@@ -911,7 +1137,7 @@ const ASISReport = () => {
             Upload Excel
           </button>
 
-          <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md flex items-center">
+          <button className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md flex items-center">
             <svg
               className="w-5 h-5 mr-2"
               fill="none"
@@ -932,8 +1158,8 @@ const ASISReport = () => {
 
       {/* Loading Indicator */}
       {isLoading && (
-        <div className="flex justify-center items-center p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="flex justify-center items-center py-1">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
       )}
 
@@ -1289,6 +1515,31 @@ const ASISReport = () => {
                   {/* Actions */}
                   <td className="border border-slate-200 p-3 sticky left-0 bg-white">
                     <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleViewControl(control)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded-full"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => openModal("edit", control)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded-full"
@@ -2070,6 +2321,13 @@ const ASISReport = () => {
         onConfirm={confirmModalProps.onConfirm}
         title={confirmModalProps.title}
         message={confirmModalProps.message}
+      />
+
+      {/* Detailed View Modal */}
+      <DetailedViewModal
+        isOpen={showDetailedView}
+        onClose={closeDetailedView}
+        control={selectedControlForView}
       />
     </>
   );

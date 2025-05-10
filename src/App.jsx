@@ -122,8 +122,12 @@ const router = createBrowserRouter([
         element: <MyReports />
       },
       {
+        path: "myreports/:reportType",
+        element: <MyReports />
+      },
+      {
         path: "policylibrary",
-        element: <PolicyLibrary/>
+        element: <PolicyLibrary />
       },
 
     ]

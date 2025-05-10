@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FilePlus2, FileUp } from "lucide-react";
+import { FilePlus, FileUp, Plus, Upload } from "lucide-react";
 import { apiRequest } from "../../../../utils/api";
 import { useParams } from "react-router-dom";
 import LegendsModal from "./LegendsModal";
@@ -25,11 +25,7 @@ const ConfirmationModal = ({
       aria-modal="true"
     >
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          aria-hidden="true"
-          onClick={onClose}
-        ></div>
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
@@ -164,7 +160,7 @@ const RiskTreatment = () => {
   // State for Confirmation Modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState({
-    onConfirm: () => {},
+    onConfirm: () => { },
     title: "Confirm Action",
     message: "Are you sure?",
   });
@@ -191,7 +187,7 @@ const RiskTreatment = () => {
     setFormData((prevFormData) => {
       const needsUpdate =
         prevFormData.rt_revision.residual_risk_rating !==
-          calculatedResidualRiskRating ||
+        calculatedResidualRiskRating ||
         prevFormData.rt_assessment.risk_category !== calculatedRiskCategory;
 
       if (needsUpdate) {
@@ -228,9 +224,8 @@ const RiskTreatment = () => {
   const renderExpandIcon = (isExpanded) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className={`h-5 w-5 ml-2 transition-transform ${
-        isExpanded ? "rotate-180" : ""
-      }`}
+      className={`h-5 w-5 ml-2 transition-transform ${isExpanded ? "rotate-180" : ""
+        }`}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -889,7 +884,7 @@ const RiskTreatment = () => {
   const closeConfirmModal = () => {
     setShowConfirmModal(false);
     setConfirmModalProps({
-      onConfirm: () => {},
+      onConfirm: () => { },
       title: "Confirm Action",
       message: "Are you sure?",
     }); // Reset
@@ -898,126 +893,29 @@ const RiskTreatment = () => {
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 p-5 bg-white sticky top-0 z-10 shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 p-2 bg-white sticky top-0 z-10 shadow-sm">
         <div className="flex items-center">
-          <h2 className="text-xl font-bold text-slate-800">Risk Treatment</h2>
+          <h2 className="text-xl font-bold text-slate-800">Risk Treatment Plans</h2>
           <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
             {riskData.length}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* Sheet Selector Dropdown */}
-          <div className="relative">
-            <select
-              className="px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              value={selectedSheet ? selectedSheet.id : ""}
-              onChange={(e) => handleSheetChange(e.target.value)}
-              disabled={isLoading}
-            >
-              {sheets.length === 0 && (
-                <option value="" disabled>
-                  No sheets available
-                </option>
-              )}
-              {sheets.map((sheet) => (
-                <option key={sheet.id} value={sheet.id}>
-                  {sheet.name}
-                </option>
-              ))}
-              <option value="create">+ Create New Report</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-              <svg
-                className="w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-          {/* Delete Sheet Button */}
+          {/* Action buttons section */}
           <button
-            className={`p-2.5 rounded-lg text-red-600 hover:bg-red-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed transition-colors`}
-            onClick={() =>
-              selectedSheet &&
-              deleteSheet(selectedSheet.id, selectedSheet.name, riskData.length)
-            } // Pass necessary info
-            disabled={!selectedSheet || isLoading}
-            title={
-              selectedSheet
-                ? "Delete selected report"
-                : "Select a report to delete"
-            }
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-5 h-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-              />
-            </svg>
-          </button>
-        </div>
-        <div className="flex gap-3">
-          <button
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md flex items-center transform hover:scale-105 transition-transform duration-200"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
             onClick={() => openModal("create")}
-            disabled={!selectedSheet} // Disable if no sheet selected
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-5 h-5 mr-2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            <span>Add Treatment Plan</span>
+            <Plus size={18} className="mr-1" /> Add Risk
           </button>
           <button
-            className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-md flex items-center transform hover:scale-105 transition-transform duration-200"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 flex items-center"
             onClick={() => openModal("excel")}
-            disabled={!selectedSheet} // Disable if no sheet selected
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-5 h-5 mr-2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-              />
-            </svg>
-            <span>Upload Excel</span>
+            <Upload size={18} className="mr-1" /> Upload Excel
           </button>
           <button
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-md flex items-center transform hover:scale-105 transition-transform duration-200"
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-md flex items-center"
             onClick={toggleLegendsModal}
           >
             <svg
@@ -1040,8 +938,55 @@ const RiskTreatment = () => {
       </div>
 
       {isLoading && (
-        <div className="flex justify-center items-center p-4">
-          <div className="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-12 w-12 mb-4 border-t-indigo-500 animate-spin"></div>
+        <div className="flex justify-center items-center py-1">
+          <div className="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-12 w-12 border-t-indigo-500 animate-spin"></div>
+        </div>
+      )}
+
+      {/* Empty state when no sheets are available */}
+      {!isLoading && sheets.length === 0 && (
+        <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 min-h-[300px] bg-white rounded-lg shadow-sm mt-2 mx-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-20 h-20 text-gray-400 mb-4 animate-pulse"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z"
+            />
+          </svg>
+
+          <h3 className="text-2xl font-medium text-gray-700 mb-2">
+            No Treatment Reports Available
+          </h3>
+          <p className="text-gray-500 mb-8 max-w-md">
+            Get started by creating a new treatment report to organize your treatment plans.
+          </p>
+          <button
+            onClick={() => setShowSheetModal(true)}
+            className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-md flex items-center transform hover:scale-105 hover:shadow-lg duration-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5 mr-2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+              />
+            </svg>
+            <span>Create New Report</span>
+          </button>
         </div>
       )}
 
@@ -1051,14 +996,14 @@ const RiskTreatment = () => {
           {/* Wrap conditional content in fragment */}
           {riskData.length === 0 ? (
             // Empty State UI for Treatment Plans
-            <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 min-h-[300px]">
+            <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 min-h-[300px] bg-white rounded-lg shadow-sm mt-2 mx-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-16 h-16 text-gray-400 mb-4"
+                className="w-20 h-20 text-gray-400 mb-4 animate-pulse"
               >
                 <path
                   strokeLinecap="round"
@@ -1066,16 +1011,16 @@ const RiskTreatment = () => {
                   d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75c0-.231-.035-.454-.1-.664M18.75 7.5H18a2.25 2.25 0 00-2.25 2.25v6.75m0 0a2.25 2.25 0 01-2.25 2.25H5.625a2.25 2.25 0 01-2.25-2.25V6.75a2.25 2.25 0 012.25-2.25h3.75a48.47 48.47 0 011.07-.069"
                 />
               </svg>
-              <h3 className="text-xl font-medium text-gray-700 mb-2">
+              <h3 className="text-2xl font-medium text-gray-700 mb-2">
                 No Treatment Plans Yet
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-500 mb-8 max-w-md">
                 Get started by adding a treatment plan manually or uploading an
-                Excel file.
+                Excel file with multiple entries.
               </p>
-              <div className="flex gap-4">
+              <div className="flex gap-6">
                 <button
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md flex items-center transform hover:scale-105 transition-transform duration-200"
+                  className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-md flex items-center transform hover:scale-105 hover:shadow-lg duration-200"
                   onClick={() => openModal("create")}
                   disabled={!selectedSheet} // Keep disabled check
                 >
@@ -1096,7 +1041,7 @@ const RiskTreatment = () => {
                   <span>Add Treatment Plan</span>
                 </button>
                 <button
-                  className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-md flex items-center transform hover:scale-105 transition-transform duration-200"
+                  className="px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-md flex items-center transform hover:scale-105 hover:shadow-lg duration-200"
                   onClick={() => openModal("excel")}
                   disabled={!selectedSheet} // Keep disabled check
                 >
@@ -1121,7 +1066,7 @@ const RiskTreatment = () => {
           ) : (
             // Existing Table Rendering
             <div
-              className="overflow-x-auto w-full p-4"
+              className="overflow-x-auto w-full px-1 pt-1"
               style={{ maxWidth: "100vw" }}
             >
               <div className="inline-block min-w-full whitespace-nowrap">
@@ -1586,10 +1531,10 @@ const RiskTreatment = () => {
                   {modalType === "edit"
                     ? "Edit Treatment Plan"
                     : modalType === "excel"
-                    ? "Upload Excel Treatment Data"
-                    : modalType === "view"
-                    ? "View Treatment Plan"
-                    : "New Treatment Plan"}
+                      ? "Upload Excel Treatment Data"
+                      : modalType === "view"
+                        ? "View Treatment Plan"
+                        : "New Treatment Plan"}
                 </h3>
               </div>
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[80vh] overflow-y-auto">
@@ -1597,493 +1542,493 @@ const RiskTreatment = () => {
                 {(modalType === "create" ||
                   modalType === "edit" ||
                   modalType === "view") && (
-                  <form className="space-y-6">
-                    {/* Basic Information */}
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <h4 className="text-lg font-medium mb-4 text-gray-800">
-                        Basic Information
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Risk ID *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.risk_id}
-                            onChange={(e) =>
-                              handleFormChange(e, null, "risk_id")
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="e.g., RT_001"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Vulnerability Type
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.vulnerability_type}
-                            onChange={(e) =>
-                              handleFormChange(e, null, "vulnerability_type")
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Threat Description
-                          </label>
-                          <textarea
-                            value={formData.threat_description}
-                            onChange={(e) =>
-                              handleFormChange(e, null, "threat_description")
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            rows="2"
-                            disabled={modalType === "view"}
-                          ></textarea>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Risk Assessment (rt_assessment) */}
-                    <div className="bg-slate-100 p-4 rounded-md">
-                      <h4 className="text-lg font-medium mb-4 text-slate-800">
-                        Risk Assessment
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Risk Rating
-                          </label>
-                          {/* Assuming this is manually entered or fetched, not calculated here */}
-                          <input
-                            type="number"
-                            min="1"
-                            value={formData.rt_assessment.risk_rating}
-                            onChange={(e) =>
-                              handleNumericChange(
-                                e,
-                                "rt_assessment",
-                                "risk_rating"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Risk Category
-                          </label>
-                          {/* Make Category disabled and limit options */}
-                          <select
-                            value={formData.rt_assessment.risk_category}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100 appearance-none"
-                            disabled
-                          >
-                            <option value="Not Significant">
-                              Not Significant
-                            </option>
-                            <option value="Significant">Significant</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Department/BU
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.rt_assessment.department_bu}
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_assessment",
-                                "department_bu"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Mitigation Strategy
-                          </label>
-                          <select
-                            value={
-                              formData.rt_assessment.risk_mitigation_strategy
-                            }
-                            onChange={(e) =>
-                              handleSelectChange(
-                                e,
-                                "rt_assessment",
-                                "risk_mitigation_strategy"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          >
-                            <option value="Tolerate">Tolerate</option>
-                            <option value="Treat">Treat</option>
-                            <option value="Transfer">Transfer</option>
-                            <option value="Terminate">Terminate</option>
-                          </select>
+                    <form className="space-y-6">
+                      {/* Basic Information */}
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        <h4 className="text-lg font-medium mb-4 text-gray-800">
+                          Basic Information
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Risk ID *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.risk_id}
+                              onChange={(e) =>
+                                handleFormChange(e, null, "risk_id")
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              placeholder="e.g., RT_001"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Vulnerability Type
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.vulnerability_type}
+                              onChange={(e) =>
+                                handleFormChange(e, null, "vulnerability_type")
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Threat Description
+                            </label>
+                            <textarea
+                              value={formData.threat_description}
+                              onChange={(e) =>
+                                handleFormChange(e, null, "threat_description")
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              rows="2"
+                              disabled={modalType === "view"}
+                            ></textarea>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Risk Revision (rt_revision) */}
-                    <div className="bg-indigo-50 p-4 rounded-md">
-                      <h4 className="text-lg font-medium mb-4 text-indigo-800">
-                        Risk Revision
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Applicable Annex Control No.
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData.rt_revision
-                                .applicable_annex_control_number
-                            }
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_revision",
-                                "applicable_annex_control_number"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Meet Legal Requirements? (Y/N)
-                          </label>
-                          <select
-                            value={formData.rt_revision.meet_legal_requirements}
-                            onChange={(e) =>
-                              handleSelectChange(
-                                e,
-                                "rt_revision",
-                                "meet_legal_requirements"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          >
-                            <option value="Y">Yes</option>
-                            <option value="N">No</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Revised Control Rating
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="5"
-                            value={formData.rt_revision.revised_control_rating}
-                            onChange={(e) =>
-                              handleNumericChange(
-                                e,
-                                "rt_revision",
-                                "revised_control_rating"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Revised Consequence Rating
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="5"
-                            value={
-                              formData.rt_revision.revised_consequence_rating
-                            }
-                            onChange={(e) =>
-                              handleNumericChange(
-                                e,
-                                "rt_revision",
-                                "revised_consequence_rating"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Revised Likelihood Rating
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="5"
-                            value={
-                              formData.rt_revision.revised_likelihood_rating
-                            }
-                            onChange={(e) =>
-                              handleNumericChange(
-                                e,
-                                "rt_revision",
-                                "revised_likelihood_rating"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Residual Risk Rating
-                          </label>
-                          {/* Make Residual Risk disabled */}
-                          <input
-                            type="number"
-                            min="1"
-                            value={formData.rt_revision.residual_risk_rating}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100"
-                            readOnly
-                            disabled
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Acceptable to Risk Owner? (Y/N)
-                          </label>
-                          <select
-                            value={
-                              formData.rt_revision.acceptable_to_risk_owner
-                            }
-                            onChange={(e) =>
-                              handleSelectChange(
-                                e,
-                                "rt_revision",
-                                "acceptable_to_risk_owner"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          >
-                            <option value="Y">Yes</option>
-                            <option value="N">No</option>
-                          </select>
+                      {/* Risk Assessment (rt_assessment) */}
+                      <div className="bg-slate-100 p-4 rounded-md">
+                        <h4 className="text-lg font-medium mb-4 text-slate-800">
+                          Risk Assessment
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Risk Rating
+                            </label>
+                            {/* Assuming this is manually entered or fetched, not calculated here */}
+                            <input
+                              type="number"
+                              min="1"
+                              value={formData.rt_assessment.risk_rating}
+                              onChange={(e) =>
+                                handleNumericChange(
+                                  e,
+                                  "rt_assessment",
+                                  "risk_rating"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Risk Category
+                            </label>
+                            {/* Make Category disabled and limit options */}
+                            <select
+                              value={formData.rt_assessment.risk_category}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100 appearance-none"
+                              disabled
+                            >
+                              <option value="Not Significant">
+                                Not Significant
+                              </option>
+                              <option value="Significant">Significant</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Department/BU
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.rt_assessment.department_bu}
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_assessment",
+                                  "department_bu"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Mitigation Strategy
+                            </label>
+                            <select
+                              value={
+                                formData.rt_assessment.risk_mitigation_strategy
+                              }
+                              onChange={(e) =>
+                                handleSelectChange(
+                                  e,
+                                  "rt_assessment",
+                                  "risk_mitigation_strategy"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            >
+                              <option value="Tolerate">Tolerate</option>
+                              <option value="Treat">Treat</option>
+                              <option value="Transfer">Transfer</option>
+                              <option value="Terminate">Terminate</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Risk Mitigation Plan (rt_mitigation_plans - Object) */}
-                    <div className="bg-green-50 p-4 rounded-md">
-                      <h4 className="text-lg font-medium mb-4 text-green-800">
-                        Risk Mitigation Plan
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Further Planned Action
-                          </label>
-                          <textarea
-                            value={
-                              formData.rt_mitigation_plans
-                                .further_planned_action
-                            }
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "further_planned_action"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            rows="2"
-                            disabled={modalType === "view"}
-                          ></textarea>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Policy Lense Task ID
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData.rt_mitigation_plans.policy_lense_task_id
-                            }
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "policy_lense_task_id"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Task Description
-                          </label>
-                          <textarea
-                            value={
-                              formData.rt_mitigation_plans.task_description
-                            }
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "task_description"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            rows="2"
-                            disabled={modalType === "view"}
-                          ></textarea>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Task Owner
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.rt_mitigation_plans.task_owner}
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "task_owner"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Ongoing Task? (Y/N)
-                          </label>
-                          <select
-                            value={formData.rt_mitigation_plans.is_ongoing}
-                            onChange={(e) =>
-                              handleSelectChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "is_ongoing"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          >
-                            <option value="Y">Yes</option>
-                            <option value="N">No</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Planned Completion Date
-                          </label>
-                          <input
-                            type="date"
-                            value={
-                              formData.rt_mitigation_plans
-                                .planned_completion_date
-                            }
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "planned_completion_date"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Recurrent Task? (Y/N)
-                          </label>
-                          <select
-                            value={formData.rt_mitigation_plans.is_recurrent}
-                            onChange={(e) =>
-                              handleSelectChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "is_recurrent"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={modalType === "view"}
-                          >
-                            <option value="Y">Yes</option>
-                            <option value="N">No</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Frequency (if recurrent)
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.rt_mitigation_plans.frequency || ""}
-                            onChange={(e) =>
-                              handleFormChange(
-                                e,
-                                "rt_mitigation_plans",
-                                "frequency"
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="e.g., Monthly, Weekly"
-                            disabled={
-                              modalType === "view" ||
-                              formData.rt_mitigation_plans.is_recurrent === "N"
-                            }
-                          />
+                      {/* Risk Revision (rt_revision) */}
+                      <div className="bg-indigo-50 p-4 rounded-md">
+                        <h4 className="text-lg font-medium mb-4 text-indigo-800">
+                          Risk Revision
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Applicable Annex Control No.
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                formData.rt_revision
+                                  .applicable_annex_control_number
+                              }
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_revision",
+                                  "applicable_annex_control_number"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Meet Legal Requirements? (Y/N)
+                            </label>
+                            <select
+                              value={formData.rt_revision.meet_legal_requirements}
+                              onChange={(e) =>
+                                handleSelectChange(
+                                  e,
+                                  "rt_revision",
+                                  "meet_legal_requirements"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Revised Control Rating
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="5"
+                              value={formData.rt_revision.revised_control_rating}
+                              onChange={(e) =>
+                                handleNumericChange(
+                                  e,
+                                  "rt_revision",
+                                  "revised_control_rating"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Revised Consequence Rating
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="5"
+                              value={
+                                formData.rt_revision.revised_consequence_rating
+                              }
+                              onChange={(e) =>
+                                handleNumericChange(
+                                  e,
+                                  "rt_revision",
+                                  "revised_consequence_rating"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Revised Likelihood Rating
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="5"
+                              value={
+                                formData.rt_revision.revised_likelihood_rating
+                              }
+                              onChange={(e) =>
+                                handleNumericChange(
+                                  e,
+                                  "rt_revision",
+                                  "revised_likelihood_rating"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Residual Risk Rating
+                            </label>
+                            {/* Make Residual Risk disabled */}
+                            <input
+                              type="number"
+                              min="1"
+                              value={formData.rt_revision.residual_risk_rating}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100"
+                              readOnly
+                              disabled
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Acceptable to Risk Owner? (Y/N)
+                            </label>
+                            <select
+                              value={
+                                formData.rt_revision.acceptable_to_risk_owner
+                              }
+                              onChange={(e) =>
+                                handleSelectChange(
+                                  e,
+                                  "rt_revision",
+                                  "acceptable_to_risk_owner"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Submit/Cancel Buttons */}
-                    <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                      <button
-                        type="button"
-                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        onClick={closeModal}
-                      >
-                        Cancel
-                      </button>
-                      {modalType !== "view" && (
+                      {/* Risk Mitigation Plan (rt_mitigation_plans - Object) */}
+                      <div className="bg-green-50 p-4 rounded-md">
+                        <h4 className="text-lg font-medium mb-4 text-green-800">
+                          Risk Mitigation Plan
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Further Planned Action
+                            </label>
+                            <textarea
+                              value={
+                                formData.rt_mitigation_plans
+                                  .further_planned_action
+                              }
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "further_planned_action"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              rows="2"
+                              disabled={modalType === "view"}
+                            ></textarea>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Policy Lense Task ID
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                formData.rt_mitigation_plans.policy_lense_task_id
+                              }
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "policy_lense_task_id"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Task Description
+                            </label>
+                            <textarea
+                              value={
+                                formData.rt_mitigation_plans.task_description
+                              }
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "task_description"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              rows="2"
+                              disabled={modalType === "view"}
+                            ></textarea>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Task Owner
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.rt_mitigation_plans.task_owner}
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "task_owner"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Ongoing Task? (Y/N)
+                            </label>
+                            <select
+                              value={formData.rt_mitigation_plans.is_ongoing}
+                              onChange={(e) =>
+                                handleSelectChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "is_ongoing"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Planned Completion Date
+                            </label>
+                            <input
+                              type="date"
+                              value={
+                                formData.rt_mitigation_plans
+                                  .planned_completion_date
+                              }
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "planned_completion_date"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Recurrent Task? (Y/N)
+                            </label>
+                            <select
+                              value={formData.rt_mitigation_plans.is_recurrent}
+                              onChange={(e) =>
+                                handleSelectChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "is_recurrent"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              disabled={modalType === "view"}
+                            >
+                              <option value="Y">Yes</option>
+                              <option value="N">No</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Frequency (if recurrent)
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.rt_mitigation_plans.frequency || ""}
+                              onChange={(e) =>
+                                handleFormChange(
+                                  e,
+                                  "rt_mitigation_plans",
+                                  "frequency"
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              placeholder="e.g., Monthly, Weekly"
+                              disabled={
+                                modalType === "view" ||
+                                formData.rt_mitigation_plans.is_recurrent === "N"
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit/Cancel Buttons */}
+                      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                         <button
                           type="button"
-                          className="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                          onClick={
-                            modalType === "edit"
-                              ? handleRiskUpdate
-                              : handleRiskSubmit
-                          }
+                          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                          onClick={closeModal}
                         >
-                          {modalType === "edit" ? "Update Plan" : "Save Plan"}
+                          Cancel
                         </button>
-                      )}
-                    </div>
-                  </form>
-                )}
+                        {modalType !== "view" && (
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                            onClick={
+                              modalType === "edit"
+                                ? handleRiskUpdate
+                                : handleRiskSubmit
+                            }
+                          >
+                            {modalType === "edit" ? "Update Plan" : "Save Plan"}
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  )}
 
                 {/* Form for uploading Excel */}
                 {modalType === "excel" && (

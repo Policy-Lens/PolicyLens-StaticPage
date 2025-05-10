@@ -396,6 +396,7 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
         regulation_standard: "",
         regulation_control_no: "",
         regulation_control_name: "",
+        parent_control: "",
     });
     const fileInputRef = useRef(null);
 
@@ -431,6 +432,7 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
                 regulation_standard: "",
                 regulation_control_no: "",
                 regulation_control_name: "",
+                parent_control: "",
             });
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
@@ -449,6 +451,7 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
             regulation_standard: "",
             regulation_control_no: "",
             regulation_control_name: "",
+            parent_control: "",
         });
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -546,6 +549,24 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
                     />
                 </div>
 
+                <div className="mb-4">
+                    <label
+                        htmlFor="parent_control"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Parent Control
+                    </label>
+                    <input
+                        type="text"
+                        id="parent_control"
+                        name="parent_control"
+                        value={formData.parent_control}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter parent control"
+                    />
+                </div>
+
                 <div className="flex justify-end space-x-3 mt-6">
                     <button
                         onClick={handleCancel}
@@ -629,10 +650,10 @@ const PolicyLibrary = () => {
     // }, [projectRole]);
 
     // Check user role in the project
-    // Using user.role from AuthContext as the primary source of truth
-    const isAdmin = user?.role === "admin";
-    // Fallback to projectRole if needed
-    const isConsultant = user?.role === "consultant" || projectRole === "consultant";
+    // Using projectRole from ProjectContext as the primary source of truth
+    const isAdmin = projectRole === "admin";
+    // Use user.role as fallback for consultant role
+    const isConsultant = projectRole === "consultant" || user?.role === "consultant";
 
     // Fetch templates data with filters
     const fetchTemplates = async (
@@ -704,11 +725,13 @@ const PolicyLibrary = () => {
         if (activeTab === "templates") {
             fetchTemplates();
         } else if (activeTab === "myFiles") {
-            if (isConsultant) {
+            if (projectRole === "consultant") {
                 fetchProjectFiles({ assigned_to_me: true });
-            }
-            if (isAdmin) {
+            } else if (projectRole === "admin") {
                 fetchProjectFiles({ assigned_by_me: true });
+            } else {
+                // For other roles, show all files as a default behavior
+                fetchProjectFiles();
             }
         } else if (activeTab === "allFiles") {
             fetchProjectFiles();
@@ -731,9 +754,9 @@ const PolicyLibrary = () => {
             fetchTemplates(newSearchTerm, controlNameFilter);
         } else {
             fetchProjectFiles(
-                activeTab === "myFiles" && projectRole == "consultant"
+                activeTab === "myFiles" && projectRole === "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole === "admin"
                         ? { assigned_by_me: true }
                         : {},
                 newSearchTerm,
@@ -750,9 +773,9 @@ const PolicyLibrary = () => {
             fetchTemplates(searchTerm, value);
         } else {
             fetchProjectFiles(
-                activeTab === "myFiles" && projectRole == "consultant"
+                activeTab === "myFiles" && projectRole === "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole === "admin"
                         ? { assigned_by_me: true }
                         : {},
                 searchTerm,
@@ -771,9 +794,9 @@ const PolicyLibrary = () => {
             fetchTemplates("", "");
         } else {
             fetchProjectFiles(
-                activeTab === "myFiles" && projectRole == "consultant"
+                activeTab === "myFiles" && projectRole === "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole === "admin"
                         ? { assigned_by_me: true }
                         : {},
                 "",
@@ -788,9 +811,9 @@ const PolicyLibrary = () => {
             fetchTemplates();
         } else {
             fetchProjectFiles(
-                activeTab === "myFiles" && projectRole == "consultant"
+                activeTab === "myFiles" && projectRole === "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole === "admin"
                         ? { assigned_by_me: true }
                         : {}
             );
@@ -806,6 +829,7 @@ const PolicyLibrary = () => {
         { key: "regulation_standard", label: "Regulation Standard" },
         { key: "regulation_control_no", label: "Regulation Control No." },
         { key: "regulation_control_name", label: "Regulation Control Name" },
+        { key: "parent_control", label: "Parent Control" },
     ];
 
     // Column headers for project files
@@ -816,6 +840,7 @@ const PolicyLibrary = () => {
         { key: "regulation_standard", label: "Regulation Standard" },
         { key: "regulation_control_no", label: "Regulation Control No." },
         { key: "regulation_control_name", label: "Regulation Control Name" },
+        { key: "parent_control", label: "Parent Control" },
         { key: "assigned_by", label: "Assigned By" },
         { key: "assigned_to", label: "Assigned To" },
         { key: "created_at", label: "Created At" },
@@ -1033,6 +1058,7 @@ const PolicyLibrary = () => {
         uploadData.append("regulation_standard", formData.regulation_standard);
         uploadData.append("regulation_control_no", formData.regulation_control_no);
         uploadData.append("regulation_control_name", formData.regulation_control_name);
+        uploadData.append("parent_control", formData.parent_control);
 
         try {
             await apiRequest(
@@ -1070,21 +1096,19 @@ const PolicyLibrary = () => {
           )}
         </button> */}
 
-                {/* My Files tab - visible to admin & consultant, fetches different data based on role */}
-                {(isConsultant || isAdmin) && (
-                    <button
-                        className={`py-3 px-6 font-medium relative transition-all ${activeTab === "myFiles"
-                            ? "text-blue-600 font-semibold"
-                            : "text-gray-600 hover:text-gray-800"
-                            }`}
-                        onClick={() => setActiveTab("myFiles")}
-                    >
-                        My Files
-                        {activeTab === "myFiles" && (
-                            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
-                        )}
-                    </button>
-                )}
+                {/* My Files tab - visible to all roles, fetches different data based on role */}
+                <button
+                    className={`py-3 px-6 font-medium relative transition-all ${activeTab === "myFiles"
+                        ? "text-blue-600 font-semibold"
+                        : "text-gray-600 hover:text-gray-800"
+                        }`}
+                    onClick={() => setActiveTab("myFiles")}
+                >
+                    My Files
+                    {activeTab === "myFiles" && (
+                        <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
+                    )}
+                </button>
 
                 {/* Removed Assigned By Me Tab */}
                 {/* {isAdmin && (
@@ -1117,7 +1141,7 @@ const PolicyLibrary = () => {
                 </button>
 
                 {/* Upload Template button in the top tab area if admin */}
-                {activeTab === "templates" && isAdmin && (
+                {activeTab === "templates" && user?.role === "admin" && (
                     <button
                         onClick={openUploadTemplateModal}
                         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm ml-auto mr-2 my-auto"
@@ -1180,7 +1204,7 @@ const PolicyLibrary = () => {
                         {/* Upload Template button removed from here since it's now in the tab bar */}
 
                         {/* Action buttons for Template tab - Only show Assign button when files are selected */}
-                        {activeTab === "templates" && isAdmin && selectedFileIds.length > 0 && (
+                        {activeTab === "templates" && projectRole === "admin" && selectedFileIds.length > 0 && (
                             <button
                                 onClick={() => openConsultantModal()}
                                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
@@ -1227,7 +1251,7 @@ const PolicyLibrary = () => {
                                         className="hover:bg-gray-50 transition-colors"
                                     >
                                         <td className="px-3 py-2.5 text-sm text-gray-900">
-                                            {isAdmin && (
+                                            {projectRole === 'admin' && (
                                                 <input
                                                     type="checkbox"
                                                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -1257,6 +1281,9 @@ const PolicyLibrary = () => {
                                             {item.regulation_control_name}
                                         </td>
                                         <td className="px-3 py-2.5 text-sm text-gray-900">
+                                            {item.parent_control || "None"}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-sm text-gray-900">
                                             <div className="flex space-x-2">
                                                 <button
                                                     className="p-1 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
@@ -1272,7 +1299,7 @@ const PolicyLibrary = () => {
                                                 >
                                                     <Download size={16} className="text-green-600" />
                                                 </button>
-                                                {isAdmin && (
+                                                {projectRole === 'admin' && (
                                                     <button
                                                         className="p-1 bg-purple-100 rounded-md hover:bg-purple-200 transition-colors"
                                                         title="Assign File"
@@ -1338,6 +1365,9 @@ const PolicyLibrary = () => {
                                             {item.regulation_control_name}
                                         </td>
                                         <td className="px-3 py-2.5 text-sm text-gray-900">
+                                            {item.parent_control || "None"}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-sm text-gray-900">
                                             {item.assigned_by?.name || "None"}
                                         </td>
                                         <td className="px-3 py-2.5 text-sm text-gray-900">
@@ -1369,7 +1399,7 @@ const PolicyLibrary = () => {
                                                     <Download size={16} className="text-green-600" />
                                                 </button>
                                                 {/* Show Upload for Consultants, Delete for Admins in My Files tab */}
-                                                {activeTab === "myFiles" && isConsultant && (
+                                                {activeTab === "myFiles" && projectRole === "consultant" && (
                                                     <button
                                                         className="p-1 bg-orange-100 rounded-md hover:bg-orange-200 transition-colors"
                                                         title="Upload New Version"
@@ -1378,7 +1408,7 @@ const PolicyLibrary = () => {
                                                         <Upload size={16} className="text-orange-600" />
                                                     </button>
                                                 )}
-                                                {activeTab === "myFiles" && isAdmin && (
+                                                {activeTab === "myFiles" && projectRole === "admin" && (
                                                     <button
                                                         className="p-1 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
                                                         title="Delete Assignment"
@@ -1422,9 +1452,11 @@ const PolicyLibrary = () => {
                                 {activeTab === "templates"
                                     ? "No templates are available at the moment."
                                     : activeTab === "myFiles"
-                                        ? isAdmin
+                                        ? projectRole === "admin"
                                             ? "You have not assigned any files yet."
-                                            : "You have no files assigned to you yet."
+                                            : projectRole === "consultant"
+                                                ? "You have no files assigned to you yet."
+                                                : "No files are available for you in this project."
                                         : "No files have been added to this project yet."}
                             </p>
                             {(searchTerm || controlNameFilter) && (

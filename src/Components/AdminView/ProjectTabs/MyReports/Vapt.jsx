@@ -332,13 +332,13 @@ const Vapt = () => {
         message.success("Report deleted successfully");
         await fetchVaptReports();
       }
-      else{
+      else {
         message.error("Failed to delete report");
       }
 
       // Fetch updated reports list after deletion
 
-    //   message.success("Report deleted successfully");
+      //   message.success("Report deleted successfully");
     } catch (err) {
       console.error("Error deleting VAPT report:", err);
       setError(err.message || "Failed to delete report");
@@ -423,12 +423,13 @@ const Vapt = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white">
-        <h2 className="text-2xl font-bold text-slate-800">VAPT Summary</h2>
+      <div className="flex items-center justify-between p-2 bg-white border-b border-slate-200 shadow-sm">
         <div className="flex items-center gap-2">
+          {/* 
+          Report Dropdown - Temporarily commented out
           <div className="relative">
             <select
-              className="pl-4 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               value={selectedReport ? selectedReport.id : ""}
               onChange={(e) => handleSheetChange(e.target.value)}
               disabled={isLoading}
@@ -462,10 +463,12 @@ const Vapt = () => {
               </svg>
             </div>
           </div>
+          */}
 
-          {/* Delete Button */}
+          {/* 
+          Delete Button - Temporarily commented out
           <button
-            className="p-2.5 rounded-lg text-red-600 hover:bg-red-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded-lg text-red-600 hover:bg-red-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed transition-colors"
             onClick={() =>
               selectedReport &&
               deleteSheet(selectedReport.id, selectedReport.name)
@@ -492,6 +495,7 @@ const Vapt = () => {
               />
             </svg>
           </button>
+          */}
         </div>
       </div>
 

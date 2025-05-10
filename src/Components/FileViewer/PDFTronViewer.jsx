@@ -23,11 +23,18 @@ const loadWebViewerScript = () => {
     });
 };
 
-const PDFTronViewer = ({ fileUrl, fileType }) => {
+const PDFTronViewer = ({ fileUrl, fileType, onLoadingChange }) => {
     const viewerDiv = useRef(null);
     const viewer = useRef(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Propagate loading state to parent component if callback provided
+    useEffect(() => {
+        if (onLoadingChange) {
+            onLoadingChange(loading);
+        }
+    }, [loading, onLoadingChange]);
 
     useEffect(() => {
         if (!fileUrl) {
@@ -65,6 +72,33 @@ const PDFTronViewer = ({ fileUrl, fileType }) => {
                             .pageText { color: #1e293b; }
                             .Button.active { background-color: #e0f2fe; color: #0284c7; }
                             .Document { height: 100%; }
+                            /* Fix for double viewer issue */
+                            .DocumentContainer > div:not(:first-child) {
+                                display: none !important;
+                            }
+                            
+                            /* Remove the default long text from the toolbar tabs */
+                            [data-element^="option.toolbarGroup"] .title::before,
+                            [data-element^="option.toolbarGroup"] .title option {
+                                display: none !important;
+                            }
+                            
+                            /* Clean up the toolbar appearance */
+                            .TabsHeader {
+                                border-bottom: 1px solid #e2e8f0;
+                                background-color: #f8fafc;
+                            }
+                            
+                            .TabsHeader button {
+                                padding: 8px 16px;
+                                font-size: 14px;
+                                font-weight: 500;
+                            }
+                            
+                            .TabsHeader button.active {
+                                border-bottom: 2px solid #3b82f6;
+                                color: #3b82f6;
+                            }
                         `,
                     },
                     viewerDiv.current
@@ -73,6 +107,54 @@ const PDFTronViewer = ({ fileUrl, fileType }) => {
                 // Get the UI instance and set theme
                 const { UI, Core } = viewer.current;
                 UI.setTheme('light');
+
+                // Instead of disabling the default toolbar, we'll update the UI after it loads
+                setTimeout(() => {
+                    try {
+                        // Find all toolbar tab elements and rename them
+                        const replaceTabNames = () => {
+                            // Map of selectors to their new text
+                            const nameMap = {
+                                '[data-element="option.toolbarGroup.toolbarGroup-View"]': 'View',
+                                '[data-element="option.toolbarGroup.toolbarGroup-Annotate"]': 'Annotate',
+                                '[data-element="option.toolbarGroup.toolbarGroup-Shapes"]': 'Shapes',
+                                '[data-element="option.toolbarGroup.toolbarGroup-Insert"]': 'Insert',
+                                '[data-element="option.toolbarGroup.toolbarGroup-Measure"]': 'Measure',
+                                '[data-element="option.toolbarGroup.toolbarGroup-Edit"]': 'Edit',
+                                '[data-element="option.toolbarGroup.toolbarGroup-FillAndSign"]': 'Fill and Sign',
+                                '[data-element="option.toolbarGroup.toolbarGroup-Forms"]': 'Forms'
+                            };
+
+                            // Apply the changes to each element
+                            Object.entries(nameMap).forEach(([selector, newText]) => {
+                                const element = document.querySelector(selector);
+                                if (element) {
+                                    const titleElement = element.querySelector('.title');
+                                    if (titleElement) {
+                                        titleElement.textContent = newText;
+                                    }
+                                }
+                            });
+                        };
+
+                        // Run initially and then observe for changes
+                        replaceTabNames();
+
+                        // Create a mutation observer to watch for future changes
+                        const observer = new MutationObserver((mutations) => {
+                            replaceTabNames();
+                        });
+
+                        // Start observing the document
+                        observer.observe(document.body, {
+                            childList: true,
+                            subtree: true
+                        });
+
+                    } catch (e) {
+                        console.warn('Error customizing toolbar:', e);
+                    }
+                }, 1000); // Wait for UI to be fully loaded
 
                 // Determine file type/extension
                 let extension = getFileExtension(fileUrl);
@@ -159,15 +241,35 @@ const PDFTronViewer = ({ fileUrl, fileType }) => {
                         }
                     }
 
+                    // Dispose UI and Core if available
+                    if (viewer.current.UI) {
+                        try {
+                            viewer.current.UI.dispose();
+                        } catch (e) {
+                            console.warn('Error disposing UI:', e);
+                        }
+                    }
+
                     // Clear the viewer div content
                     if (viewerDiv.current) {
                         try {
-                            while (viewerDiv.current.firstChild) {
-                                viewerDiv.current.removeChild(viewerDiv.current.firstChild);
-                            }
+                            // Use innerHTML for a clean sweep of the container
+                            viewerDiv.current.innerHTML = '';
                         } catch (e) {
                             console.warn('Error cleaning viewer div:', e);
                         }
+                    }
+
+                    // Remove any potential leftover WebViewer elements from the document
+                    try {
+                        const webViewerElements = document.querySelectorAll('.webviewer-outer-container');
+                        webViewerElements.forEach(element => {
+                            if (element.parentNode && element !== viewerDiv.current) {
+                                element.parentNode.removeChild(element);
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('Error removing leftover elements:', e);
                     }
                 } catch (e) {
                     console.warn('Error during cleanup:', e);
@@ -195,6 +297,11 @@ const PDFTronViewer = ({ fileUrl, fileType }) => {
 
     // Render error state
     if (error) {
+        // Make sure loading is set to false when there's an error
+        if (onLoadingChange) {
+            onLoadingChange(false);
+        }
+
         return (
             <div className="h-full w-full flex items-center justify-center bg-gray-50">
                 <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
@@ -219,11 +326,6 @@ const PDFTronViewer = ({ fileUrl, fileType }) => {
 
     return (
         <div className="h-full w-full relative">
-            {loading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
-                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            )}
             <div ref={viewerDiv} className="h-full w-full"></div>
         </div>
     );

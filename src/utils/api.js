@@ -8,7 +8,8 @@ const apiRequest = async (
   method,
   endpoint,
   body = null,
-  requiresAuth = false
+  requiresAuth = false,
+  isMultipart = false
 ) => {
   try {
     const headers = {};
@@ -29,10 +30,12 @@ const apiRequest = async (
     if (body) {
       if (body instanceof FormData) {
         config.data = body;
-        // Do not set Content-Type header, let FormData handle it
+        // Don't set Content-Type - axios will set the correct boundary for multipart/form-data
       } else {
         config.data = body;
-        headers["Content-Type"] = "application/json";
+        if (!isMultipart) {
+          headers["Content-Type"] = "application/json";
+        }
       }
     }
 
@@ -40,14 +43,19 @@ const apiRequest = async (
     return response;
   } catch (error) {
     if (error.response?.status === 401 && requiresAuth) {
-      return handleTokenRefresh(method, endpoint, body);
+      return handleTokenRefresh(method, endpoint, body, isMultipart);
     }
     throw error.response?.data || { message: "Something went wrong" };
   }
 };
 
 // Handle Token Refresh and Retry Original Request
-const handleTokenRefresh = async (method, endpoint, body) => {
+const handleTokenRefresh = async (
+  method,
+  endpoint,
+  body,
+  isMultipart = false
+) => {
   try {
     const refreshToken = Cookies.get("refreshToken");
     if (!refreshToken) {
@@ -66,7 +74,7 @@ const handleTokenRefresh = async (method, endpoint, body) => {
       sameSite: "Strict",
     });
 
-    return apiRequest(method, endpoint, body, true);
+    return apiRequest(method, endpoint, body, true, isMultipart);
   } catch (error) {
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
