@@ -1,14 +1,36 @@
 import { useState } from "react";
-import { BarChart3, CheckCircle, ClipboardList, Clock, MessageCircle, CalendarDays } from "lucide-react";
+import {
+  BarChart3,
+  CheckCircle,
+  ClipboardList,
+  Clock,
+  MessageCircle,
+  CalendarDays,
+} from "lucide-react";
 import SideNav from "../WorkFlow/SideNav";
 
 const AdminDashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const statsData = [
-    { title: "New Users", count: 124, color: "bg-blue-500", icon: <CheckCircle className="text-white w-10 h-10" /> },
-    { title: "Total Tasks", count: 120, color: "bg-green-500", icon: <ClipboardList className="text-white w-10 h-10" /> },
-    { title: "Pending Tasks", count: 24, color: "bg-yellow-500", icon: <Clock className="text-white w-10 h-10" /> },
+    {
+      title: "New Users",
+      count: 124,
+      color: "bg-blue-500",
+      icon: <CheckCircle className="text-white w-10 h-10" />,
+    },
+    {
+      title: "Total Tasks",
+      count: 120,
+      color: "bg-green-500",
+      icon: <ClipboardList className="text-white w-10 h-10" />,
+    },
+    {
+      title: "Pending Tasks",
+      count: 24,
+      color: "bg-yellow-500",
+      icon: <Clock className="text-white w-10 h-10" />,
+    },
   ];
 
   const activities = [
@@ -18,9 +40,21 @@ const AdminDashboard = () => {
   ];
 
   const messages = [
-    { sender: "Rajesh Kumar", text: "Can you update the report?", time: "2 mins ago" },
-    { sender: "Priya Sharma", text: "Meeting at 3 PM confirmed.", time: "30 mins ago" },
-    { sender: "Vikram Patel", text: "Please check the new requirements.", time: "1 hour ago" },
+    {
+      sender: "Rajesh Kumar",
+      text: "Can you update the report?",
+      time: "2 mins ago",
+    },
+    {
+      sender: "Priya Sharma",
+      text: "Meeting at 3 PM confirmed.",
+      time: "30 mins ago",
+    },
+    {
+      sender: "Vikram Patel",
+      text: "Please check the new requirements.",
+      time: "1 hour ago",
+    },
   ];
 
   const deadlines = [
@@ -32,22 +66,29 @@ const AdminDashboard = () => {
   return (
     <div className="flex min-h-screen bg-blue-50 text-gray-800">
       {/* Main Content */}
-      <div
-        className="flex-1 transition-all duration-300 p-8 "
-      >
+      <div className="flex-1 transition-all duration-300 p-8 ">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-extrabold text-blue-900 mb-6">Admin Dashboard</h1>
+          <h1 className="text-4xl font-extrabold text-blue-900 mb-6">
+            Admin Dashboard
+          </h1>
 
           {/* Stats Section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {statsData.map((stat, index) => (
-              <div key={index} className="flex items-center p-6 bg-white rounded-2xl shadow-lg border border-gray-200 transition transform hover:scale-105">
+              <div
+                key={index}
+                className="flex items-center p-6 bg-white rounded-2xl shadow-lg border border-gray-200 transition transform hover:scale-105"
+              >
                 <div className={`p-4 rounded-full ${stat.color}`}>
                   {stat.icon}
                 </div>
                 <div className="ml-4">
-                  <h2 className="text-lg font-semibold text-gray-700">{stat.title}</h2>
-                  <p className="text-4xl font-bold text-gray-900 mt-2">{stat.count}</p>
+                  <h2 className="text-lg font-semibold text-gray-700">
+                    {stat.title}
+                  </h2>
+                  <p className="text-4xl font-bold text-gray-900 mt-2">
+                    {stat.count}
+                  </p>
                 </div>
               </div>
             ))}
@@ -60,7 +101,10 @@ const AdminDashboard = () => {
               Task Progress
             </h2>
             <div className="w-full bg-gray-200 rounded-full h-5">
-              <div className="bg-green-500 h-5 rounded-full text-white text-sm font-semibold flex items-center justify-center" style={{ width: "80%" }}>
+              <div
+                className="bg-green-500 h-5 rounded-full text-white text-sm font-semibold flex items-center justify-center"
+                style={{ width: "80%" }}
+              >
                 80% Completed
               </div>
             </div>
@@ -76,9 +120,14 @@ const AdminDashboard = () => {
               </h2>
               <ul className="divide-y divide-gray-200">
                 {activities.map((activity, index) => (
-                  <li key={index} className="py-4 flex justify-between items-center hover:bg-blue-100 transition rounded-lg px-3">
+                  <li
+                    key={index}
+                    className="py-4 flex justify-between items-center hover:bg-blue-100 transition rounded-lg px-3"
+                  >
                     <span className="text-gray-700">{activity.text}</span>
-                    <span className="text-sm text-gray-500">{activity.time}</span>
+                    <span className="text-sm text-gray-500">
+                      {activity.time}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -92,12 +141,19 @@ const AdminDashboard = () => {
               </h2>
               <ul className="divide-y divide-gray-200">
                 {messages.map((message, index) => (
-                  <li key={index} className="py-4 flex justify-between items-center hover:bg-blue-100 transition rounded-lg px-3">
+                  <li
+                    key={index}
+                    className="py-4 flex justify-between items-center hover:bg-blue-100 transition rounded-lg px-3"
+                  >
                     <div>
-                      <p className="text-gray-900 font-medium">{message.sender}</p>
+                      <p className="text-gray-900 font-medium">
+                        {message.sender}
+                      </p>
                       <p className="text-gray-700 text-sm">{message.text}</p>
                     </div>
-                    <span className="text-sm text-gray-500">{message.time}</span>
+                    <span className="text-sm text-gray-500">
+                      {message.time}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -112,14 +168,16 @@ const AdminDashboard = () => {
             </h2>
             <ul className="divide-y divide-gray-200">
               {deadlines.map((deadline, index) => (
-                <li key={index} className="py-4 flex justify-between items-center hover:bg-blue-100 transition rounded-lg px-3">
+                <li
+                  key={index}
+                  className="py-4 flex justify-between items-center hover:bg-blue-100 transition rounded-lg px-3"
+                >
                   <span className="text-gray-700">{deadline.task}</span>
                   <span className="text-sm text-gray-500">{deadline.date}</span>
                 </li>
               ))}
             </ul>
           </div>
-
         </div>
       </div>
     </div>

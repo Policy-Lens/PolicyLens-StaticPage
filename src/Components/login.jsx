@@ -104,7 +104,7 @@ const LoginPage = () => {
 
         // Use setTimeout to delay navigation, allowing the loading indicator to be displayed
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate("/dashboard");
         }, 1500);
       }
     } catch (error) {
@@ -128,9 +128,14 @@ const LoginPage = () => {
         {isLoading && (
           <div className="mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div className="bg-blue-600 h-2.5 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+              <div
+                className="bg-blue-600 h-2.5 rounded-full animate-pulse"
+                style={{ width: "100%" }}
+              ></div>
             </div>
-            <p className="text-center text-gray-600 mt-2">Loading dashboard...</p>
+            <p className="text-center text-gray-600 mt-2">
+              Loading dashboard...
+            </p>
           </div>
         )}
 

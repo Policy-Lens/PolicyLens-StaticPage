@@ -1,5 +1,15 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Button, Modal, Input, Upload, message, Spin, Dropdown, Select, DatePicker } from "antd";
+import {
+  Button,
+  Modal,
+  Input,
+  Upload,
+  message,
+  Spin,
+  Dropdown,
+  Select,
+  DatePicker,
+} from "antd";
 import {
   PaperClipOutlined,
   FileTextOutlined,
@@ -18,8 +28,16 @@ function ServiceRequirements() {
   const [description, setDescription] = useState("");
   const [isAssignedUser, setIsAssignedUser] = useState(false);
   const { projectid } = useParams();
-  const { addStepData, getStepData, getStepId, projectRole, checkStepAuth, assignStep, getStepAssignment, getMembers } =
-    useContext(ProjectContext);
+  const {
+    addStepData,
+    getStepData,
+    getStepId,
+    projectRole,
+    checkStepAuth,
+    assignStep,
+    getStepAssignment,
+    getMembers,
+  } = useContext(ProjectContext);
   const [serviceRequirementsData, setServiceRequirementsData] = useState([]);
   const [stepId, setStepId] = useState(null);
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
@@ -279,18 +297,19 @@ function ServiceRequirements() {
           <div className="flex items-center gap-2">
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium
-              ${stepStatus === "completed"
+              ${
+                stepStatus === "completed"
                   ? "bg-green-100 text-green-800"
                   : stepStatus === "in_progress"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
             >
               {stepStatus.charAt(0).toUpperCase() +
                 stepStatus.slice(1).replace("_", " ")}
             </span>
 
-            {(projectRole.includes("admin") || isAssignedUser) && (
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
               <Dropdown
                 menu={{
                   items: [
@@ -337,7 +356,7 @@ function ServiceRequirements() {
           </div>
         </div>
         <div className="flex gap-2">
-          {projectRole.includes("admin") && (
+          {projectRole.includes("consultant admin") && (
             <Button
               type="default"
               onClick={() => {
@@ -349,14 +368,16 @@ function ServiceRequirements() {
               Assign Task
             </Button>
           )}
-          {(projectRole.includes("admin") || isAssignedUser) && (
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button
               type="primary"
               onClick={() => setIsModalVisible(true)}
               className="bg-blue-600 hover:bg-blue-700"
               disabled={loading}
             >
-              {serviceRequirementsData.length > 0 ? "Update Requirements" : "Add Requirements"}
+              {serviceRequirementsData.length > 0
+                ? "Update Requirements"
+                : "Add Requirements"}
             </Button>
           )}
         </div>
@@ -647,14 +668,28 @@ function ServiceRequirements() {
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0 mt-0.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-blue-600"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">Download Template</h3>
+                  <h3 className="text-sm font-medium text-blue-800">
+                    Download Template
+                  </h3>
                   <div className="mt-2 text-sm text-blue-600">
-                    <p>Please download and fill in the template below before submitting your service requirements.</p>
+                    <p>
+                      Please download and fill in the template below before
+                      submitting your service requirements.
+                    </p>
                   </div>
                   <div className="mt-3">
                     <a
@@ -662,8 +697,19 @@ function ServiceRequirements() {
                       download="service_requirements_template.txt"
                       className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                      <svg className="-ml-1 mr-2 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      <svg
+                        className="-ml-1 mr-2 h-5 w-5 text-blue-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
                       </svg>
                       Download Service Requirements Template
                     </a>

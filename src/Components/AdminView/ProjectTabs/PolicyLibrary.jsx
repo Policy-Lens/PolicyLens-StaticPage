@@ -62,7 +62,7 @@ const ConsultantSelectionModal = ({
                 const filteredConsultants = members.filter(
                     (member) =>
                         (member.project_role === "consultant" ||
-                            member.project_role === "admin") &&
+                            member.project_role === "consultant admin") &&
                         member.id !== user?.id
                 );
                 setConsultants(filteredConsultants);

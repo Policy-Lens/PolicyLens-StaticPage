@@ -1,238 +1,211 @@
-import { useState } from "react";
-import { Select, Button } from "antd";
-import SideNav from "./SideNav";
-import ManualReport from "./ManualReport"; 
-import { AuditorData } from "../../AuditorData";
+import { useState, useEffect } from "react";
+import { Eye, Download } from "lucide-react";
+import FileViewerModal from "../FileViewer/FileViewerModal";
+import { message } from "antd";
+import { apiRequest, BASE_URL } from "../../utils/api";
+import { useParams } from "react-router-dom";
+import { useContext } from "react";
+import { ProjectContext } from "../../Context/ProjectContext";
 
 const AuditorWorkspace = () => {
-    const [selectedSource, setSelectedSource] = useState(null);
-    const [selectedControls, setSelectedControls] = useState([]); 
-    const [popupContent, setPopupContent] = useState(null);
-    const [showManualReport, setShowManualReport] = useState(false); 
-    const [selectedPolicy, setSelectedPolicy] = useState(null);
-    const [collapsed, setCollapsed] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [selectedFileId, setSelectedFileId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [viewerModal, setViewerModal] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileType: "",
+    fileName: "",
+  });
+  const { projectid } = useParams();
 
-    const handleSourceChange = (value) => {
-        setSelectedSource(value);
-    };
+  useEffect(() => {
+    fetchFiles();
+  }, [projectid]);
 
-    const handleControlSelection = (control) => {
-        setSelectedControls((prev) => {
-            const isAlreadySelected = prev.some((item) => item.controlName === control.controlName);
-            if (isAlreadySelected) {
-                return prev.filter((item) => item.controlName !== control.controlName);
-            }
-            return [...prev, control];
-        });
-    };
+  const fetchFiles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/controlfiles/projects/${projectid}/control-files/`,
+        null,
+        true
+      );
+      if (response.status === 200) {
+        setFiles(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching files:", error);
+      message.error("Failed to load files");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const policies = [
-        { id: 1, policyName: "Data Protection Policy", policyType: "ISO 27001" },
-        { id: 2, policyName: "Privacy Policy", policyType: "ISO 27701" },
-        { id: 3, policyName: "Payment Security Policy", policyType: "PCI DSS" },
-        { id: 4, policyName: "Risk Management Policy", policyType: "ISO 31000" },
-        { id: 5, policyName: "Access Control Policy", policyType: "NIST SP 800-53" },
-    ];
+  const openFileViewer = (file) => {
+    setViewerModal({
+      isOpen: true,
+      fileUrl: file.file_path || "",
+      fileType: file.file_type?.toLowerCase() || "",
+      fileName: file.file_name || "",
+    });
+  };
 
-    return (
-        <div className="flex h-screen font-sans pl-6 bg-gray-100">
-          
-            {/* Main Content */}
-            <div className="flex-1 pl-0 pb-8 pt-0 bg-gray-100 text-gray-800 mr-3">
-                {showManualReport ? (
-                    <ManualReport
-                        selectedControls={selectedControls} 
-                        onBack={() => setShowManualReport(false)}
-                    />
-                ) : (
-                    <>
-                        <div className="flex justify-between items-center mb-8 mt-5">
-                            <h1 className="text-2xl font-bold text-blue-900">Auditor Workspace</h1>
-                        </div>
+  const closeFileViewer = () => {
+    setViewerModal({
+      ...viewerModal,
+      isOpen: false,
+    });
+  };
 
-                        {/* Policies Table */}
-                        <div className="mt-8">
-                            <h3 className="mb-4 text-blue-900 font-medium">Policies</h3>
-                            <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-                                <table className="min-w-full border-collapse border border-gray-300 text-sm">
-                                    <thead className="bg-gradient-to-r from-blue-100 to-blue-200 border-b border-gray-300">
-                                        <tr>
-                                            <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                                Select
-                                            </th>
-                                            <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                                Policy Name
-                                            </th>
-                                            <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                                Policy Type
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {policies.map((policy) => (
-                                            <tr
-                                                key={policy.id}
-                                                className="border-b border-gray-200 transition hover:bg-blue-100"
-                                            >
-                                                <td className="py-4 pl-10 text-left">
-                                                    <input
-                                                        type="checkbox"
-                                                        name="policySelect"
-                                                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                                        onChange={() => setSelectedPolicy(policy)}
-                                                    />
-                                                </td>
-                                                <td className="py-4 px-6 text-gray-700">{policy.policyName}</td>
-                                                <td className="py-4 px-6 text-gray-700">{policy.policyType}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+  const handleDownload = (file) => {
+    if (file.file_path) {
+      window.open(`${file.file_path}`, "_blank");
+    }
+  };
 
-                            {/* Policy Selection Dropdown */}
-                            {selectedPolicy && (
-                                <div className="mb-8 mt-8">
-                                    <h3 className="mb-4 text-black font-bold">{selectedPolicy.policyName} selected</h3>
-                                    <h3 className="mb-4 text-blue-900 font-medium">Select the Policy Standard</h3>
-                                    <Select
-                                        className="w-72"
-                                        placeholder="Select Policy Standard"
-                                        onChange={handleSourceChange}
-                                    >
-                                        <Select.Option value="iso27001">ISO 27001</Select.Option>
-                                        <Select.Option value="iso27701">ISO 27701</Select.Option>
-                                        <Select.Option value="pcidss">PCI DSS</Select.Option>
-                                    </Select>
-                                </div>
-                            )}
+  const handleGenerateMLReport = () => {
+    // This is a dummy button for now
+    message.info("ML Report generation will be implemented in the future");
+  };
 
-                        {/*Table */}
-                        {selectedSource && (
-                            <div className="mt-8">
-                                <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-                                    <table className="min-w-full border-collapse border border-gray-300 text-sm">
-                                        <thead className="bg-gradient-to-r from-blue-100 to-blue-200 border-b border-gray-300">
-                                            <tr>
-                                                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                                    Select
-                                                </th>
-                                                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                                    Parent Control
-                                                </th>
-                                                <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase">
-                                                    Control Name
-                                                </th>
-                                                <th className="py-4 px-6 text-center font-semibold text-blue-800 uppercase">
-                                                    Key Points
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {AuditorData.map((item, index) => (
-                                                <tr
-                                                    key={index}
-                                                    className={`border-b border-gray-200 transition ${index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                                                        } hover:bg-blue-100`}
-                                                >
-                                                    <td className="py-4 pl-10 text-left">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                            onChange={() => handleControlSelection(item)}
-                                                        />
-                                                    </td>
-                                                    <td className="py-4 px-6 text-gray-700">{item.parentControl}</td>
-                                                    <td className="py-4 px-6 text-gray-700">{item.controlName}</td>
-                                                    <td className="py-4 px-6 text-center">
-                                                        <button
-                                                            className="text-blue-500 hover:text-blue-700"
-                                                            onClick={() => setPopupContent(item.keyPoints)}
-                                                            aria-label="Preview Key Points"
-                                                        >
-                                                            <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                viewBox="0 0 24 24"
-                                                                fill="currentColor"
-                                                                className="w-5 h-5 mx-auto"
-                                                            >
-                                                                <path d="M12 4.5c-4.97 0-9.27 3.11-10.88 7.5 1.61 4.39 5.91 7.5 10.88 7.5s9.27-3.11 10.88-7.5C21.27 7.61 16.97 4.5 12 4.5zm0 12c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5zm0-7.5a3 3 0 100 6 3 3 0 000-6z" />
-                                                            </svg>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
+  const formatDate = (isoString) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
-                        {/* Buttons: Generate ML Report and Skip */}
-                        {selectedControls.length > 0 && (
-                            <div className="mt-8 flex gap-4">
-                                <Button
-                                    type="primary"
-                                    className="bg-blue-500 border-blue-500 hover:bg-blue-600 hover:border-blue-600 px-6 py-2 text-white rounded-md mb-5"
-                                >
-                                    Generate ML Report
-                                </Button>
-                                <Button
-                                    type="default"
-                                    className="border-gray-300 hover:border-gray-400 px-6 py-2 rounded-md mb-5"
-                                    onClick={() => setShowManualReport(true)}
-                                >
-                                    Skip
-                                </Button>
-                            </div>
-                        )}
-
-                            {popupContent && (
-                                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                                    <div className="bg-white p-6 rounded shadow-lg w-3/4 max-w-4xl">
-                                        <h2 className="text-lg font-bold mb-4">Key Points</h2>
-                                        <div className="max-h-96 overflow-y-auto">
-                                            {Array.isArray(popupContent) ? (
-                                                <ul className="list-disc pl-6">
-                                                    {popupContent.map((point, idx) => {
-                                                        const subPoints = point.split("\n");
-                                                        return (
-                                                            <li key={idx} className="mb-2">
-                                                                {subPoints[0]}
-                                                                {subPoints.length > 1 && (
-                                                                    <ul className="list-disc pl-6">
-                                                                        {subPoints.slice(1).map((subPoint, subIdx) => (
-                                                                            <li key={subIdx} className="mb-1">
-                                                                                {subPoint}
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-                                                                )}
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
-                                            ) : (
-                                                <p>{popupContent}</p>
-                                            )}
-                                        </div>
-                                        <div className="text-right">
-                                            <button
-                                                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                                                onClick={() => setPopupContent(null)}
-                                            >
-                                                Close
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                    </>
-                )}
-            </div>
+  return (
+    <div className="flex flex-col h-screen font-sans pl-6 bg-gray-100">
+      <div className="flex-1 pl-0 pb-8 pt-0 bg-gray-100 text-gray-800 mr-3">
+        <div className="flex justify-between items-center mb-8 mt-5">
+          <h1 className="text-2xl font-bold text-blue-900">
+            Auditor Workspace
+          </h1>
+          {selectedFileId && (
+            <button
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+              onClick={handleGenerateMLReport}
+            >
+              Generate ML Report
+            </button>
+          )}
         </div>
-    );
+
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              {" "}
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Select
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    File Name
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    File Type
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Regulation Standard
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Regulation Control No.
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Regulation Control Name
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Parent Control
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Upload Date
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {files.map((file) => (
+                  <tr
+                    key={file.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      <input
+                        type="radio"
+                        name="fileSelection"
+                        checked={selectedFileId === file.id}
+                        onChange={() => setSelectedFileId(file.id)}
+                        className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 text-sm font-medium text-blue-600">
+                      {file.file_name}
+                    </td>{" "}
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {file.file_type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {file.regulation_standard}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {file.regulation_control_no}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {file.regulation_control_name}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {file.parent_control}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      {formatDate(file.created_at)}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm text-gray-900">
+                      <div className="flex space-x-2">
+                        <button
+                          className="p-1 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
+                          title="View File"
+                          onClick={() => openFileViewer(file)}
+                        >
+                          <Eye size={16} className="text-blue-600" />
+                        </button>
+                        <button
+                          className="p-1 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
+                          title="Download File"
+                          onClick={() => handleDownload(file)}
+                        >
+                          <Download size={16} className="text-green-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* File Viewer Modal */}
+      <FileViewerModal
+        isOpen={viewerModal.isOpen}
+        onClose={closeFileViewer}
+        fileUrl={viewerModal.fileUrl}
+        fileType={viewerModal.fileType}
+        fileName={viewerModal.fileName}
+      />
+    </div>
+  );
 };
 
 export default AuditorWorkspace;

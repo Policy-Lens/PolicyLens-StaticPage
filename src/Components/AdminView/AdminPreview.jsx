@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { List, Tag, Typography, Space, Button, Spin, Collapse, Empty, message } from "antd";
-import { CheckCircleOutlined, DownloadOutlined, FileTextOutlined } from "@ant-design/icons";
+import {
+  List,
+  Tag,
+  Typography,
+  Space,
+  Button,
+  Spin,
+  Collapse,
+  Empty,
+  message,
+} from "antd";
+import {
+  CheckCircleOutlined,
+  DownloadOutlined,
+  FileTextOutlined,
+} from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
 import { BASE_URL } from "../../utils/api";
@@ -32,8 +46,13 @@ const PreviewPage = () => {
   const fetchListData = async () => {
     setLoading(true);
     try {
-      const response = await apiRequest("GET", `/api/plc/plc-data/all-steps/${projectid}/latest/`, null, true);
-      if(response.status === 200){
+      const response = await apiRequest(
+        "GET",
+        `/api/plc/plc-data/all-steps/${projectid}/latest/`,
+        null,
+        true
+      );
+      if (response.status === 200) {
         console.log(response.data);
         setListData(response.data);
       }
@@ -48,7 +67,12 @@ const PreviewPage = () => {
   const fetchJsonData = async () => {
     setLoading(true);
     try {
-      const response = await apiRequest("GET", `/api/plc/plc-data/all-steps/${projectid}/`, null, true);
+      const response = await apiRequest(
+        "GET",
+        `/api/plc/plc-data/all-steps/${projectid}/`,
+        null,
+        true
+      );
       setJsonData(response.data);
     } catch (error) {
       console.error("Error fetching JSON data:", error);
@@ -61,7 +85,7 @@ const PreviewPage = () => {
   // Extract filename from file path
   const getFileName = (filePath) => {
     if (!filePath) return "";
-    return filePath.split('/').pop();
+    return filePath.split("/").pop();
   };
 
   // Format date for display
@@ -81,12 +105,7 @@ const PreviewPage = () => {
     }
 
     if (!listData || listData.length === 0) {
-      return (
-        <Empty 
-          description="No step data available" 
-          className="my-10"
-        />
-      );
+      return <Empty description="No step data available" className="my-10" />;
     }
 
     return (
@@ -101,8 +120,12 @@ const PreviewPage = () => {
                 <Space size="large" className="flex items-start">
                   <CheckCircleOutlined className="text-2xl text-green-500 mt-1" />
                   <div>
-                    <Text className="text-lg font-medium">{item.field_name}</Text>
-                    <div className="text-sm text-gray-600 mt-1">{item.text_data}</div>
+                    <Text className="text-lg font-medium">
+                      {item.field_name}
+                    </Text>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {item.text_data}
+                    </div>
                     {item.documents && item.documents.length > 0 && (
                       <div className="mt-2">
                         <Text className="text-sm font-medium">Documents:</Text>
@@ -110,7 +133,7 @@ const PreviewPage = () => {
                           {item.documents.map((doc) => (
                             <div key={doc.id} className="flex items-center">
                               <FileTextOutlined className="text-blue-500 mr-2" />
-                              <a 
+                              <a
                                 href={`${BASE_URL}${doc.file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -124,7 +147,9 @@ const PreviewPage = () => {
                       </div>
                     )}
                     <div className="text-xs text-gray-500 mt-2">
-                      <b>Step:</b> {item.step_no} | <b>Saved by:</b> {item.saved_by} | <b>Timestamp:</b> {formatDate(item.saved_at)}
+                      <b>Step:</b> {item.step_no} | <b>Saved by:</b>{" "}
+                      {item.saved_by} | <b>Timestamp:</b>{" "}
+                      {formatDate(item.saved_at)}
                     </div>
                   </div>
                 </Space>
@@ -149,12 +174,7 @@ const PreviewPage = () => {
     }
 
     if (!jsonData || jsonData.length === 0) {
-      return (
-        <Empty 
-          description="No step data available" 
-          className="my-10"
-        />
-      );
+      return <Empty description="No step data available" className="my-10" />;
     }
 
     return (
@@ -162,49 +182,71 @@ const PreviewPage = () => {
         <div className="max-h-[70vh] overflow-y-auto pr-2">
           <Collapse className="bg-white">
             {jsonData.map((item, index) => (
-              <Panel 
+              <Panel
                 header={
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-lg">{item.field_name}</span>
-                    <span className="text-sm text-gray-500">{item.data.length} entries</span>
+                    <span className="font-medium text-lg">
+                      {item.field_name}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {item.data.length} entries
+                    </span>
                   </div>
-                } 
+                }
                 key={index}
               >
                 {item.data.map((entry, entryIndex) => (
-                  <div key={entryIndex} className="mb-6 pb-2 bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm">
+                  <div
+                    key={entryIndex}
+                    className="mb-6 pb-2 bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm"
+                  >
                     <div className="flex justify-between mb-3 pb-2 border-b border-gray-200">
-                      <Text strong className="text-base">Entry #{entryIndex + 1}</Text>
+                      <Text strong className="text-base">
+                        Entry #{entryIndex + 1}
+                      </Text>
                       <Text type="secondary">{formatDate(entry.saved_at)}</Text>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4">
                       <div className="flex items-center">
-                        <Text type="secondary" className="font-medium mr-2">Step Number:</Text>
+                        <Text type="secondary" className="font-medium mr-2">
+                          Step Number:
+                        </Text>
                         <Text>{entry.step_no}</Text>
                       </div>
                       <div className="flex items-center">
-                        <Text type="secondary" className="font-medium mr-2">Sequence Number:</Text>
+                        <Text type="secondary" className="font-medium mr-2">
+                          Sequence Number:
+                        </Text>
                         <Text>{entry.sequence_no}</Text>
                       </div>
                     </div>
-                    
+
                     <div className="mb-4">
-                      <Text type="secondary" className="font-medium">Description:</Text>
-                      <div className="p-3 bg-white rounded mt-1 border border-gray-100">{entry.text_data}</div>
+                      <Text type="secondary" className="font-medium">
+                        Description:
+                      </Text>
+                      <div className="p-3 bg-white rounded mt-1 border border-gray-100">
+                        {entry.text_data}
+                      </div>
                     </div>
-                    
+
                     {entry.documents && entry.documents.length > 0 && (
                       <div className="mb-4">
-                        <Text type="secondary" className="font-medium">Documents:</Text>
+                        <Text type="secondary" className="font-medium">
+                          Documents:
+                        </Text>
                         <div className="space-y-2 mt-1">
                           {entry.documents.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between bg-white p-3 rounded border border-gray-100">
+                            <div
+                              key={doc.id}
+                              className="flex items-center justify-between bg-white p-3 rounded border border-gray-100"
+                            >
                               <div className="flex items-center">
                                 <FileTextOutlined className="text-blue-500 mr-2" />
                                 <span>{getFileName(doc.file)}</span>
                               </div>
-                              <a 
+                              <a
                                 href={`${BASE_URL}${doc.file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -217,26 +259,31 @@ const PreviewPage = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="text-xs text-gray-500">
                       <b>Saved by:</b> {entry.saved_by}
                     </div>
                   </div>
                 ))}
-                
+
                 <div className="mt-4 pt-2 border-t border-gray-200">
-                  <Button 
-                    size="small" 
-                    type="text" 
+                  <Button
+                    size="small"
+                    type="text"
                     icon={<DownloadOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
                       const dataStr = JSON.stringify(item.data, null, 2);
-                      const blob = new Blob([dataStr], { type: 'application/json' });
+                      const blob = new Blob([dataStr], {
+                        type: "application/json",
+                      });
                       const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
+                      const a = document.createElement("a");
                       a.href = url;
-                      a.download = `${item.field_name.replace(/\s+/g, '_')}_data.json`;
+                      a.download = `${item.field_name.replace(
+                        /\s+/g,
+                        "_"
+                      )}_data.json`;
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
@@ -265,12 +312,7 @@ const PreviewPage = () => {
     const data = rawViewType === "latest" ? listData : jsonData;
 
     if (!data || data.length === 0) {
-      return (
-        <Empty 
-          description="No data available" 
-          className="my-10"
-        />
-      );
+      return <Empty description="No data available" className="my-10" />;
     }
 
     return (
@@ -297,9 +339,9 @@ const PreviewPage = () => {
             icon={<DownloadOutlined />}
             onClick={() => {
               const dataStr = JSON.stringify(data, null, 2);
-              const blob = new Blob([dataStr], { type: 'application/json' });
+              const blob = new Blob([dataStr], { type: "application/json" });
               const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
+              const a = document.createElement("a");
               a.href = url;
               a.download = `project_${projectid}_${rawViewType}.json`;
               document.body.appendChild(a);
@@ -372,9 +414,18 @@ const PreviewPage = () => {
                 Please select a view to display the project data:
               </p>
               <ul className="text-left inline-block mb-6">
-                <li className="mb-2"><strong>Latest Data View:</strong> Shows the most recent data for each step</li>
-                <li className="mb-2"><strong>Complete Data View:</strong> Shows all historical data organized by field</li>
-                <li><strong>Raw JSON:</strong> Displays the raw JSON data for technical inspection</li>
+                <li className="mb-2">
+                  <strong>Latest Data View:</strong> Shows the most recent data
+                  for each step
+                </li>
+                <li className="mb-2">
+                  <strong>Complete Data View:</strong> Shows all historical data
+                  organized by field
+                </li>
+                <li>
+                  <strong>Raw JSON:</strong> Displays the raw JSON data for
+                  technical inspection
+                </li>
               </ul>
               <div className="flex justify-center space-x-4">
                 <Button
@@ -391,10 +442,7 @@ const PreviewPage = () => {
                 >
                   Complete Data View
                 </Button>
-                <Button
-                  onClick={() => setView("raw")}
-                  size="large"
-                >
+                <Button onClick={() => setView("raw")} size="large">
                   Raw JSON
                 </Button>
               </div>

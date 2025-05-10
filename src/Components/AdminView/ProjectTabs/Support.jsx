@@ -23,6 +23,10 @@ import {
   Trash2,
   ExternalLink,
   Eye,
+  ClipboardEdit,
+  Edit3,
+  Edit2,
+  Edit,
 } from "lucide-react";
 import { apiRequest, BASE_URL } from "../../../utils/api";
 import { ProjectContext } from "../../../Context/ProjectContext";
@@ -50,11 +54,21 @@ const Support = () => {
   const [statusConfirmation, setStatusConfirmation] = useState({
     visible: false,
     ticketId: null,
+    currentStatus: null,
     newStatus: null,
   });
   const [technicalConfirmation, setTechnicalConfirmation] = useState({
     visible: false,
     ticketId: null,
+  });
+  const [editTicketModal, setEditTicketModal] = useState({
+    visible: false,
+    ticket: null,
+  });
+  const [editTicketForm, setEditTicketForm] = useState({
+    subject: "",
+    description: "",
+    priority: "",
   });
   const [tickets, setTickets] = useState([]);
   const [myTickets, setMyTickets] = useState([]);
@@ -68,7 +82,59 @@ const Support = () => {
   });
   const { project, getMembers, projectRole } = useContext(ProjectContext);
   const [isLoading, setIsLoading] = useState(false);
-  const {user} = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
+
+  const handleEditTicket = (ticket) => {
+    setEditTicketForm({
+      subject: ticket.subject,
+      description: ticket.description,
+      priority: ticket.priority,
+    });
+    setEditTicketModal({
+      visible: true,
+      ticket,
+    });
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditTicketForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateTicket = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/support/ticket/${editTicketModal.ticket.id}/update/`,
+        editTicketForm,
+        true
+      );
+
+      if (response.status === 200) {
+        // Refresh the tickets
+        if (activeTab === "my-tickets") fetchMyTickets();
+        if (activeTab === "all-tickets") fetchAllTickets();
+        if (activeTab === "assigned-tickets") fetchAssignedTickets();
+
+        if (selectedTicket && selectedTicket.id === editTicketModal.ticket.id) {
+          setSelectedTicket({
+            ...selectedTicket,
+            ...editTicketForm,
+          });
+        }
+
+        message.success("Ticket updated successfully");
+        setEditTicketModal({ visible: false, ticket: null });
+      }
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      message.error("Failed to update ticket");
+    }
+  };
   // Fetch tickets data based on active tab
   useEffect(() => {
     if (project && projectid) {
@@ -108,7 +174,9 @@ const Support = () => {
   const fetchProjectMembers = async () => {
     try {
       const members = await getMembers(projectid);
-      setProjectMembers(members.filter(member => member.id !== user.id) || []);
+      setProjectMembers(
+        members.filter((member) => member.id !== user.id) || []
+      );
     } catch (error) {
       console.error("Error fetching project members:", error);
     }
@@ -387,24 +455,12 @@ const Support = () => {
   // Check if user can update status
   const canUpdateStatus = (ticket) => {
     return (
-      projectRole === "admin" ||
-      (activeTab === "assigned-tickets" && ticket.status !== "closed")
+      projectRole === "consultant admin" || activeTab === "assigned-tickets"
     );
   };
-
   // Status update components display check
   const canShowStatusUpdate = (ticket) => {
     return canUpdateStatus(ticket);
-  };
-
-  // Update ticket status with confirmation
-  const handleUpdateStatus = async (ticketId, newStatus) => {
-    const ticket = tickets.find((t) => t.id === ticketId);
-    if (!canUpdateStatus(ticket)) {
-      message.error("You don't have permission to update this ticket's status");
-      return;
-    }
-    setStatusConfirmation({ visible: true, ticketId, newStatus });
   };
 
   const confirmStatusUpdate = async () => {
@@ -412,7 +468,7 @@ const Support = () => {
       const { ticketId, newStatus } = statusConfirmation;
       const response = await apiRequest(
         "PATCH",
-        `/api/support/ticket/${ticketId}/update/`,
+        `/api/support/ticket/${ticketId}/status/update/`,
         { status: newStatus },
         true
       );
@@ -908,9 +964,9 @@ const Support = () => {
                                   <MoreHorizontal size={18} />
                                 </button>
                                 {activeDropdown === ticket.id && (
-                                  <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-20 w-44 py-1 overflow-hidden">
+                                  <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-20 w-44 p-1 overflow-hidden">
                                     <button
-                                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center"
+                                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 flex items-center"
                                       onClick={() => viewTicketDetails(ticket)}
                                     >
                                       <ExternalLink
@@ -920,58 +976,40 @@ const Support = () => {
                                       View Details
                                     </button>
 
+                                    {/* Edit button - only show in "my-tickets" tab */}
+                                    {activeTab === "my-tickets" && (
+                                      <button
+                                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-100 flex items-center gap-2"
+                                        onClick={() => handleEditTicket(ticket)}
+                                      >
+                                        <Edit size={14} className="mr-2" />
+                                        Edit Ticket
+                                      </button>
+                                    )}
+
                                     {/* Status update dropdown - only show if user has permission */}
                                     {canShowStatusUpdate(ticket) && (
-                                      <div className="px-4 py-2 border-t border-slate-100">
-                                        <div className="text-xs font-semibold text-slate-500 mb-1.5">
-                                          Change Status
-                                        </div>
-                                        <div className="space-y-1">
-                                          {/* Only show In Progress option if status is open */}
-                                          {ticket.status === "open" && (
-                                            <button
-                                              className="w-full px-2 py-1 text-left text-xs rounded hover:bg-slate-50 text-slate-700"
-                                              onClick={() =>
-                                                handleUpdateStatus(
-                                                  ticket.id,
-                                                  "in_progress"
-                                                )
-                                              }
-                                            >
-                                              In Progress
-                                            </button>
-                                          )}
-
-                                          {/* Only show Closed option if status is open or in-progress */}
-                                          {(ticket.status === "open" ||
-                                            ticket.status ===
-                                              "in_progress") && (
-                                            <button
-                                              className="w-full px-2 py-1 text-left text-xs rounded hover:bg-slate-50 text-slate-700"
-                                              onClick={() =>
-                                                handleUpdateStatus(
-                                                  ticket.id,
-                                                  "closed"
-                                                )
-                                              }
-                                            >
-                                              Closed
-                                            </button>
-                                          )}
-
-                                          {/* Show a message if no status changes are allowed */}
-                                          {ticket.status === "closed" && (
-                                            <div className="text-xs text-slate-500 p-1">
-                                              Cannot change status of closed
-                                              tickets
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
+                                      <button
+                                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-100 flex items-center gap-2 "
+                                        onClick={() =>
+                                          setStatusConfirmation({
+                                            visible: true,
+                                            ticketId: ticket.id,
+                                            currentStatus: ticket.status,
+                                            newStatus: ticket.status,
+                                          })
+                                        }
+                                      >
+                                        <Edit3
+                                          size={14}
+                                          className="text-black-400"
+                                        />
+                                        Change Status
+                                      </button>
                                     )}
 
                                     {/* Mark as Technical Issue - only show for admin and non-closed tickets */}
-                                    {projectRole === "admin" &&
+                                    {projectRole === "consultant admin" &&
                                       !ticket.is_technical &&
                                       ticket.status !== "closed" && (
                                         <button
@@ -1375,15 +1413,17 @@ const Support = () => {
               </div>
 
               {/* Mark as Technical button */}
-              {!selectedTicket.is_technical && projectRole === "admin" && selectedTicket!=='closed' &&(
-                <button
-                  onClick={() => handleMarkTechnicalIssue(selectedTicket.id)}
-                  className="mb-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <AlertCircle size={16} className="mr-2" />
-                  Mark as Technical Issue
-                </button>
-              )}
+              {!selectedTicket.is_technical &&
+                projectRole === "consultant admin" &&
+                selectedTicket !== "closed" && (
+                  <button
+                    onClick={() => handleMarkTechnicalIssue(selectedTicket.id)}
+                    className="mb-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    <AlertCircle size={16} className="mr-2" />
+                    Mark as Technical Issue
+                  </button>
+                )}
 
               <div className="prose prose-slate max-w-none">
                 {/* Ticket details in sections */}
@@ -1632,45 +1672,22 @@ const Support = () => {
             </div>
 
             <div className="border-t border-slate-200 p-5 flex justify-end space-x-3 bg-slate-50 rounded-b-xl">
-              {/* Status update buttons - only show if user has permission */}
               {canShowStatusUpdate(selectedTicket) && (
                 <div className="mr-auto">
-                  <div className="text-sm font-medium text-slate-600 mb-2">
-                    Update Status:
-                  </div>
-                  <div className="flex gap-2">
-                    {/* Only show In Progress button if status is open */}
-                    {selectedTicket.status === "open" && (
-                      <button
-                        className="px-3 py-1.5 rounded text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                        onClick={() =>
-                          handleUpdateStatus(selectedTicket.id, "in_progress")
-                        }
-                      >
-                        In Progress
-                      </button>
-                    )}
-
-                    {/* Only show Closed button if status is open or in-progress */}
-                    {(selectedTicket.status === "open" ||
-                      selectedTicket.status === "in_progress") && (
-                      <button
-                        className="px-3 py-1.5 rounded text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
-                        onClick={() =>
-                          handleUpdateStatus(selectedTicket.id, "closed")
-                        }
-                      >
-                        Closed
-                      </button>
-                    )}
-
-                    {/* Show a message if no status changes are allowed */}
-                    {selectedTicket.status === "closed" && (
-                      <div className="text-sm text-slate-500 py-1.5">
-                        Cannot change status of closed tickets
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2"
+                    onClick={() =>
+                      setStatusConfirmation({
+                        visible: true,
+                        ticketId: selectedTicket.id,
+                        currentStatus: selectedTicket.status,
+                        newStatus: "open",
+                      })
+                    }
+                  >
+                    <ClipboardEdit size={16} />
+                    Change Status
+                  </button>
                 </div>
               )}
               <button
@@ -1678,6 +1695,163 @@ const Support = () => {
                 onClick={() => setTicketDetailOpen(false)}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Status Change Modal */}
+      {statusConfirmation.visible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scale-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">
+                Update Status
+              </h3>
+              <button
+                onClick={() =>
+                  setStatusConfirmation({
+                    visible: false,
+                    ticketId: null,
+                    currentStatus: null,
+                    newStatus: null,
+                  })
+                }
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Current Status Display */}
+            <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+              <div className="text-sm font-medium text-slate-600 mb-2">
+                Current Status
+              </div>
+              <div className="flex items-center">
+                <div
+                  className={`${
+                    getStatusInfo(statusConfirmation.currentStatus).color
+                  } ${
+                    getStatusInfo(statusConfirmation.currentStatus).bg
+                  } py-1.5 px-3 rounded-full text-sm font-medium flex items-center gap-1.5`}
+                >
+                  {getStatusInfo(statusConfirmation.currentStatus).icon}
+                  {statusConfirmation.currentStatus}
+                </div>
+              </div>
+            </div>
+
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <div className="px-2 bg-white text-sm text-slate-500">
+                  Change to
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <label
+                disabled={statusConfirmation.oldStatus === "open"}
+                className="flex items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="status"
+                  value="open"
+                  checked={statusConfirmation.newStatus === "open"}
+                  onChange={() =>
+                    setStatusConfirmation((prev) => ({
+                      ...prev,
+                      newStatus: "open",
+                    }))
+                  }
+                  className="h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                />
+                <div className="ml-3">
+                  <div className="font-medium text-slate-900">Open</div>
+                  <div className="text-sm text-slate-500">
+                    Ticket needs attention
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name="status"
+                  value="in_progress"
+                  checked={statusConfirmation.newStatus === "in_progress"}
+                  onChange={() =>
+                    setStatusConfirmation((prev) => ({
+                      ...prev,
+                      newStatus: "in_progress",
+                    }))
+                  }
+                  className="h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                />
+                <div className="ml-3">
+                  <div className="font-medium text-slate-900">In Progress</div>
+                  <div className="text-sm text-slate-500">
+                    Currently being worked on
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name="status"
+                  value="closed"
+                  checked={statusConfirmation.newStatus === "closed"}
+                  onChange={() =>
+                    setStatusConfirmation((prev) => ({
+                      ...prev,
+                      newStatus: "closed",
+                    }))
+                  }
+                  className="h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                />
+                <div className="ml-3">
+                  <div className="font-medium text-slate-900">Closed</div>
+                  <div className="text-sm text-slate-500">
+                    Issue has been resolved
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                onClick={() =>
+                  setStatusConfirmation({
+                    visible: false,
+                    ticketId: null,
+                    currentStatus: null,
+                    newStatus: null,
+                  })
+                }
+              >
+                Cancel
+              </button>
+              <button
+                disabled={
+                  statusConfirmation.currentStatus ===
+                  statusConfirmation.newStatus
+                }
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors
+    ${
+      statusConfirmation.currentStatus === statusConfirmation.newStatus
+        ? "bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300"
+        : "bg-indigo-600 text-white hover:bg-indigo-700"
+    }`}
+                onClick={confirmStatusUpdate}
+              >
+                Update Status
               </button>
             </div>
           </div>
@@ -1917,43 +2091,7 @@ const Support = () => {
         </div>
       )}
 
-      {/* Status Update Confirmation Modal */}
-      {statusConfirmation.visible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scale-in">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">
-              Confirm Status Update
-            </h3>
-            <p className="text-slate-600 mb-6">
-              Are you sure you want to update the status of this ticket to{" "}
-              <span className="font-medium">
-                {statusConfirmation.newStatus?.replace("_", " ")}
-              </span>
-              ?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
-                onClick={() =>
-                  setStatusConfirmation({
-                    visible: false,
-                    ticketId: null,
-                    newStatus: null,
-                  })
-                }
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                onClick={confirmStatusUpdate}
-              >
-                Update Status
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The single Status Change Modal with radio buttons */}
 
       {/* Technical Issue Confirmation Modal */}
       {technicalConfirmation.visible && (
@@ -1984,6 +2122,101 @@ const Support = () => {
                 Mark as Technical Issue
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Ticket Modal */}
+      {editTicketModal.visible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 animate-scale-in">
+            <div className="border-b border-slate-200 p-5 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-white rounded-t-xl">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+                <ClipboardEdit size={18} className="text-indigo-600 mr-2" />
+                Edit Ticket
+              </h3>
+              <button
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={() =>
+                  setEditTicketModal({ visible: false, ticket: null })
+                }
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateTicket}>
+              <div className="p-6 space-y-5">
+                <div>
+                  <label
+                    className="block text-sm font-medium text-slate-700 mb-1.5"
+                    htmlFor="subject"
+                  >
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    id="subject"
+                    name="subject"
+                    value={editTicketForm.subject}
+                    onChange={handleEditInputChange}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all bg-slate-50 hover:bg-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium text-slate-700 mb-1.5"
+                    htmlFor="description"
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={editTicketForm.description}
+                    onChange={handleEditInputChange}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 min-h-[150px] transition-all bg-slate-50 hover:bg-white"
+                    required
+                  ></textarea>
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium text-slate-700 mb-1.5"
+                    htmlFor="priority"
+                  >
+                    Priority
+                  </label>
+                  <select
+                    id="priority"
+                    name="priority"
+                    value={editTicketForm.priority}
+                    onChange={handleEditInputChange}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 bg-slate-50 hover:bg-white appearance-none transition-all"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+              <div className="border-t border-slate-200 p-5 flex justify-end space-x-3 bg-slate-50 rounded-b-xl">
+                <button
+                  type="button"
+                  className="px-5 py-2.5 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors font-medium"
+                  onClick={() =>
+                    setEditTicketModal({ visible: false, ticket: null })
+                  }
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

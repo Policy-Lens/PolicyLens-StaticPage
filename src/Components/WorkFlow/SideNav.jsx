@@ -62,14 +62,16 @@ const SideNav = ({ collapsed, setCollapsed }) => {
   const isActive = (path) => {
     // Special case for Project Lifecycle
     if (path === `/project/${projectid}/`) {
-      return location.pathname === `/project/${projectid}/` ||
+      return (
+        location.pathname === `/project/${projectid}/` ||
         location.pathname === `/project/${projectid}` ||
         // Also match top nav tabs pages
-        location.pathname.includes('/questionbank') ||
-        location.pathname.includes('/calender') ||
-        location.pathname.includes('/myevidences') ||
-        location.pathname.includes('/askforhelp') ||
-        location.pathname.includes('/myreports');
+        location.pathname.includes("/questionbank") ||
+        location.pathname.includes("/calender") ||
+        location.pathname.includes("/myevidences") ||
+        location.pathname.includes("/askforhelp") ||
+        location.pathname.includes("/myreports")
+      );
     }
 
     // For other menu items, use exact match
@@ -90,7 +92,10 @@ const SideNav = ({ collapsed, setCollapsed }) => {
           onClick={() => navigate("/dashboard")}
         >
           <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-md text-white">
-            <Home size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            <Home
+              size={18}
+              className="shrink-0 transition-transform group-hover:scale-110"
+            />
           </div>
           {!collapsed && (
             <span className="font-semibold text-base text-gray-800 group-hover:text-blue-700 transition-colors">
@@ -121,20 +126,36 @@ const SideNav = ({ collapsed, setCollapsed }) => {
               key={index}
               className={`flex items-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group
                 ${collapsed ? "justify-center" : "gap-3"} 
-                ${active
-                  ? "bg-blue-100 text-blue-800"
-                  : "text-gray-700 hover:bg-blue-50"} 
+                ${
+                  active
+                    ? "bg-blue-100 text-blue-800"
+                    : "text-gray-700 hover:bg-blue-50"
+                } 
                 active:scale-98 relative overflow-hidden`}
               onClick={() => navigate(item.path)}
             >
-              <div className={`shrink-0 transition-transform duration-200 ${!collapsed && active ? "translate-x-0.5" : ""}`}>
+              <div
+                className={`shrink-0 transition-transform duration-200 ${
+                  !collapsed && active ? "translate-x-0.5" : ""
+                }`}
+              >
                 {React.cloneElement(item.icon, {
-                  className: `${active ? "text-blue-700" : "text-gray-500 group-hover:text-blue-600"} transition-colors`,
+                  className: `${
+                    active
+                      ? "text-blue-700"
+                      : "text-gray-500 group-hover:text-blue-600"
+                  } transition-colors`,
                 })}
               </div>
 
               {!collapsed && (
-                <span className={`text-sm font-medium whitespace-nowrap transition-colors ${active ? "text-blue-800" : "text-gray-700 group-hover:text-blue-700"}`}>
+                <span
+                  className={`text-sm font-medium whitespace-nowrap transition-colors ${
+                    active
+                      ? "text-blue-800"
+                      : "text-gray-700 group-hover:text-blue-700"
+                  }`}
+                >
                   {item.label}
                 </span>
               )}
@@ -150,7 +171,11 @@ const SideNav = ({ collapsed, setCollapsed }) => {
       {/* User Profile & Project Role */}
       <div className="border-t border-gray-200 pt-3 pb-2 px-3">
         {/* User Profile */}
-        <div className={`flex items-center gap-3 mb-3 p-2 rounded-lg bg-gray-50 ${collapsed ? "justify-center" : ""}`}>
+        <div
+          className={`flex items-center gap-3 mb-3 p-2 rounded-lg bg-gray-50 ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 overflow-hidden">
             <UserCircle size={collapsed ? 20 : 24} />
           </div>
@@ -168,11 +193,11 @@ const SideNav = ({ collapsed, setCollapsed }) => {
         </div>
 
         {/* Project Role - Only show if admin */}
-        {!collapsed && projectRole === "admin" && (
+        {!collapsed && projectRole === "consultant admin" && (
           <div className="mb-3 px-2 py-1 bg-blue-50 rounded-md">
             <p className="text-xs text-gray-500">Project Role:</p>
             <p className="text-sm font-medium text-blue-700 capitalize">
-              {projectRole || "Admin"}
+              {projectRole || "Consultant Admin"}
             </p>
           </div>
         )}
@@ -184,9 +209,10 @@ const SideNav = ({ collapsed, setCollapsed }) => {
             navigate("/");
           }}
           className={`flex items-center w-full rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600 mb-2
-            ${collapsed
-              ? "justify-center p-2"
-              : "px-3 py-2 border border-red-200 hover:border-red-300"
+            ${
+              collapsed
+                ? "justify-center p-2"
+                : "px-3 py-2 border border-red-200 hover:border-red-300"
             }`}
         >
           <LogOut size={collapsed ? 20 : 18} className="shrink-0" />
