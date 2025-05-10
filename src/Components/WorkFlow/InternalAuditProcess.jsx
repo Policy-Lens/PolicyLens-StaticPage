@@ -79,7 +79,7 @@ const InternalAuditProcess = () => {
                 stepStatus.slice(1).replace("_", " ")}
             </span>
 
-            {(projectRole.includes("admin") || isAssignedUser) && (
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
               <Dropdown
                 menu={{
                   items: [

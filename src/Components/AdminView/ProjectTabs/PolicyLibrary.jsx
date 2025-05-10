@@ -62,7 +62,7 @@ const ConsultantSelectionModal = ({
                 const filteredConsultants = members.filter(
                     (member) =>
                         (member.project_role === "consultant" ||
-                            member.project_role === "admin") &&
+                            member.project_role === "consultant admin") &&
                         member.id !== user?.id
                 );
                 setConsultants(filteredConsultants);
@@ -733,7 +733,7 @@ const PolicyLibrary = () => {
             fetchProjectFiles(
                 activeTab === "myFiles" && projectRole == "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole == "consultant admin"
                         ? { assigned_by_me: true }
                         : {},
                 newSearchTerm,
@@ -752,7 +752,7 @@ const PolicyLibrary = () => {
             fetchProjectFiles(
                 activeTab === "myFiles" && projectRole == "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole == "consultant admin"
                         ? { assigned_by_me: true }
                         : {},
                 searchTerm,
@@ -773,7 +773,7 @@ const PolicyLibrary = () => {
             fetchProjectFiles(
                 activeTab === "myFiles" && projectRole == "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole == "consultant admin"
                         ? { assigned_by_me: true }
                         : {},
                 "",
@@ -790,7 +790,7 @@ const PolicyLibrary = () => {
             fetchProjectFiles(
                 activeTab === "myFiles" && projectRole == "consultant"
                     ? { assigned_to_me: true }
-                    : activeTab === "myFiles" && projectRole == "admin"
+                    : activeTab === "myFiles" && projectRole == "consultant admin"
                         ? { assigned_by_me: true }
                         : {}
             );

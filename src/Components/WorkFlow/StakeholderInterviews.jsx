@@ -237,7 +237,7 @@ const StakeholderInterviews = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Stakeholder Interviews</h2>
         <div className="flex gap-2">
-          {projectRole.includes("admin") && (
+          {projectRole.includes("consultant admin") && (
             <Button
               type="default"
               onClick={() => {
@@ -249,7 +249,7 @@ const StakeholderInterviews = () => {
               Assign Task
             </Button>
           )}
-          {(projectRole.includes("admin") || isAssignedUser) && (
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button type="primary" onClick={handleAddData} className="bg-blue-500">
               {interviewData.length > 0 ? "Update Data" : "Add Data"}
             </Button>
