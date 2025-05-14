@@ -27,7 +27,7 @@ import { LoadingOutlined } from "@ant-design/icons";
 // Create a context for loading state
 export const LoadingContext = createContext({
   isLoading: false,
-  setIsLoading: () => {},
+  setIsLoading: () => { },
 });
 
 const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
@@ -55,24 +55,60 @@ const steps = [
 ];
 
 const CarouselHorizontalStepper = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const { projectid } = useParams();
+  const [currentStep, setCurrentStep] = useState(() => {
+    // Load from project-step mapping in localStorage
+    try {
+      const projectSteps = JSON.parse(localStorage.getItem('workflow-steps') || '{}');
+      return projectid && projectSteps[projectid] ? parseInt(projectSteps[projectid], 10) : 0;
+    } catch (e) {
+      console.error("Error loading saved step:", e);
+      return 0;
+    }
+  });
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 7 });
   const containerRef = useRef(null);
   const [collapsed, setCollapsed] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [activeTab, setActiveTab] = useState("Workflow");
   const navigate = useNavigate();
-  const { projectid } = useParams();
   const [isLoading, setIsLoading] = useState(false);
 
-  const getCurrentPhase = () => {
-    return phases.findIndex((phase) => phase.steps.includes(currentStep));
-  };
+  // Save current step to localStorage whenever it changes or projectid changes
+  useEffect(() => {
+    if (!projectid) return;
+
+    try {
+      const projectSteps = JSON.parse(localStorage.getItem('workflow-steps') || '{}');
+      projectSteps[projectid] = currentStep;
+      localStorage.setItem('workflow-steps', JSON.stringify(projectSteps));
+    } catch (e) {
+      console.error("Error saving step:", e);
+    }
+  }, [currentStep, projectid]);
+
+  // Update current step when project changes
+  useEffect(() => {
+    if (!projectid) return;
+
+    try {
+      const projectSteps = JSON.parse(localStorage.getItem('workflow-steps') || '{}');
+      if (projectSteps[projectid] !== undefined) {
+        setCurrentStep(parseInt(projectSteps[projectid], 10));
+      }
+    } catch (e) {
+      console.error("Error loading step on project change:", e);
+    }
+  }, [projectid]);
 
   useEffect(() => {
     scrollToStep(currentStep);
     adjustVisibleRange(currentStep);
   }, [currentStep]);
+
+  const getCurrentPhase = () => {
+    return phases.findIndex((phase) => phase.steps.includes(currentStep));
+  };
 
   const adjustVisibleRange = (stepIndex) => {
     const maxStepsToShow = 12; // Increased visible steps
@@ -183,23 +219,21 @@ const CarouselHorizontalStepper = () => {
                       return (
                         <div
                           key={actualIndex}
-                          className={`flex flex-col items-center cursor-pointer relative group ${
-                            status === "current"
-                              ? "text-blue-600 font-semibold"
-                              : "text-gray-500"
-                          }`}
+                          className={`flex flex-col items-center cursor-pointer relative group ${status === "current"
+                            ? "text-blue-600 font-semibold"
+                            : "text-gray-500"
+                            }`}
                           onClick={() => handleStepClick(actualIndex)}
                           title={step.title}
                         >
                           <div
                             className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 
-                            ${
-                              status === "completed"
+                            ${status === "completed"
                                 ? "bg-green-500 text-white"
                                 : status === "current"
-                                ? "bg-blue-500 text-white transform scale-110 translate-y-[1px]"
-                                : "bg-gray-300"
-                            } 
+                                  ? "bg-blue-500 text-white transform scale-110 translate-y-[1px]"
+                                  : "bg-gray-300"
+                              } 
                             group-hover:scale-110 group-hover:shadow-md`}
                           >
                             {actualIndex + 1}
@@ -258,9 +292,8 @@ const CarouselHorizontalStepper = () => {
             </button>
 
             <div
-              className={`flex transition-transform duration-500 h-full ${
-                isTransitioning ? "opacity-50" : "opacity-100"
-              }`}
+              className={`flex transition-transform duration-500 h-full ${isTransitioning ? "opacity-50" : "opacity-100"
+                }`}
               style={{ transform: `translateX(-${currentStep * 100}%)` }}
             >
               {steps.map((step, index) => (

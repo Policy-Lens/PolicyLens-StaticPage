@@ -61,22 +61,9 @@ const LoginPage = () => {
     if (!validate()) return;
 
     try {
-      // const response = await fetch("http://localhost:5000/login", {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify(formData),
-      //     credentials: "include", // Ensures cookies are sent with the request
-      // });
+      // Set loading state to true right away when button is clicked
+      setIsLoading(true);
 
-      // const data = await response.json();
-
-      // if (data.status == "ok") {
-      //     setMessage("Login successful!");
-      //     setErrors({});
-      //     navigate("/dashboard")
-      // } else {
-      //     setErrors({ server: data.message || "Login failed. Please try again." });
-      // }
       const res = await apiRequest("POST", "/api/auth/login/", {
         email: formData.username,
         password: formData.password,
@@ -99,10 +86,7 @@ const LoginPage = () => {
         setMessage("Login successful!");
         setErrors({});
 
-        // Set loading state to true after successful login
-        setIsLoading(true);
-
-        // Use setTimeout to delay navigation, allowing the loading indicator to be displayed
+        // Navigate after successful login
         setTimeout(() => {
           navigate("/dashboard");
         }, 1500);
@@ -110,6 +94,8 @@ const LoginPage = () => {
     } catch (error) {
       console.error("Error during login:", error.error);
       setErrors({ server: error.error });
+      // Make sure to set loading to false if there's an error
+      setIsLoading(false);
     }
   };
 
@@ -119,23 +105,20 @@ const LoginPage = () => {
         <h2 className="text-3xl font-bold text-center text-blue-700">Login</h2>
         <p className="text-center text-gray-600 mt-2">Access your account</p>
 
-        {message && <p className="text-green-600 text-center">{message}</p>}
-        {errors.server && (
-          <p className="text-red-600 text-center">{errors.server}</p>
+        {message && (
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-md p-3 flex items-center animate-fade-in transform transition duration-300 ease-in-out">
+            <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <p className="text-green-700">{message}</p>
+          </div>
         )}
-
-        {/* Loading indicator - shown only when isLoading is true */}
-        {isLoading && (
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-blue-600 h-2.5 rounded-full animate-pulse"
-                style={{ width: "100%" }}
-              ></div>
-            </div>
-            <p className="text-center text-gray-600 mt-2">
-              Loading dashboard...
-            </p>
+        {errors.server && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3 flex items-center animate-fade-in transform transition duration-300 ease-in-out">
+            <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p className="text-red-700">{errors.server}</p>
           </div>
         )}
 
@@ -187,10 +170,20 @@ const LoginPage = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-blue-600 text-white p-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
             disabled={isLoading}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Logging in...
+              </>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
       </div>

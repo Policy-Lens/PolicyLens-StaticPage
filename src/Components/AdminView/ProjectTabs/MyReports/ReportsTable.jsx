@@ -566,9 +566,6 @@ const ReportsTable = ({ refreshTrigger }) => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Report Name
                                     </th>
@@ -584,6 +581,9 @@ const ReportsTable = ({ refreshTrigger }) => {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Updated On
                                     </th>
+                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -593,26 +593,6 @@ const ReportsTable = ({ refreshTrigger }) => {
                                         className="hover:bg-gray-50 cursor-pointer"
                                         onClick={() => navigateToReport(report.id, report.report_tab)}
                                     >
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <div className="flex justify-center space-x-3">
-                                                {/* Remove eye button, clicking on row will navigate to report */}
-                                                <button
-                                                    className="p-1.5 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors focus:outline-none"
-                                                    onClick={(e) => handleEdit(e, report)}
-                                                    title="Edit"
-                                                >
-                                                    <Edit size={18} className="text-indigo-600" />
-                                                </button>
-
-                                                <button
-                                                    className="p-1.5 bg-red-50 rounded-full hover:bg-red-100 transition-colors focus:outline-none"
-                                                    onClick={(e) => handleDeleteClick(e, report)}
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={18} className="text-red-600" />
-                                                </button>
-                                            </div>
-                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900">
                                                 {report.name}
@@ -643,6 +623,24 @@ const ReportsTable = ({ refreshTrigger }) => {
                                             <div className="flex items-center">
                                                 <Calendar size={16} className="mr-2 text-gray-400" />
                                                 <div className="text-sm text-gray-900">{report.updated_on}</div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <div className="flex justify-center space-x-3">
+                                                <button
+                                                    className="p-1.5 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors focus:outline-none"
+                                                    onClick={(e) => handleEdit(e, report)}
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={18} className="text-indigo-600" />
+                                                </button>
+                                                <button
+                                                    className="p-1.5 bg-red-50 rounded-full hover:bg-red-100 transition-colors focus:outline-none"
+                                                    onClick={(e) => handleDeleteClick(e, report)}
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={18} className="text-red-600" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
