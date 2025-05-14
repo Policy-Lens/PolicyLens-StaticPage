@@ -5,10 +5,14 @@ import { AuthContext } from "../../AuthContext";
 import {
   Calendar,
   HelpCircle,
+  Ticket,
   FileText,
   Shield,
   CheckCircle,
   Database,
+  Library,
+  FilesIcon,
+  Files,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -34,10 +38,11 @@ const AdminLayout = () => {
   const tabIcons = {
     Workflow: <CheckCircle size={16} />,
     Calendar: <Calendar size={16} />,
-    Support: <HelpCircle size={16} />,
-    Questionnaire: <FileText size={16} />,
-    "Evidence Data": <Database size={16} />,
-    Policies: <Shield size={16} />,
+    AskforHelp: <HelpCircle size={16} />,
+    QuestionBank: <FileText size={16} />,
+    MyEvidences: <Database size={16} />,
+    MyReports: <Files size={16} />,
+    PolicyLibrary: <Library size={16} />,
   };
 
   const tabs = [
@@ -121,7 +126,7 @@ const AdminLayout = () => {
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                 >
-                  {tabIcons[tab] || null}
+                  {tabIcons[tab.replaceAll(" ", "")] || null}
                   <span>{tab}</span>
                 </button>
               ))}
