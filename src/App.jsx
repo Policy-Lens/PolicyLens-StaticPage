@@ -23,6 +23,7 @@ import { ProjectProvider } from "./Context/ProjectContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
+import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -103,7 +104,7 @@ const router = createBrowserRouter([
       },
       {
         path: "questionbank",
-        element: <Questionnaire />
+        element: <NewQuestionnaire />
       },
       {
         path: "myevidences",
