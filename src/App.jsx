@@ -24,6 +24,7 @@ import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
+import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
   {
     path: "/settings",
     element: <SettingsPage />,
+  },
+  {
+    path: "/questionlibrary",
+    element: <QuestionLibrary />,
   },
   {
     path: "/projects",

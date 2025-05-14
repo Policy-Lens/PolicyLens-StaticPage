@@ -11,6 +11,7 @@ import {
   MenuSquare,
   LogOut,
   UserCircle,
+  Library,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "antd";
@@ -65,6 +66,12 @@ const Sidebar = ({ onToggle }) => {
       path: "/settings",
     },
   ];
+  const policyLib = {
+    key: "questionlibrary",
+    icon: <Library size={20} />,
+    label: "Question Library",
+    path: "/questionlibrary",
+  };
   const { checkLogin } = useContext(AuthContext);
   const handleToggle = () => {
     setCollapsed(!collapsed);
@@ -94,7 +101,7 @@ const Sidebar = ({ onToggle }) => {
           position: "fixed",
           top: 0,
           left: 0,
-          zIndex: 1000,
+          zIndex: 10,
         }}
       >
         {/* Sidebar Header */}
@@ -146,6 +153,25 @@ const Sidebar = ({ onToggle }) => {
               menuItem
             );
           })}
+          { user?.role === 'admin'&&
+            <li
+              key={policyLib.key}
+              className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                location.pathname === policyLib.path
+                  ? "bg-blue-600 text-white"
+                  : "text-blue-700 hover:bg-blue-50"
+              }`}
+            >
+              <Link to={policyLib.path} className="flex items-center w-full">
+                <span className="text-xl">{policyLib.icon}</span>
+                {!collapsed && (
+                  <span className="ml-3 text-sm font-medium">
+                    {policyLib.label}
+                  </span>
+                )}
+              </Link>
+            </li>
+          }
         </ul>
 
         {/* User Profile & Logout */}
