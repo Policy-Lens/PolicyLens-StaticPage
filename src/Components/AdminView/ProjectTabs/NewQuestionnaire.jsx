@@ -45,6 +45,7 @@ const NewQuestionnaire = () => {
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [activeSidebarTab, setActiveSidebarTab] = useState("question");
   const [activeQuestionTab, setActiveQuestionTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("clause"); // "clause" or "control"
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,7 +106,7 @@ const NewQuestionnaire = () => {
     useState(false);
 
   // Type choices for filtering
-  const typeChoices = [
+  const clauseTypeChoices = [
     "Clause 4 - Context of the Organization",
     "Clause 5 - Leadership",
     "Clause 6 - Planning",
@@ -113,11 +114,18 @@ const NewQuestionnaire = () => {
     "Clause 8 - Operation",
     "Clause 9 - Performance Evaluation",
     "Clause 10 - Improvement",
+  ];
+
+  const controlTypeChoices = [
     "5 - ORGANIZATIONAL CONTROLS",
     "6 - PEOPLE CONTROLS",
     "7 - PHYSICAL CONTROLS",
     "8 - TECHNOLOGICAL CONTROLS",
   ];
+
+  // Get type choices based on active tab
+  const typeChoices =
+    activeTab === "clause" ? clauseTypeChoices : controlTypeChoices;
 
   // Response choices for answers
   const responseChoices = [
@@ -161,6 +169,9 @@ const NewQuestionnaire = () => {
     let endpoint = `/api/new-questionnaire/project/${projectid}/questions/?`;
     const params = new URLSearchParams();
 
+    // Add type parameter based on active tab
+    params.append("type", activeTab);
+
     // Add filters based on user role
     if (projectRole === "company_representative") {
       params.append("assigned_to_answer", "true");
@@ -171,7 +182,7 @@ const NewQuestionnaire = () => {
 
     // Add search and filters
     if (searchQuery) params.append("search", searchQuery);
-    if (filters.type) params.append("type", filters.type);
+    if (filters.type) params.append("type_description", filters.type);
     if (filters.standard) params.append("standard", filters.standard);
     if (filters.status) params.append("status", filters.status);
 
@@ -249,10 +260,19 @@ const NewQuestionnaire = () => {
     setSearchQuery("");
   };
 
+  // Effect to update filters when active tab changes
+  useEffect(() => {
+    // Clear the type filter when changing tabs
+    setFilters((prev) => ({
+      ...prev,
+      type: "",
+    }));
+  }, [activeTab]);
+
   // Effect to refetch questions when dependencies change
   useEffect(() => {
     handleGetQuestions();
-  }, [searchQuery, filters, projectid]);
+  }, [searchQuery, filters, projectid, activeTab]);
 
   // Handle click outside assign dropdown
   useEffect(() => {
@@ -545,7 +565,7 @@ const NewQuestionnaire = () => {
             return question;
           });
         });
-        
+
         setReviewerToDelete(null);
       } else {
         throw new Error(`Failed with status: ${response.status}`);
@@ -1032,263 +1052,302 @@ const NewQuestionnaire = () => {
           } bg-white border-r border-slate-200 transition-width duration-300 ease-in-out`}
         >
           {/* Top Bar: Header and Actions */}
-          <div className="flex items-center border-b border-slate-200 p-4 bg-white sticky top-0 z-10">
-            {/* Header */}
-            <h2 className="text-lg font-semibold text-slate-700">Questions</h2>
+          <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
+            {/* Header and Actions */}
+            <div className="flex items-center p-4">
+              {/* Header */}
+              <h2 className="text-lg font-semibold text-slate-700">
+                Questions
+              </h2>
 
-            {/* Search, Filter, and Actions */}
-            <div className="flex ml-auto gap-2">
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search questions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
-                />
-              </div>
-
-              {/* Filter Button */}
-              <div className="relative">
-                <button
-                  className={`px-4 py-2.5 border ${
-                    filterDropdownOpen
-                      ? "border-indigo-300 ring-2 ring-indigo-300"
-                      : "border-slate-200"
-                  } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
-                  onClick={toggleFilterDropdown}
-                >
-                  <Filter
-                    size={16}
-                    className={`mr-2 ${
-                      Object.values(filters).some((f) => f !== "") ||
-                      searchQuery
-                        ? "text-indigo-500"
-                        : "text-slate-400"
-                    }`}
+              {/* Search, Filter, and Actions */}
+              <div className="flex ml-auto gap-2">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search questions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
                   />
-                  <span>Filter</span>
-                  {(filters.type ||
-                    filters.standard ||
-                    filters.status ||
-                    searchQuery) && (
-                    <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
-                      {
-                        [
-                          filters.type && "Type",
-                          filters.standard && "Standard",
-                          filters.status && "Status",
-                          searchQuery && "Search",
-                        ].filter(Boolean).length
-                      }{" "}
-                      Active
-                    </span>
-                  )}
-                </button>
+                </div>
 
-                {/* Filter Dropdown Content */}
-                {filterDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-[calc(100vh-120px)] flex flex-col">
-                    {/* Header */}
-                    <div className="p-3 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 flex justify-between items-center sticky top-0 z-10">
-                      <span>Filter Options</span>
-                      {(filters.type ||
-                        filters.standard ||
-                        filters.status ||
-                        searchQuery) && (
-                        <span className="text-xs text-indigo-600">
-                          {/* Display count if needed */}
-                        </span>
-                      )}
-                    </div>
+                {/* Filter Button */}
+                <div className="relative">
+                  <button
+                    className={`px-4 py-2.5 border ${
+                      filterDropdownOpen
+                        ? "border-indigo-300 ring-2 ring-indigo-300"
+                        : "border-slate-200"
+                    } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
+                    onClick={toggleFilterDropdown}
+                  >
+                    <Filter
+                      size={16}
+                      className={`mr-2 ${
+                        Object.values(filters).some((f) => f !== "") ||
+                        searchQuery
+                          ? "text-indigo-500"
+                          : "text-slate-400"
+                      }`}
+                    />
+                    <span>Filter</span>
+                    {(filters.type ||
+                      filters.standard ||
+                      filters.status ||
+                      searchQuery) && (
+                      <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {
+                          [
+                            filters.type && "Type",
+                            filters.standard && "Standard",
+                            filters.status && "Status",
+                            searchQuery && "Search",
+                          ].filter(Boolean).length
+                        }{" "}
+                        Active
+                      </span>
+                    )}
+                  </button>
 
-                    {/* Scrollable Filters */}
-                    <div className="overflow-y-auto">
-                      {/* Type Filter */}
-                      <div className="p-3 border-b border-slate-200">
-                        <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
-                          <span>Question Type</span>
-                          {filters.type && (
-                            <button
-                              onClick={() => handleFilterChange("type", "")}
-                              className="text-xs text-slate-500 hover:text-slate-700"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </h4>
-                        <div className="space-y-1">
-                          {typeChoices.map((type) => (
-                            <button
-                              key={type}
-                              onClick={() => handleFilterChange("type", type)}
-                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                filters.type === type
-                                  ? "bg-indigo-50 text-indigo-700 font-medium"
-                                  : "text-slate-600 hover:bg-slate-50"
-                              }`}
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
+                  {/* Filter Dropdown Content */}
+                  {filterDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-[calc(100vh-120px)] flex flex-col">
+                      {/* Header */}
+                      <div className="p-3 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 flex justify-between items-center sticky top-0 z-10">
+                        <span>Filter Options</span>
+                        {(filters.type ||
+                          filters.standard ||
+                          filters.status ||
+                          searchQuery) && (
+                          <span className="text-xs text-indigo-600">
+                            {/* Display count if needed */}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Status Filter */}
-                      <div className="p-3 border-b border-slate-200">
-                        <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
-                          <span>Status</span>
-                          {filters.status && (
-                            <button
-                              onClick={() => handleFilterChange("status", "")}
-                              className="text-xs text-slate-500 hover:text-slate-700"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </h4>
-                        <div className="space-y-1">
-                          {statusChoices.map((status) => (
-                            <button
-                              key={status}
-                              onClick={() =>
-                                handleFilterChange("status", status)
-                              }
-                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                filters.status === status
-                                  ? "bg-indigo-50 text-indigo-700 font-medium"
-                                  : "text-slate-600 hover:bg-slate-50"
-                              }`}
-                            >
-                              {status}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Standard Filter - Simplified for now */}
-                      <div className="p-3 border-b border-slate-200">
-                        <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
-                          <span>Standard</span>
-                          {filters.standard && (
-                            <button
-                              onClick={() => handleFilterChange("standard", "")}
-                              className="text-xs text-slate-500 hover:text-slate-700"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </h4>
-                        <div className="space-y-1">
-                          <button
-                            onClick={() =>
-                              handleFilterChange("standard", "ISO27001")
-                            }
-                            className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                              filters.standard === "ISO27001"
-                                ? "bg-indigo-50 text-indigo-700 font-medium"
-                                : "text-slate-600 hover:bg-slate-50"
-                            }`}
-                          >
-                            ISO27001
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Active Filters Summary */}
-                      {(filters.type ||
-                        filters.standard ||
-                        filters.status ||
-                        searchQuery) && (
-                        <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
-                          <h4 className="text-xs font-medium text-slate-600 mb-1">
-                            Active Filters:
-                          </h4>
-                          <div className="flex flex-wrap gap-1">
+                      {/* Scrollable Filters */}
+                      <div className="overflow-y-auto">
+                        {/* Type Filter */}
+                        <div className="p-3 border-b border-slate-200">
+                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
+                            <span>
+                              {activeTab === "clause" ? "Clause" : "Control"}{" "}
+                              Type
+                            </span>
                             {filters.type && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Type: {filters.type}
-                                <button
-                                  onClick={() => handleFilterChange("type", "")}
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
+                              <button
+                                onClick={() => handleFilterChange("type", "")}
+                                className="text-xs text-slate-500 hover:text-slate-700"
+                              >
+                                Clear
+                              </button>
                             )}
-                            {filters.standard && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Standard: {filters.standard}
-                                <button
-                                  onClick={() =>
-                                    handleFilterChange("standard", "")
-                                  }
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            )}
-                            {filters.status && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Status: {filters.status}
-                                <button
-                                  onClick={() =>
-                                    handleFilterChange("status", "")
-                                  }
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            )}
-                            {searchQuery && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                Search: {searchQuery}
-                                <button
-                                  onClick={() => setSearchQuery("")}
-                                  className="ml-1 hover:text-indigo-900"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </span>
-                            )}
+                          </h4>
+                          <div className="space-y-1">
+                            {typeChoices.map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => handleFilterChange("type", type)}
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${
+                                  filters.type === type
+                                    ? "bg-indigo-50 text-indigo-700 font-medium"
+                                    : "text-slate-600 hover:bg-slate-50"
+                                }`}
+                              >
+                                {type}
+                              </button>
+                            ))}
                           </div>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Footer Actions */}
-                    <div className="flex p-3 border-t border-slate-200 bg-slate-50 gap-2 sticky bottom-0 z-10">
-                      <button
-                        onClick={clearFilters}
-                        className="flex-1 py-2 text-center bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-                      >
-                        Clear All
-                      </button>
-                      <button
-                        onClick={() => setFilterDropdownOpen(false)}
-                        className="flex-1 py-2 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-                      >
-                        Apply Filters
-                      </button>
+                        {/* Status Filter */}
+                        <div className="p-3 border-b border-slate-200">
+                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
+                            <span>Status</span>
+                            {filters.status && (
+                              <button
+                                onClick={() => handleFilterChange("status", "")}
+                                className="text-xs text-slate-500 hover:text-slate-700"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </h4>
+                          <div className="space-y-1">
+                            {statusChoices.map((status) => (
+                              <button
+                                key={status}
+                                onClick={() =>
+                                  handleFilterChange("status", status)
+                                }
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${
+                                  filters.status === status
+                                    ? "bg-indigo-50 text-indigo-700 font-medium"
+                                    : "text-slate-600 hover:bg-slate-50"
+                                }`}
+                              >
+                                {status}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Standard Filter - Simplified for now */}
+                        <div className="p-3 border-b border-slate-200">
+                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
+                            <span>Standard</span>
+                            {filters.standard && (
+                              <button
+                                onClick={() =>
+                                  handleFilterChange("standard", "")
+                                }
+                                className="text-xs text-slate-500 hover:text-slate-700"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </h4>
+                          <div className="space-y-1">
+                            <button
+                              onClick={() =>
+                                handleFilterChange("standard", "ISO27001")
+                              }
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
+                                filters.standard === "ISO27001"
+                                  ? "bg-indigo-50 text-indigo-700 font-medium"
+                                  : "text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              ISO27001
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Active Filters Summary */}
+                        {(filters.type ||
+                          filters.standard ||
+                          filters.status ||
+                          searchQuery) && (
+                          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                            <h4 className="text-xs font-medium text-slate-600 mb-1">
+                              Active Filters:
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                              {filters.type && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  {activeTab === "clause"
+                                    ? "Clause"
+                                    : "Control"}
+                                  : {filters.type}
+                                  <button
+                                    onClick={() =>
+                                      handleFilterChange("type", "")
+                                    }
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                              {filters.standard && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  Standard: {filters.standard}
+                                  <button
+                                    onClick={() =>
+                                      handleFilterChange("standard", "")
+                                    }
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                              {filters.status && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  Status: {filters.status}
+                                  <button
+                                    onClick={() =>
+                                      handleFilterChange("status", "")
+                                    }
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                              {searchQuery && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                  Search: {searchQuery}
+                                  <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="ml-1 hover:text-indigo-900"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="flex p-3 border-t border-slate-200 bg-slate-50 gap-2 sticky bottom-0 z-10">
+                        <button
+                          onClick={clearFilters}
+                          className="flex-1 py-2 text-center bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                        >
+                          Clear All
+                        </button>
+                        <button
+                          onClick={() => setFilterDropdownOpen(false)}
+                          className="flex-1 py-2 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                        >
+                          Apply Filters
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                </div>
+
+                {/* Assignment Button (for company role) */}
+                {projectRole === "company" && (
+                  <button
+                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
+                    onClick={openAssignmentModal}
+                  >
+                    <UserPlus size={16} className="mr-1.5" />
+                    <span>Assign Questions</span>
+                  </button>
                 )}
               </div>
+            </div>
 
-              {/* Assignment Button (for company role) */}
-              {projectRole === "company" && (
-                <button
-                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
-                  onClick={openAssignmentModal}
-                >
-                  <UserPlus size={16} className="mr-1.5" />
-                  <span>Assign Questions</span>
-                </button>
-              )}
+            {/* Tabs */}
+            <div className="flex px-4 border-t border-slate-200">
+              <button
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "clause"
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}
+                onClick={() => setActiveTab("clause")}
+              >
+                Clause Questions
+              </button>
+              <button
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "control"
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}
+                onClick={() => setActiveTab("control")}
+              >
+                Control Questions
+              </button>
             </div>
           </div>
 
@@ -1313,7 +1372,7 @@ const NewQuestionnaire = () => {
                       Question
                     </th>
                     <th className="w-44 p-4 text-left font-semibold text-slate-600">
-                      Type
+                      {activeTab === "clause" ? "Clause" : "Control"}
                     </th>
                     <th className="w-44 p-4 text-left font-semibold text-slate-600">
                       Status
@@ -1358,7 +1417,7 @@ const NewQuestionnaire = () => {
                         </td>
                         <td className="p-4 text-slate-600">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                            {question.type_display || question.type}
+                            {question.type_description}
                           </span>
                         </td>
                         <td className="p-4">
@@ -1396,7 +1455,8 @@ const NewQuestionnaire = () => {
                               <span className="text-xs text-slate-500 mr-2">
                                 Not assigned
                               </span>
-                              {projectRole === "company" &&
+                              {(projectRole === "company" ||
+                                projectRole === "consultant admin") &&
                                 question.status !== "Accepted" &&
                                 !question.assigned_to_answer_details && (
                                   <button
@@ -1430,7 +1490,9 @@ const NewQuestionnaire = () => {
                             ) : (
                               <div className="flex items-center">
                                 <span className="text-xs text-slate-500 mr-2">
-                                  Not assigned
+                                  {question.status === "Needs Review"
+                                    ? "Not assigned"
+                                    : "Can assign only when answer need review"}
                                 </span>
                                 {question.status === "Needs Review" && (
                                   <button
@@ -1588,7 +1650,8 @@ const NewQuestionnaire = () => {
                       </h5>
 
                       {/* Assign Button (Conditional for Company) */}
-                      {projectRole === "company" &&
+                      {(projectRole === "company" ||
+                        projectRole === "consultant admin") &&
                         activeQuestion.status !== "Accepted" &&
                         !activeQuestion.assigned_to_answer && (
                           <div className="relative" ref={assignDropdownRef}>
@@ -1605,7 +1668,7 @@ const NewQuestionnaire = () => {
 
                             {/* Assign Dropdown */}
                             {isAssignDropdownOpen && (
-                              <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-30">
+                              <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-30 h-36 overflow-y-scroll">
                                 <div className="p-2 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 text-sm">
                                   Assign Representative
                                 </div>
@@ -1620,7 +1683,7 @@ const NewQuestionnaire = () => {
                                     {companyRepresentatives.map((rep) => (
                                       <button
                                         key={rep.id}
-                                        className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${
+                                        className={`w-full text-left px-3 py-1 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${
                                           selectedRepresentative?.id === rep.id
                                             ? "bg-indigo-50 text-indigo-700"
                                             : "text-slate-700"
@@ -1686,7 +1749,8 @@ const NewQuestionnaire = () => {
                       {activeQuestion.assigned_to_answer_details ? (
                         <div className="bg-blue-50 rounded-lg p-3 relative group hover:shadow-md transition-shadow">
                           {/* Delete button - show for company role only */}
-                          {projectRole === "company" &&
+                          {(projectRole === "company" ||
+                            projectRole === "consultant admin") &&
                             activeQuestion.status !== "Accepted" && (
                               <button
                                 className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 shadow-sm"
@@ -1769,7 +1833,7 @@ const NewQuestionnaire = () => {
 
                               {/* Assign Reviewer Dropdown */}
                               {isAssignReviewerDropdownOpen && (
-                                <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-30 max-h-[300px] overflow-y-auto">
+                                <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-30 h-36 overflow-y-scroll">
                                   <div className="p-2 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 text-sm">
                                     Assign Reviewer
                                   </div>
