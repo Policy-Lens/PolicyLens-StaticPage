@@ -1314,7 +1314,7 @@ const NewQuestionnaire = () => {
                 </div>
 
                 {/* Assignment Button (for company role) */}
-                {projectRole === "company" && (
+                {(projectRole === "company" || projectRole==="consultant admin")&& (
                   <button
                     className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
                     onClick={openAssignmentModal}

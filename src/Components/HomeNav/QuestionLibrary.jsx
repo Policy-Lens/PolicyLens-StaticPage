@@ -293,7 +293,8 @@ const QuestionLibrary = () => {
       setSelectedFile(e.target.files[0]);
     }
   };
-
+  const [partialErrorsWhileUploading,setPartialErrorsWhileUploading] = useState([])
+  const [partialErrors,setPartialErrors] = useState(false)
   const handleFileUpload = async () => {
     if (!selectedFile) {
       message.warning("Please select a file to upload");
@@ -318,7 +319,7 @@ const QuestionLibrary = () => {
         true
       );
 
-      if (response.status === 200 || response.status === 201) {
+      if (response.status === 200 || response.status === 201 || response.status===207) {
         message.success(
           `Successfully created ${response.data.questions_created} questions`
         );
@@ -333,6 +334,8 @@ const QuestionLibrary = () => {
           message.warning(
             `${response.data.errors.length} errors occurred during upload`
           );
+          setPartialErrorsWhileUploading(response.data.errors);
+          setPartialErrors(true);
         }
 
         // Reset file input
@@ -1041,6 +1044,37 @@ const QuestionLibrary = () => {
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
                 )}
                 {isDeleting ? "Deleting..." : "Delete Question"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {partialErrors && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-xl p-6 mx-4 h-80 overflow-y-auto">
+            <div className="flex items-center text-red-600 mb-4">
+              <AlertCircle size={24} className="mr-3" />
+              <h3 className="text-lg font-medium">Errors in Excel File While Uploading</h3>
+            </div>
+            <p className="text-slate-600 mb-2">
+              The following errors were found in the uploaded Excel file:
+            </p>
+            <ul className="list-inside mb-5">
+              {partialErrorsWhileUploading.map((error, index) => (
+                <li key={index} className="text-sm text-slate-500">
+                  <div className="flex items-start flex-col p-2 border border-slate-200 rounded-lg mb-2">
+                    <div className="font-bold text-size">Row {error.row} </div>
+                    <div className="bg-slate-200 text-red-600 p-1">{error.error}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                onClick={()=>{setPartialErrors(false); setPartialErrorsWhileUploading([])}}
+              >
+                Cancel
               </button>
             </div>
           </div>
