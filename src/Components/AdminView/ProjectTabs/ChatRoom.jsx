@@ -44,7 +44,6 @@ const ChatRoom = (props) => {
         console.error("Error fetching messages:", error);
       } finally {
         setIsLoadingMessages(false);
-        setLoadingMessage("Connected");
       }
     };
     fetchMessages();
@@ -60,12 +59,7 @@ const ChatRoom = (props) => {
     socketRef.current = ws;
 
     ws.onopen = () => {
-      if(isLoadingMessages){
-        setLoadingMessage("Loading Messages ...");
-      }
-      else{
       setLoadingMessage("Connected");
-      }
     };
 
     ws.onmessage = (event) => {
