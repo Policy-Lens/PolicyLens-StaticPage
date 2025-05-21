@@ -47,12 +47,12 @@ const AdminLayout = () => {
 
   const tabs = [
     "Workflow",
-    "Calendar",
-    "Ask for Help",
     "Question Bank",
     "My Evidences",
     "My Reports",
     "Policy Library",
+    "Calendar",
+    "Ask for Help"
   ];
 
   useEffect(() => {
@@ -107,9 +107,8 @@ const AdminLayout = () => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 overflow-auto bg-gray-100 p-0 ${
-          collapsed ? "ml-16" : "ml-56"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 overflow-auto bg-gray-100 p-0 ${collapsed ? "ml-16" : "ml-56"
+          }`}
       >
         {/* Project Tabs Navigation - Show on Project Lifecycle and all top nav tab pages */}
         {isTopNavVisible && (
@@ -120,10 +119,9 @@ const AdminLayout = () => {
                   key={tab}
                   onClick={() => handleTabClick(tab)}
                   className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 
-                    ${
-                      activeTab === tab
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    ${activeTab === tab
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                 >
                   {tabIcons[tab.replaceAll(" ", "")] || null}

@@ -237,10 +237,10 @@ function InquirySection({ isVisible, onClose }) {
               </div>
               <div className="mt-2">
                 <a
-                  href="/temp.txt"
+                  href="/templates/Inquiry_template.xlsx"
                   download={`${fieldName
                     .toLowerCase()
-                    .replace(/\s+/g, "_")}_template.txt`}
+                    .replace(/\s+/g, "_")}_template.xlsx`}
                   className="inline-flex items-center px-3 py-1 border border-blue-300 shadow-sm text-xs font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <svg
@@ -699,13 +699,12 @@ function InquiryPage() {
           <div className="flex items-center gap-2">
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium
-              ${
-                stepStatus === "completed"
+              ${stepStatus === "completed"
                   ? "bg-green-100 text-green-800"
                   : stepStatus === "in_progress"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-yellow-100 text-yellow-800"
-              }`}
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
             >
               {stepStatus.charAt(0).toUpperCase() +
                 stepStatus.slice(1).replace("_", " ")}
