@@ -4,6 +4,7 @@ import {
   Search,
   Plus,
   MessageCircle,
+  MessagesSquare,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -28,10 +29,12 @@ import {
   Edit2,
   Edit,
 } from "lucide-react";
-import { apiRequest, BASE_URL } from "../../../utils/api";
+import { apiRequest, BASE_URL, BASE_URL_WS } from "../../../utils/api";
 import { ProjectContext } from "../../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { AuthContext } from "../../../AuthContext";
+import Cookies from "js-cookie";
+import ChatRoom from "./ChatRoom";
 
 const Support = () => {
   const { projectid } = useParams();
@@ -83,6 +86,7 @@ const Support = () => {
   const { project, getMembers, projectRole } = useContext(ProjectContext);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useContext(AuthContext);
+  const [onlineStatus, setOnlineStatus] = useState({});
 
   const handleEditTicket = (ticket) => {
     setEditTicketForm({
@@ -565,6 +569,46 @@ const Support = () => {
     });
   };
 
+  // WebSocket for ticket online status
+  useEffect(() => {
+    if (!projectid) return;
+    let ws;
+    const token = Cookies.get("accessToken");
+    if (!token) return;
+    ws = new WebSocket(
+      `${BASE_URL_WS}/ws/presence/support/${projectid}/?token=${token}`
+    );
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "initial_presence" && data.presence) {
+          setOnlineStatus(data.presence);
+        } else if (data.type === "presence_state" && data.ticket) {
+          setOnlineStatus((prev) => ({
+            ...prev,
+            [data.ticket]: data.onlinestatus,
+          }));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    ws.onerror = () => {};
+    ws.onclose = () => {};
+    return () => {
+      ws && ws.close();
+    };
+  }, [projectid]);
+
+  // Handle ChatModal
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [ticketId, setTicketId] = useState(null);
+  const handleChatModalOpen = (ticket) => {
+    setTicketId(ticket.id);
+    setIsChatModalOpen(true);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 relative">
       {/* Main Content */}
@@ -942,13 +986,24 @@ const Support = () => {
                           </td>
                           <td className="p-4">
                             <div className="flex items-center justify-center space-x-2">
-                              <button
-                                className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50"
-                                title="View ticket"
-                                onClick={() => viewTicketDetails(ticket)}
-                              >
-                                <Eye size={18} />
-                              </button>
+                              {/* Chat icon - only for consultant admin, assigned-tickets, or my-tickets */}
+                              {(projectRole === "consultant admin" ||
+                                activeTab === "assigned-tickets" ||
+                                activeTab === "my-tickets") && (
+                                <button
+                                  className="relative p-2 text-slate-600 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50"
+                                  title="Open Chat"
+                                  onClick={() => handleChatModalOpen(ticket)}
+                                >
+                                  <MessagesSquare size={18} />
+                                  {onlineStatus[`${ticket.id}`] ? (
+                                    <span className="absolute top-1 right-3 block w-2 h-2 bg-green-500 rounded-full border border-white"></span>
+                                  ) : (
+                                    <span className="absolute top-1 right-3 block w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                                  )}
+                                </button>
+                              )}
+                              {/* Remove Eye icon, keep More actions */}
                               <div className="relative">
                                 <button
                                   className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50"
@@ -2219,6 +2274,10 @@ const Support = () => {
             </form>
           </div>
         </div>
+      )}
+      {/* Handle Chat modal */}
+      {isChatModalOpen && (
+        <ChatRoom ticket_id={ticketId} onClose={() => setIsChatModalOpen(false)} />
       )}
     </div>
   );

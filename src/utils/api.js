@@ -2,8 +2,13 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const BASE_URL = "https://backend.prolense.in";
-// const BASE_URL = "http://localhost:8000";
+const BASE_URL_WS = "wss://backend.prolense.in";
+const BASE_HOST = "backend.prolense.in";
 
+// Uncomment the line below for local development
+// const BASE_URL = "http://localhost:8000";
+// const BASE_URL_WS = "ws://localhost:8000";
+// const BASE_HOST = "localhost:8000";
 const apiRequest = async (
   method,
   endpoint,
@@ -83,4 +88,4 @@ const handleTokenRefresh = async (
   }
 };
 
-export { apiRequest, BASE_URL };
+export { apiRequest, BASE_URL, BASE_HOST,BASE_URL_WS };

@@ -25,10 +25,15 @@ import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
+import SupportChat from "./wstest/SupportChat";
 const router = createBrowserRouter([
   {
     path: "/",
     element: <LoginPage />,
+  },
+  {
+    path: "/chat",
+    element: <SupportChat />,
   },
   {
     path: "/register",
