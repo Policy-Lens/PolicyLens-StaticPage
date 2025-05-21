@@ -867,6 +867,19 @@ const PolicyLibrary = () => {
         });
     };
 
+    // Toggle select all templates
+    const toggleSelectAllTemplates = () => {
+        if (templatesData.length === 0) return;
+
+        if (selectedFileIds.length === templatesData.length) {
+            // If all are selected, unselect all
+            setSelectedFileIds([]);
+        } else {
+            // Otherwise, select all
+            setSelectedFileIds(templatesData.map(template => template.id));
+        }
+    };
+
     // Open consultant selection modal for multiple files
     const openConsultantModal = (fileIds = selectedFileIds) => {
         setConsultantModal({
@@ -1379,7 +1392,16 @@ const PolicyLibrary = () => {
                                             className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b"
                                         >
                                             <div className="flex items-center">
-                                                <span>{column.label}</span>
+                                                {column.key === "select" && projectRole === "consultant admin" ? (
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        checked={templatesData.length > 0 && selectedFileIds.length === templatesData.length}
+                                                        onChange={toggleSelectAllTemplates}
+                                                    />
+                                                ) : (
+                                                    <span>{column.label}</span>
+                                                )}
                                             </div>
                                         </th>
                                     ))}
