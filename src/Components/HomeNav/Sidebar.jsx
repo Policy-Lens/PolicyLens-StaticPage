@@ -12,6 +12,7 @@ import {
   LogOut,
   UserCircle,
   Library,
+  Database,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "antd";
@@ -64,6 +65,12 @@ const Sidebar = ({ onToggle }) => {
       icon: <Settings size={20} />,
       label: "Settings",
       path: "/settings",
+    },
+    {
+      key: "iso4217",
+      icon: <Database size={20} />,
+      label: "ISO4217",
+      path: "/iso4217",
     },
   ];
   const policyLib = {

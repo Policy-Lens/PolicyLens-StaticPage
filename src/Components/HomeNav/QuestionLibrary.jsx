@@ -62,20 +62,20 @@ const QuestionLibrary = () => {
 
   // Type choices for filtering and form
   const clauseTypeChoices = [
-    "Clause 4 - Context of the Organization",
-    "Clause 5 - Leadership",
-    "Clause 6 - Planning",
-    "Clause 7 - Support",
-    "Clause 8 - Operation",
-    "Clause 9 - Performance Evaluation",
-    "Clause 10 - Improvement",
+    "4 - Context of the Organization",
+    "5 - Leadership",
+    "6 - Planning",
+    "7 - Support",
+    "8 - Operation",
+    "9 - Performance Evaluation",
+    "10 - Improvement",
   ];
 
   const controlTypeChoices = [
-    "5 - ORGANIZATIONAL CONTROLS",
-    "6 - PEOPLE CONTROLS",
-    "7 - PHYSICAL CONTROLS",
-    "8 - TECHNOLOGICAL CONTROLS",
+    "5 - Organizational Controls",
+    "6 - People Controls",
+    "7 - Physical Controls",
+    "8 - Technological Controls",
   ];
 
   // Get type choices based on active tab

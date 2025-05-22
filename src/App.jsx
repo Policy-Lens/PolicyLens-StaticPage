@@ -25,6 +25,7 @@ import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
+import ISO4217 from "./Components/HomeNav/ISO4217";
 import SupportChat from "./wstest/SupportChat";
 const router = createBrowserRouter([
   {
@@ -72,6 +73,10 @@ const router = createBrowserRouter([
     element: <QuestionLibrary />,
   },
   {
+    path: "/iso4217",
+    element: <ISO4217 />,
+  },
+  {
     path: "/projects",
     element: <Projects />,
   },
@@ -94,56 +99,54 @@ const router = createBrowserRouter([
       },
       {
         path: "admindashboard",
-        element: <AdminDashboard />
+        element: <AdminDashboard />,
       },
       {
         path: "internalauditprocess",
-        element: <InternalAuditProcess />
+        element: <InternalAuditProcess />,
       },
       {
         path: "adminpreview",
-        element: <AdminPreview />
+        element: <AdminPreview />,
       },
       {
         path: "projectteam",
-        element: <ProjectTeam />
+        element: <ProjectTeam />,
       },
       {
         path: "auditorworkspace",
-        element: <AuditorWorkspace />
+        element: <AuditorWorkspace />,
       },
       {
         path: "questionbank",
-        element: <NewQuestionnaire />
+        element: <NewQuestionnaire />,
       },
       {
         path: "myevidences",
-        element: <EvidenceData />
+        element: <EvidenceData />,
       },
       {
         path: "calender",
-        element: <MeetingCalendar />
+        element: <MeetingCalendar />,
       },
       {
         path: "askforhelp",
-        element: <Support />
+        element: <Support />,
       },
       {
         path: "myreports",
-        element: <MyReports />
+        element: <MyReports />,
       },
       {
         path: "myreports/:reportType",
-        element: <MyReports />
+        element: <MyReports />,
       },
       {
         path: "policylibrary",
-        element: <PolicyLibrary />
+        element: <PolicyLibrary />,
       },
-
-    ]
-  }
-
+    ],
+  },
 ]);
 
 const AppLayout = () => {

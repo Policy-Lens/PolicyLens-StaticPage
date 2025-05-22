@@ -107,20 +107,20 @@ const NewQuestionnaire = () => {
 
   // Type choices for filtering
   const clauseTypeChoices = [
-    "Clause 4 - Context of the Organization",
-    "Clause 5 - Leadership",
-    "Clause 6 - Planning",
-    "Clause 7 - Support",
-    "Clause 8 - Operation",
-    "Clause 9 - Performance Evaluation",
-    "Clause 10 - Improvement",
+    "4 - Context of the Organization",
+    "5 - Leadership",
+    "6 - Planning",
+    "7 - Support",
+    "8 - Operation",
+    "9 - Performance Evaluation",
+    "10 - Improvement",
   ];
 
   const controlTypeChoices = [
-    "5 - ORGANIZATIONAL CONTROLS",
-    "6 - PEOPLE CONTROLS",
-    "7 - PHYSICAL CONTROLS",
-    "8 - TECHNOLOGICAL CONTROLS",
+    "5 - Organizational Controls",
+    "6 - People Controls",
+    "7 - Physical Controls",
+    "8 - Technological Controls",
   ];
 
   // Get type choices based on active tab
@@ -1314,7 +1314,8 @@ const NewQuestionnaire = () => {
                 </div>
 
                 {/* Assignment Button (for company role) */}
-                {(projectRole === "company" || projectRole==="consultant admin")&& (
+                {(projectRole === "company" ||
+                  projectRole === "consultant admin") && (
                   <button
                     className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
                     onClick={openAssignmentModal}
@@ -1368,11 +1369,17 @@ const NewQuestionnaire = () => {
                     <th className="w-32 p-4 text-left font-semibold text-slate-600">
                       Reference
                     </th>
-                    <th className="p-4 text-left font-semibold text-slate-600">
+                    <th className="w-80 p-4 text-left font-semibold text-slate-600">
                       Question
                     </th>
-                    <th className="w-44 p-4 text-left font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause" : "Control"}
+                    <th className="w-36 p-4 text-left font-semibold text-slate-600">
+                      {activeTab === "clause" ? "Clause no." : "Control no."}
+                    </th>
+                    <th className="w-36 p-4 text-left font-semibold text-slate-600">
+                      {activeTab === "clause" ? "Clause name" : "Control name"}
+                    </th>
+                    <th className="p-4 text-left font-semibold text-slate-600">
+                      Standard
                     </th>
                     <th className="w-44 p-4 text-left font-semibold text-slate-600">
                       Status
@@ -1415,10 +1422,16 @@ const NewQuestionnaire = () => {
                             {question.question}
                           </div>
                         </td>
+                        <td className="p-4 text-slate-600 text-center">
+                            {question.type_description.split(" - ")[0]}
+                        </td>
                         <td className="p-4 text-slate-600">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                            {question.type_description}
+                            {question.type_description.split(" - ")[1]}
                           </span>
+                        </td>
+                        <td className="p-4 text-slate-600 text-center">
+                            {question.standard}
                         </td>
                         <td className="p-4">
                           <span
