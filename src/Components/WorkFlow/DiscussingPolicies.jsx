@@ -3,7 +3,7 @@ import { Button, Input, Upload, Modal, Select, DatePicker, message } from "antd"
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-import { BASE_URL } from "../../utils/api";
+import { BASE_URL, apiRequest } from "../../utils/api";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -16,6 +16,7 @@ const DiscussingPolicies = () => {
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDeadline, setTaskDeadline] = useState(null);
   const [taskReferences, setTaskReferences] = useState("");
+  const [stepStatus, setStepStatus] = useState("pending");
 
   // State for API data
   const [discussingPoliciesData, setDiscussingPoliciesData] = useState([]);
@@ -52,11 +53,36 @@ const DiscussingPolicies = () => {
     setOldFilesNeeded(prev => [...prev, fileUrl]);
   };
 
+  const updateStepStatus = async (newStatus) => {
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepId}/update-status/`,
+        {
+          status: newStatus,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setStepStatus(newStatus);
+        message.success("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      message.error("Failed to update status");
+    }
+  };
+
   // Get step ID, step data, and check authorization
   const get_step_id = async () => {
     const step_id = await getStepId(projectid, 8);
     if (step_id) {
       setStepId(step_id);
+      const response = await getStepData(step_id);
+      if (response && response.status) {
+        setStepStatus(response.status);
+      }
       await get_step_data(step_id);
       const isAuthorized = await checkStepAuth(step_id);
       setIsAssignedUser(isAuthorized);
@@ -232,7 +258,7 @@ const DiscussingPolicies = () => {
     <div className="p-6 rounded-md">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Discussing Policies</h2>
-        <div className="flex gap-2">
+        <div className="flex space-x-3">
           {projectRole.includes("consultant admin") && (
             <Button
               type="default"
@@ -244,6 +270,17 @@ const DiscussingPolicies = () => {
             >
               Assign Task
             </Button>
+          )}
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            <Select
+              value={stepStatus}
+              onChange={updateStepStatus}
+              style={{ width: 140 }}
+            >
+              <Option value="pending">Pending</Option>
+              <Option value="in_progress">In Progress</Option>
+              <Option value="completed">Completed</Option>
+            </Select>
           )}
           {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button type="primary" onClick={handleAddData} className="bg-blue-500">

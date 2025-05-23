@@ -4,6 +4,7 @@ import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { BASE_URL } from "../../utils/api";
+import { apiRequest } from "../../utils/api";
 const { Panel } = Collapse;
 const { TextArea } = Input;
 const { Option } = Select;
@@ -26,6 +27,7 @@ const StakeholderInterviews = () => {
   const [members, setMembers] = useState([]);
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
   const [removedOldFiles, setRemovedOldFiles] = useState([]);
+  const [stepStatus, setStepStatus] = useState("pending");
 
   const { projectid } = useParams();
   const {
@@ -55,14 +57,15 @@ const StakeholderInterviews = () => {
 
   // Get step ID, step data, and check authorization
   const get_step_id = async () => {
-    const step_id = await getStepId(projectid, 5);
-    if (step_id) {
-      setStepId(step_id);
-      await get_step_data(step_id);
-      const isAuthorized = await checkStepAuth(step_id);
+    const response = await getStepId(projectid, 5);
+    if (response) {
+      setStepId(response.plc_step_id);
+      setStepStatus(response.status);
+      await get_step_data(response.plc_step_id);
+      const isAuthorized = await checkStepAuth(response.plc_step_id);
       setIsAssignedUser(isAuthorized);
       if (isAuthorized) {
-        await getTaskAssignment(step_id);
+        await getTaskAssignment(response.plc_step_id);
       }
     }
   };
@@ -232,11 +235,32 @@ const StakeholderInterviews = () => {
     }
   };
 
+  const updateStepStatus = async (newStatus) => {
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepId}/update-status/`,
+        {
+          status: newStatus,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setStepStatus(newStatus);
+        message.success("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      message.error("Failed to update status");
+    }
+  };
+
   return (
     <div className="p-6 rounded-md">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Stakeholder Interviews</h2>
-        <div className="flex gap-2">
+        <div className="flex space-x-3">
           {projectRole.includes("consultant admin") && (
             <Button
               type="default"
@@ -249,6 +273,19 @@ const StakeholderInterviews = () => {
               Assign Task
             </Button>
           )}
+
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            <Select
+              value={stepStatus}
+              onChange={updateStepStatus}
+              style={{ width: 140 }}
+            >
+              <Option value="pending">Pending</Option>
+              <Option value="in_progress">In Progress</Option>
+              <Option value="completed">Completed</Option>
+            </Select>
+          )}
+
           {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button type="primary" onClick={handleAddData} className="bg-blue-500">
               {interviewData.length > 0 ? "Update Data" : "Add Data"}

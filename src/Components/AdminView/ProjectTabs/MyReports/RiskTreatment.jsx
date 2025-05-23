@@ -995,72 +995,159 @@ const RiskTreatment = () => {
         <>
           {/* Wrap conditional content in fragment */}
           {riskData.length === 0 ? (
-            // Empty State UI for Treatment Plans
-            <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 min-h-[300px] bg-white rounded-lg shadow-sm mt-2 mx-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-20 h-20 text-gray-400 mb-4 animate-pulse"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75c0-.231-.035-.454-.1-.664M18.75 7.5H18a2.25 2.25 0 00-2.25 2.25v6.75m0 0a2.25 2.25 0 01-2.25 2.25H5.625a2.25 2.25 0 01-2.25-2.25V6.75a2.25 2.25 0 012.25-2.25h3.75a48.47 48.47 0 011.07-.069"
-                />
-              </svg>
-              <h3 className="text-2xl font-medium text-gray-700 mb-2">
-                No Treatment Plans Yet
-              </h3>
-              <p className="text-gray-500 mb-8 max-w-md">
-                Get started by adding a treatment plan manually or uploading an
-                Excel file with multiple entries.
-              </p>
-              <div className="flex gap-6">
-                <button
-                  className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-md flex items-center transform hover:scale-105 hover:shadow-lg duration-200"
-                  onClick={() => openModal("create")}
-                  disabled={!selectedSheet} // Keep disabled check
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5 mr-2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 4.5v15m7.5-7.5h-15"
-                    />
-                  </svg>
-                  <span>Add Treatment Plan</span>
-                </button>
-                <button
-                  className="px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-md flex items-center transform hover:scale-105 hover:shadow-lg duration-200"
-                  onClick={() => openModal("excel")}
-                  disabled={!selectedSheet} // Keep disabled check
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5 mr-2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                    />
-                  </svg>
-                  <span>Upload Excel</span>
-                </button>
+            // Empty Table with Headers - Show when sheet is selected but has no risks
+            <div className="overflow-x-auto w-full px-1 pt-1" style={{ maxWidth: "100vw" }}>
+              <div className="inline-block min-w-full whitespace-nowrap">
+                <table className="border-collapse shadow-lg rounded-lg overflow-hidden">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      {/* Action column */}
+                      <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
+                        Actions
+                      </th>
+
+                      {/* Basic columns */}
+                      <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
+                        Risk ID
+                      </th>
+                      <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
+                        Vulnerability Type
+                      </th>
+                      <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
+                        Threat Description
+                      </th>
+
+                      {/* Risk Assessment column group */}
+                      <th
+                        className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
+                        onClick={() => toggleGroup("riskAssessment")}
+                        colSpan={expandedGroups.riskAssessment ? 4 : 1}
+                      >
+                        <div className="flex items-center justify-center">
+                          <span>Risk Assessment</span>
+                          {renderExpandIcon(expandedGroups.riskAssessment)}
+                        </div>
+                      </th>
+
+                      {/* Risk Revision column group */}
+                      <th
+                        className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
+                        onClick={() => toggleGroup("riskRevision")}
+                        colSpan={expandedGroups.riskRevision ? 7 : 1}
+                      >
+                        <div className="flex items-center justify-center">
+                          <span>Risk Revision</span>
+                          {renderExpandIcon(expandedGroups.riskRevision)}
+                        </div>
+                      </th>
+
+                      {/* Risk Mitigation Plan column group */}
+                      <th
+                        className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
+                        onClick={() => toggleGroup("mitigationPlan")}
+                        colSpan={expandedGroups.mitigationPlan ? 8 : 1}
+                      >
+                        <div className="flex items-center justify-center">
+                          <span>Risk Mitigation Plan</span>
+                          {renderExpandIcon(expandedGroups.mitigationPlan)}
+                        </div>
+                      </th>
+                    </tr>
+
+                    {/* Second row for subheaders */}
+                    <tr className="bg-slate-50">
+                      <th className="border border-slate-200 p-3 font-medium"></th>
+                      {/* Actions */}
+                      <th className="border border-slate-200 p-3 font-medium"></th>
+                      {/* Risk ID */}
+                      <th className="border border-slate-200 p-3 font-medium"></th>
+                      {/* Vuln Type */}
+                      <th className="border border-slate-200 p-3 font-medium"></th>
+                      {/* Threat Desc */}
+                      {/* rt_assessment subheaders */}
+                      {expandedGroups.riskAssessment ? (
+                        <>
+                          <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">
+                            Risk Rating
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">
+                            Risk Category
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">
+                            Department / BU
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">
+                            Risk Mitigation Strategy
+                          </th>
+                        </>
+                      ) : (
+                        <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                      )}
+                      {/* rt_revision subheaders */}
+                      {expandedGroups.riskRevision ? (
+                        <>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Applicable Annex Control No.
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Meet Legal Requirements? (Y/N)
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Revised Control Rating
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Revised Consequence Rating
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Revised Likelihood Rating
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Residual Risk Rating
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
+                            Acceptable to Risk Owner? (Y/N)
+                          </th>
+                        </>
+                      ) : (
+                        <th className="border border-slate-200 p-3 font-medium bg-indigo-100"></th>
+                      )}
+                      {/* rt_mitigation_plans subheaders */}
+                      {expandedGroups.mitigationPlan ? (
+                        <>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Further Planned Action
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Policy Lense Task ID
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Task Description
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Task Owner
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Ongoing Task? (Y/N)
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Planned Completion Date
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Recurrent Task? (Y/N)
+                          </th>
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
+                            Frequency
+                          </th>
+                        </>
+                      ) : (
+                        <th className="border border-slate-200 p-3 font-medium bg-green-100"></th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Empty tbody for the empty state */}
+                  </tbody>
+                </table>
               </div>
             </div>
           ) : (

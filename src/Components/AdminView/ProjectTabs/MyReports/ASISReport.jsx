@@ -1209,45 +1209,266 @@ const ASISReport = () => {
         </div>
       )}
 
-      {/* No Controls Message */}
+      {/* Empty Table - Shown when a report is selected but has no controls */}
       {!isLoading && selectedReport && controls.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <svg
-            className="w-16 h-16 text-gray-400 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="text-xl font-medium text-gray-700 mb-2">
-            No Controls Available
-          </h3>
-          <p className="text-gray-500 mb-6">
-            Add your first control to this report.
-          </p>
-          <div className="flex gap-4">
-            <button
-              onClick={() => openModal("form")}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md flex items-center"
-            >
-              <FilePlus className="w-5 h-5 mr-2" />
-              Add Control
-            </button>
-            <button
-              onClick={() => openModal("excel")}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
-            >
-              <FileUp className="w-5 h-5 mr-2" />
-              Upload Excel
-            </button>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse">
+            {/* Table Header */}
+            <thead>
+              <tr>
+                {/* Actions column */}
+                <th className="border border-slate-200 p-3 bg-gray-100 sticky left-0 z-10">
+                  Actions
+                </th>
+
+                {/* Basic columns */}
+                <th className="border border-slate-200 p-3 bg-gray-100">
+                  Control ID
+                </th>
+                <th className="border border-slate-200 p-3 bg-gray-100 min-w-[250px]">
+                  Control Name
+                </th>
+                <th className="border border-slate-200 p-3 bg-gray-100 min-w-[200px]">
+                  Associated org function
+                </th>
+                <th className="border border-slate-200 p-3 bg-gray-100">
+                  Control Theme
+                </th>
+
+                {/* Control Type header group */}
+                <th
+                  onClick={() => toggleGroup("controlType")}
+                  colSpan={expandedGroups.controlType ? 3 : 1}
+                  className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
+                >
+                  Control Type {renderExpandIcon(expandedGroups.controlType)}
+                </th>
+
+                {/* Control property / Control objective header group */}
+                <th
+                  onClick={() => toggleGroup("controlProperty")}
+                  colSpan={expandedGroups.controlProperty ? 6 : 1}
+                  className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
+                >
+                  Control property / Control objective{" "}
+                  {renderExpandIcon(expandedGroups.controlProperty)}
+                </th>
+
+                {/* Control Type / Cyber security concept header group */}
+                <th
+                  onClick={() => toggleGroup("cyberSecurityConcept")}
+                  colSpan={expandedGroups.cyberSecurityConcept ? 5 : 1}
+                  className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
+                >
+                  Control Type / Cyber security concept{" "}
+                  {renderExpandIcon(expandedGroups.cyberSecurityConcept)}
+                </th>
+
+                {/* Security domain header group */}
+                <th
+                  onClick={() => toggleGroup("securityDomain")}
+                  colSpan={expandedGroups.securityDomain ? 4 : 1}
+                  className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
+                >
+                  Security domain{" "}
+                  {renderExpandIcon(expandedGroups.securityDomain)}
+                </th>
+
+                {/* Operational capability header group */}
+                <th
+                  onClick={() => toggleGroup("operationalCapability")}
+                  colSpan={expandedGroups.operationalCapability ? 15 : 1}
+                  className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
+                >
+                  Operational capability{" "}
+                  {renderExpandIcon(expandedGroups.operationalCapability)}
+                </th>
+
+                {/* Other header group */}
+                <th
+                  onClick={() => toggleGroup("other")}
+                  colSpan={expandedGroups.other ? 4 : 1}
+                  className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
+                >
+                  Other {renderExpandIcon(expandedGroups.other)}
+                </th>
+              </tr>
+
+              {/* Subheaders for expanded groups */}
+              <tr>
+                {/* Actions placeholder */}
+                <th className="border border-slate-200 p-3 bg-gray-100 sticky left-0"></th>
+
+                {/* Basic placeholder columns */}
+                <th className="border border-slate-200 p-3 bg-gray-100"></th>
+                <th className="border border-slate-200 p-3 bg-gray-100"></th>
+                <th className="border border-slate-200 p-3 bg-gray-100"></th>
+                <th className="border border-slate-200 p-3 bg-gray-100"></th>
+
+                {/* Control Type subheaders */}
+                {expandedGroups.controlType ? (
+                  <>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Preventive
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Detective
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Corrective
+                    </th>
+                  </>
+                ) : (
+                  <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                )}
+
+                {/* Control property subheaders */}
+                {expandedGroups.controlProperty ? (
+                  <>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Confidentiality
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Integrity
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Availability
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Covers Intent
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Covers Implementation
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Covers Effectiveness
+                    </th>
+                  </>
+                ) : (
+                  <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                )}
+
+                {/* Cyber security concept subheaders */}
+                {expandedGroups.cyberSecurityConcept ? (
+                  <>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Identify
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Protect
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Detect
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Respond
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Recover
+                    </th>
+                  </>
+                ) : (
+                  <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                )}
+
+                {/* Security domain subheaders */}
+                {expandedGroups.securityDomain ? (
+                  <>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Governance_and_Ecosystem
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Protection
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Defence
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Resilience
+                    </th>
+                  </>
+                ) : (
+                  <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                )}
+
+                {/* Operational capability subheaders */}
+                {expandedGroups.operationalCapability ? (
+                  <>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Governance
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Asset_management
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Information_protection
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Human_resource_security
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Physical_security
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      System_and_network_security
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Application_security
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Secure_configuration
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Identity_and_access_management
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Threat_and_vulnerability_management
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Continuity
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Supplier_relationships_security
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Legal_and_compliance
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Information_security_event_management
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Information_security_assurance
+                    </th>
+                  </>
+                ) : (
+                  <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                )}
+
+                {/* Other subheaders */}
+                {expandedGroups.other ? (
+                  <>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Related to
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Must have
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Nice to have
+                    </th>
+                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white">
+                      Sample audit questions
+                    </th>
+                  </>
+                ) : (
+                  <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Empty tbody - No rows to display */}
+            </tbody>
+          </table>
         </div>
       )}
 

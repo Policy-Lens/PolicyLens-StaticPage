@@ -11,7 +11,7 @@ import {
 import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-import { BASE_URL } from "../../utils/api";
+import { BASE_URL, apiRequest } from "../../utils/api";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -23,6 +23,7 @@ function ImplementPolicies() {
   const [feedbackText, setFeedbackText] = useState("");
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
   const [removedOldFiles, setRemovedOldFiles] = useState([]);
+  const [stepStatus, setStepStatus] = useState("pending");
 
   // State variables for task assignment
   const [selectedTeamMembers, setSelectedTeamMembers] = useState([]);
@@ -220,9 +221,34 @@ function ImplementPolicies() {
     const step_id = await getStepId(projectid, 10);
     if (step_id) {
       setStepId(step_id);
+      const response = await getStepData(step_id);
+      if (response && response.status) {
+        setStepStatus(response.status);
+      }
       await get_step_data(step_id);
       await checkAssignedUser(step_id);
       await getTaskAssignment(step_id);
+    }
+  };
+
+  const updateStepStatus = async (newStatus) => {
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepId}/update-status/`,
+        {
+          status: newStatus,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setStepStatus(newStatus);
+        message.success("Status updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      message.error("Failed to update status");
     }
   };
 
@@ -257,7 +283,7 @@ function ImplementPolicies() {
         <h2 className="text-xl font-semibold text-gray-800">
           Implement Policies
         </h2>
-        <div className="flex gap-2">
+        <div className="flex space-x-3">
           {projectRole.includes("consultant admin") && (
             <Button
               type="default"
@@ -269,6 +295,17 @@ function ImplementPolicies() {
             >
               Assign Task
             </Button>
+          )}
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            <Select
+              value={stepStatus}
+              onChange={updateStepStatus}
+              style={{ width: 140 }}
+            >
+              <Option value="pending">Pending</Option>
+              <Option value="in_progress">In Progress</Option>
+              <Option value="completed">Completed</Option>
+            </Select>
           )}
           {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button
