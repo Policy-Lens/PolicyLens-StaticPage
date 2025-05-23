@@ -1,5 +1,9 @@
 import "./App.css";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
 import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper";
 import AdminDashboard from "./Components/AdminView/AdminDashboard";
 import ProjectTeam from "./Components/AdminView/ProjectTeam";
@@ -26,6 +30,8 @@ import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
 import ISO4217 from "./Components/HomeNav/ISO4217";
+import GICS from "./Components/HomeNav/GICS";
+import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
 const router = createBrowserRouter([
   {
@@ -73,8 +79,22 @@ const router = createBrowserRouter([
     element: <QuestionLibrary />,
   },
   {
-    path: "/iso4217",
-    element: <ISO4217 />,
+    path: "/database",
+    element: <Database />,
+    children: [
+      {
+        index: true,
+        element: <Navigate to="iso4217" replace />,
+      },
+      {
+        path: "iso4217",
+        element: <ISO4217 />,
+      },
+      {
+        path: "gics",
+        element: <GICS />,
+      },
+    ],
   },
   {
     path: "/projects",

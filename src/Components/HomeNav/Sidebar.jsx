@@ -67,10 +67,10 @@ const Sidebar = ({ onToggle }) => {
       path: "/settings",
     },
     {
-      key: "iso4217",
+      key: "database",
       icon: <Database size={20} />,
-      label: "ISO4217",
-      path: "/iso4217",
+      label: "Database",
+      path: "/database",
     },
   ];
   const policyLib = {

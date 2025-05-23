@@ -14,18 +14,15 @@ import { AuthContext } from "../../AuthContext";
 import { apiRequest } from "../../utils/api";
 import { message, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
-import Sidebar from "./Sidebar";
 
 const ISO4217 = () => {
   const { user } = useContext(AuthContext);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   // States for data handling
   const [currencies, setCurrencies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -60,7 +57,6 @@ const ISO4217 = () => {
   useEffect(() => {
     setIsAdmin(user?.role === "admin");
   }, [user]);
-
   // Fetch currencies
   const fetchCurrencies = async () => {
     setIsLoading(true);
@@ -261,91 +257,79 @@ const ISO4217 = () => {
       setIsDeleting(false);
     }
   };
-  // No need to block access, just continue to render the table
-
   return (
-    <div className="flex">
-      <Sidebar onToggle={setIsSidebarCollapsed} />
-      <div
-        style={{ marginLeft: isSidebarCollapsed ? "80px" : "240px" }}
-        className="flex flex-1 overflow-hidden shadow-xl rounded-lg h-screen"
-      >
-        <div className="flex flex-col w-full bg-white transition-width duration-300 ease-in-out">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-slate-200">
-            <h1 className="text-2xl font-bold text-slate-800">
-              ISO4217
-            </h1>            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search ..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  id="search"
-                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 w-64"
-                />
-              </div>
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => {
-                      setModalType("upload");
-                      setShowModal(true);
-                    }}
-                    className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
-                  >
-                    <UploadCloud size={16} />
-                    Upload Excel
-                  </button>
-                  <button
-                    onClick={openAddModal}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                  >
-                    <Plus size={16} />
-                    Add Currency
-                  </button>
-                </>
-              )}
-            </div>
+    <div className="h-full flex flex-col ">
+      <div className="p-6 flex items-center justify-between">
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search currencies..."
+            value={searchQuery}
+            id="search"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 w-64"
+          />
+        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                setModalType("upload");
+                setShowModal(true);
+              }}
+              className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+              <UploadCloud size={16} />
+              Upload Excel
+            </button>
+            <button
+              onClick={openAddModal}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Add Currency
+            </button>
           </div>
+        )}
+      </div>
 
-          {/* Table */}
-          <div className="flex-1 overflow-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <Spin
-                  indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />}
-                />
-              </div>
-            ) : (
-              <table className="w-full border-collapse">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500">
-                      Entity
+      {/* Table */}
+      <div className="flex-1 mx-6 mb-6 bg-white rounded-lg shadow overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />} />
+          </div>
+        ) : (
+          <div className="relative">
+            <table className="w-full border-collapse">
+              <thead className="bg-slate-200 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
+                    Entity
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
+                    Currency
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
+                    Code
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
+                    Numeric
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
+                    Minor Unit
+                  </th>
+                  {isAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-black">
+                      Actions
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500">
-                      Currency
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500">
-                      Code
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500">
-                      Numeric
-                    </th>                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500">
-                      Minor Unit
-                    </th>
-                    {isAdmin && (
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500">
-                        Actions
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {currencies.map((currency) => (
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y h-64 divide-slate-200 overflow-y-auto">
+                {currencies &&
+                  currencies.map((currency) => (
                     <tr key={currency.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 text-sm text-slate-600">
                         {currency.entity}
@@ -358,7 +342,8 @@ const ISO4217 = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
                         {currency.numeric_code}
-                      </td>                      <td className="px-6 py-4 text-sm text-slate-600">
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
                         {currency.minor_unit}
                       </td>
                       {isAdmin && (
@@ -381,11 +366,10 @@ const ISO4217 = () => {
                       )}
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            )}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}
