@@ -709,54 +709,9 @@ function InquiryPage() {
               {stepStatus.charAt(0).toUpperCase() +
                 stepStatus.slice(1).replace("_", " ")}
             </span>
-
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: "pending",
-                      label: "Pending",
-                      onClick: () => updateStepStatus("pending"),
-                    },
-                    {
-                      key: "in_progress",
-                      label: "In Progress",
-                      onClick: () => updateStepStatus("in_progress"),
-                    },
-                    {
-                      key: "completed",
-                      label: "Completed",
-                      onClick: () => updateStepStatus("completed"),
-                    },
-                  ],
-                }}
-              >
-                <Button
-                  size="small"
-                  className="flex items-center gap-1"
-                  icon={
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  }
-                />
-              </Dropdown>
-            )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex space-x-3">
           {projectRole.includes("consultant admin") && (
             <Button
               type="default"
@@ -769,6 +724,19 @@ function InquiryPage() {
               Assign Task
             </Button>
           )}
+
+          {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            <Select
+              value={stepStatus}
+              onChange={updateStepStatus}
+              style={{ width: 140 }}
+            >
+              <Option value="pending">Pending</Option>
+              <Option value="in_progress">In Progress</Option>
+              <Option value="completed">Completed</Option>
+            </Select>
+          )}
+
           {(projectRole.includes("consultant admin") || isAssignedUser) && (
             <Button
               type="primary"
