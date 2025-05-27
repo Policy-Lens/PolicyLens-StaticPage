@@ -1,0 +1,33 @@
+/* ...existing styles... */
+
+/* Notification loading bar animation */
+@keyframes notification-countdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.notification-loading-bar {
+  animation: notification-countdown 5s linear forwards;
+}
+
+/* Custom antd message notification styles */
+.custom-message-notification {
+  padding: 12px 16px;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.custom-message-notification .ant-message-notice-content {
+  background: white;
+  padding: 0;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-radius: 0.5rem;
+}
+
+.custom-message-notification:hover {
+  cursor: pointer;
+}

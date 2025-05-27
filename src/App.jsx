@@ -33,6 +33,7 @@ import ISO4217 from "./Components/HomeNav/ISO4217";
 import GICS from "./Components/HomeNav/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
+import SSE from "./wstest/SSE";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -78,6 +79,10 @@ const router = createBrowserRouter([
     path: "/questionlibrary",
     element: <QuestionLibrary />,
   },
+  // {
+  //   path: "/test",
+  //   element: <SSE />,
+  // },
   {
     path: "/database",
     element: <Database />,
