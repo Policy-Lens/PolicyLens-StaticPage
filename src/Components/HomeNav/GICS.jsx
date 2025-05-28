@@ -332,16 +332,18 @@ const GICS = () => {
             ))}
           </select>
 
-          {(searchQuery||selectedIndustryGroup||selectedSector)&&<button
-            onClick={() => {
-              setSelectedSector("");
-              setSelectedIndustryGroup("");
-              setSearchQuery("");
-            }}
-            className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
-          >
-            Clear Filters
-          </button>}
+          {(searchQuery || selectedIndustryGroup || selectedSector) && (
+            <button
+              onClick={() => {
+                setSelectedSector("");
+                setSelectedIndustryGroup("");
+                setSearchQuery("");
+              }}
+              className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
 
         {isAdmin && (
@@ -441,7 +443,7 @@ const GICS = () => {
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {sector.sub_industry}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className="px-6 py-4 text-sm min-w-[600px] max-w-[600px] text-slate-600">
                       {sector.sub_industry_description}
                     </td>
                     {isAdmin && (

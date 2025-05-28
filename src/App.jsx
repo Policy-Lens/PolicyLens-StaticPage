@@ -34,6 +34,8 @@ import GICS from "./Components/HomeNav/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
 import SSE from "./wstest/SSE";
+import Regulations from "./Components/HomeNav/Regulations";
+import ISO27001 from "./Components/HomeNav/ISO27001";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -89,7 +91,15 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="iso4217" replace />,
+        element: <Navigate to="regulations" replace />,
+      },
+      {
+        path: "regulations",
+        element: <Regulations />,
+      },
+      {
+        path: "iso27001",
+        element: <ISO27001 />,
       },
       {
         path: "iso4217",
