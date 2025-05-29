@@ -270,7 +270,7 @@ const ISO27001 = () => {
             />
           </div>
 
-          <select
+          {/* <select
             value={selectedRegId}
             onChange={(e) => setSelectedRegId(e.target.value)}
             className="block w-40 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -281,7 +281,7 @@ const ISO27001 = () => {
                 {id}
               </option>
             ))}
-          </select>
+          </select> */}
 
           <select
             value={selectedParentId}
@@ -296,16 +296,17 @@ const ISO27001 = () => {
             ))}
           </select>
 
-          {(selectedRegId || selectedParentId) && (
+          {(selectedRegId || selectedParentId || searchQuery) && (
             <button
-              onClick={() => {
+            onClick={() => {
                 setSelectedRegId("");
                 setSelectedParentId("");
-              }}
-              className="px-3 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
-            >
-              Clear
-            </button>
+                setSearchQuery("");
+            }}
+            className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
+          >
+            Clear Filters
+          </button>
           )}
 
           {isAdmin && (
@@ -383,7 +384,9 @@ const ISO27001 = () => {
               </thead>
               <tbody className="bg-white divide-y divide-slate-200 overflow-y-auto">
                 {controls.map((control) => (
-                  <tr key={control.id} className="hover:bg-slate-50">                    <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
+                  <tr key={control.id} className="hover:bg-slate-50">
+                    {" "}
+                    <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
                       {control.reg_id}
                     </td>
                     <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
@@ -403,7 +406,8 @@ const ISO27001 = () => {
                     </td>
                     <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
                       {control.ctrl_name}
-                    </td>                    <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap">
+                    </td>{" "}
+                    <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap">
                       {control.ctrl_definition}
                     </td>
                     <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[1200px] max-w-[1200px] whitespace-pre-wrap">
