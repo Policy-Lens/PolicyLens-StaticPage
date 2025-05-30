@@ -468,28 +468,31 @@ function FinalizeContract() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-md p-10 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-10 w-10 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
+        <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-md border border-gray-100 p-6 flex flex-col items-center justify-center min-h-[300px]">
+          <div className="text-center max-w-md mx-auto">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 bg-blue-100 rounded-full animate-pulse"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-8 w-8 text-blue-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">
               No Contract Data
             </h3>
-            <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+            <p className="text-gray-600 mb-8 leading-relaxed">
               The contract section helps finalize the agreement between parties.
               Add your contract details to get started.
             </p>
@@ -497,21 +500,14 @@ function FinalizeContract() {
               onClick={handleAddData}
               type="primary"
               size="large"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all duration-200 font-medium h-10 px-6"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Add Contract
+              <span className="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                <span>Add Contract</span>
+              </span>
             </Button>
           </div>
         </div>

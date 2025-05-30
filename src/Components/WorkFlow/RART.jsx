@@ -129,24 +129,22 @@ const RART = () => {
     <div className="p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-3">
             <h1 className="text-2xl font-bold text-gray-800">
               Risk Assessment and Risk Treatment (RART)
             </h1>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium
-                ${stepStatus === "completed"
-                    ? "bg-green-100 text-green-800"
-                    : stepStatus === "in_progress"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-              >
-                {stepStatus.charAt(0).toUpperCase() +
-                  stepStatus.slice(1).replace("_", " ")}
-              </span>
-            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium
+              ${stepStatus === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : stepStatus === "in_progress"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
+            >
+              {stepStatus.charAt(0).toUpperCase() +
+                stepStatus.slice(1).replace("_", " ")}
+            </span>
           </div>
           <div className="flex space-x-3">
             {projectRole?.includes("consultant admin") && (
