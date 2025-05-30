@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { message, Popconfirm, Spin } from "antd";
 import { Search, Plus, Upload, X, Edit, Trash2 } from "lucide-react";
-import { apiRequest } from "../../utils/api";
-import { AuthContext } from "../../AuthContext";
+import { apiRequest } from "../../../utils/api";
+import { AuthContext } from "../../../AuthContext";
 import { LoadingOutlined } from "@ant-design/icons";
 
 const ISO27001 = () => {
@@ -298,15 +298,15 @@ const ISO27001 = () => {
 
           {(selectedRegId || selectedParentId || searchQuery) && (
             <button
-            onClick={() => {
+              onClick={() => {
                 setSelectedRegId("");
                 setSelectedParentId("");
                 setSearchQuery("");
-            }}
-            className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
-          >
-            Clear Filters
-          </button>
+              }}
+              className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
+            >
+              Clear Filters
+            </button>
           )}
 
           {isAdmin && (

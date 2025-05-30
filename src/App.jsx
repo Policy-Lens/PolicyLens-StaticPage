@@ -29,13 +29,13 @@ import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
-import ISO4217 from "./Components/HomeNav/ISO4217";
-import GICS from "./Components/HomeNav/GICS";
+import ISO4217 from "./Components/HomeNav/Database/ISO4217";
+import GICS from "./Components/HomeNav/Database/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
 import AdminDashboardRouter from "./Components/AdminView/AdminDashboardRouter";
-import Regulations from "./Components/HomeNav/Regulations";
-import ISO27001 from "./Components/HomeNav/ISO27001";
+import Regulations from "./Components/HomeNav/Database/Regulations";
+import ISO27001 from "./Components/HomeNav/Database/ISO27001";
 const router = createBrowserRouter([
   {
     path: "/",

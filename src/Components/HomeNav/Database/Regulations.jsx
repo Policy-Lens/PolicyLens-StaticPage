@@ -9,8 +9,8 @@ import {
   Trash2,
   ExternalLink,
 } from "lucide-react";
-import { apiRequest } from "../../utils/api";
-import { AuthContext } from "../../AuthContext";
+import { apiRequest } from "../../../utils/api";
+import { AuthContext } from "../../../AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Regulations = () => {

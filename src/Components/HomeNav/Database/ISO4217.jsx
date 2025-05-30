@@ -10,8 +10,8 @@ import {
   UploadCloud,
   Download,
 } from "lucide-react";
-import { AuthContext } from "../../AuthContext";
-import { apiRequest } from "../../utils/api";
+import { AuthContext } from "../../../AuthContext";
+import { apiRequest } from "../../../utils/api";
 import { message, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 
@@ -298,7 +298,9 @@ const ISO4217 = () => {
       <div className="flex-1 mx-6 mb-6 bg-white rounded-lg shadow overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Spin indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />} />
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />}
+            />
           </div>
         ) : (
           <div className="relative">

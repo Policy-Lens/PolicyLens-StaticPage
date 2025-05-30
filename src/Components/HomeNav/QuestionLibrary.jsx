@@ -45,6 +45,7 @@ const QuestionLibrary = () => {
     reference: "",
     question: "",
     type: activeTab, // Defaults to activeTab value ("clause" or "control")
+    pdca_cycle: "", // Only for clause questions
     type_description: "",
     standard: "ISO27001",
   });
@@ -242,7 +243,9 @@ const QuestionLibrary = () => {
         response = await apiRequest(
           "PATCH",
           `/api/new-questionnaire/library/${activeQuestion.id}/update/`,
-          newQuestion,
+          newQuestion.type === "clause"
+            ? newQuestion
+            : { ...newQuestion, pdca_cycle: "" },
           true
         );
       } else {
@@ -250,7 +253,9 @@ const QuestionLibrary = () => {
         response = await apiRequest(
           "POST",
           `/api/new-questionnaire/library/create/`,
-          newQuestion,
+          newQuestion.type === "clause"
+            ? newQuestion
+            : { ...newQuestion, pdca_cycle: "" },
           true
         );
       }
@@ -293,8 +298,9 @@ const QuestionLibrary = () => {
       setSelectedFile(e.target.files[0]);
     }
   };
-  const [partialErrorsWhileUploading,setPartialErrorsWhileUploading] = useState([])
-  const [partialErrors,setPartialErrors] = useState(false)
+  const [partialErrorsWhileUploading, setPartialErrorsWhileUploading] =
+    useState([]);
+  const [partialErrors, setPartialErrors] = useState(false);
   const handleFileUpload = async () => {
     if (!selectedFile) {
       message.warning("Please select a file to upload");
@@ -319,7 +325,11 @@ const QuestionLibrary = () => {
         true
       );
 
-      if (response.status === 200 || response.status === 201 || response.status===207) {
+      if (
+        response.status === 200 ||
+        response.status === 201 ||
+        response.status === 207
+      ) {
         message.success(
           `Successfully created ${response.data.questions_created} questions`
         );
@@ -676,12 +686,20 @@ const QuestionLibrary = () => {
                     <th className="p-4 text-left font-semibold text-slate-600">
                       Question
                     </th>
-                    <th className="w-44 p-4 text-left font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause" : "Control"}
+                    <th className="w-36 p-4 text-center font-semibold text-slate-600">
+                      {activeTab === "clause" ? "Clause no." : "Control no."}
                     </th>
-                    <th className="w-44 p-4 text-left font-semibold text-slate-600">
+                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                      {activeTab === "clause" ? "Clause name" : "Control name"}
+                    </th>
+                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
                       Standard
                     </th>
+                    {activeTab === "clause" && (
+                      <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                        PDCA Cycle
+                      </th>
+                    )}
                     <th className="w-28 p-4 text-left font-semibold text-slate-600">
                       Actions
                     </th>
@@ -707,16 +725,38 @@ const QuestionLibrary = () => {
                             {question.question}
                           </div>
                         </td>
-                        <td className="p-4 text-slate-600">
+                        <td className="p-4 text-slate-600 text-center">
+                          {question.type_description.split(" - ")[0]}
+                        </td>
+                        <td className="p-4 text-slate-600 text-center">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                            {question.type_description}
+                            {question.type_description.split(" - ")[1]}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-600">
+                        <td className="p-4 text-center">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
                             {question.standard}
                           </span>
                         </td>
+                        {activeTab === "clause" && (
+                          <td className="p-4 text-center">
+                            <span
+                              className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                question.pdca_cycle === "Plan"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : question.pdca_cycle === "Do"
+                                  ? "bg-pink-100 text-pink-700"
+                                  : question.pdca_cycle === "Check"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : question.pdca_cycle === "Act"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : "bg-slate-100 text-slate-700"
+                              }`}
+                            >
+                              {question.pdca_cycle}
+                            </span>
+                          </td>
+                        )}
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             <button
@@ -812,7 +852,14 @@ const QuestionLibrary = () => {
                   <select
                     name="type"
                     value={newQuestion.type}
-                    onChange={handleQuestionInputChange}
+                    onChange={(e) => {
+                      handleQuestionInputChange(e);
+                      setNewQuestion((prev) => ({
+                        ...prev,
+                        type_description: "",
+                        pdca_cycle: "",
+                      }));
+                    }}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
                     required
                   >
@@ -848,6 +895,27 @@ const QuestionLibrary = () => {
                             {type}
                           </option>
                         ))}
+                  </select>
+                </div>
+
+                {/* PDCA Cycle (only for clause questions) */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    PDCA Cycle
+                  </label>
+                  <select
+                    name="pdca_cycle"
+                    disabled={newQuestion.type !== "clause"}
+                    value={newQuestion.pdca_cycle}
+                    onChange={handleQuestionInputChange}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
+                    required={newQuestion.type === "clause"}
+                  >
+                    <option value="">Select a PDCA Cycle</option>
+                    <option value="Plan">Plan</option>
+                    <option value="Do">Do</option>
+                    <option value="Check">Check</option>
+                    <option value="Act">Act</option>
                   </select>
                 </div>
 
@@ -1054,7 +1122,9 @@ const QuestionLibrary = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-xl p-6 mx-4 h-80 overflow-y-auto">
             <div className="flex items-center text-red-600 mb-4">
               <AlertCircle size={24} className="mr-3" />
-              <h3 className="text-lg font-medium">Errors in Excel File While Uploading</h3>
+              <h3 className="text-lg font-medium">
+                Errors in Excel File While Uploading
+              </h3>
             </div>
             <p className="text-slate-600 mb-2">
               The following errors were found in the uploaded Excel file:
@@ -1064,7 +1134,9 @@ const QuestionLibrary = () => {
                 <li key={index} className="text-sm text-slate-500">
                   <div className="flex items-start flex-col p-2 border border-slate-200 rounded-lg mb-2">
                     <div className="font-bold text-size">Row {error.row} </div>
-                    <div className="bg-slate-200 text-red-600 p-1">{error.error}</div>
+                    <div className="bg-slate-200 text-red-600 p-1">
+                      {error.error}
+                    </div>
                   </div>
                 </li>
               ))}
@@ -1072,7 +1144,10 @@ const QuestionLibrary = () => {
             <div className="flex justify-end gap-3">
               <button
                 className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                onClick={()=>{setPartialErrors(false); setPartialErrorsWhileUploading([])}}
+                onClick={() => {
+                  setPartialErrors(false);
+                  setPartialErrorsWhileUploading([]);
+                }}
               >
                 Cancel
               </button>
