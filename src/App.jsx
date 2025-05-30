@@ -33,7 +33,7 @@ import ISO4217 from "./Components/HomeNav/ISO4217";
 import GICS from "./Components/HomeNav/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
-import SSE from "./wstest/SSE";
+import AdminDashboardRouter from "./Components/AdminView/AdminDashboardRouter";
 import Regulations from "./Components/HomeNav/Regulations";
 import ISO27001 from "./Components/HomeNav/ISO27001";
 const router = createBrowserRouter([
@@ -133,9 +133,10 @@ const router = createBrowserRouter([
         element: <CarouselHorizontalStepper />,
       },
       {
-        path: "admindashboard",
-        element: <AdminDashboard />,
+        path: "admindashboard/*",
+        element: <AdminDashboardRouter />,
       },
+
       {
         path: "internalauditprocess",
         element: <InternalAuditProcess />,
