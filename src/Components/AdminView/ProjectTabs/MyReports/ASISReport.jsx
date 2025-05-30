@@ -1114,6 +1114,46 @@ const ASISReport = () => {
           <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
             {controls.length}
           </div>
+
+          {/* Report Selection Dropdown */}
+          {reports.length > 0 && (
+            <div className="ml-4 relative">
+              <select
+                value={selectedReport ? selectedReport.id : ""}
+                onChange={(e) => handleReportChange(e.target.value)}
+                className="pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-48"
+                disabled={isLoading}
+              >
+                {!selectedReport && (
+                  <option value="" disabled>
+                    Select a report...
+                  </option>
+                )}
+                {reports.map((report) => (
+                  <option key={report.id} value={report.id}>
+                    {report.name}
+                  </option>
+                ))}
+                <option value="create">+ Create New Report</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}

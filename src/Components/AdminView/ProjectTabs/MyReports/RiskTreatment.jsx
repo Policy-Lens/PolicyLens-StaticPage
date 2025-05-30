@@ -899,6 +899,29 @@ const RiskTreatment = () => {
           <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
             {riskData.length}
           </div>
+
+          {/* Report Selection Dropdown */}
+          {sheets.length > 0 && (
+            <div className="ml-4 flex items-center">
+              <label className="text-sm font-medium text-gray-700 mr-2">
+                Report:
+              </label>
+              <select
+                value={selectedSheet ? selectedSheet.id : ""}
+                onChange={(e) => handleSheetChange(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white shadow-sm min-w-[200px]"
+              >
+                {sheets.map((sheet) => (
+                  <option key={sheet.id} value={sheet.id}>
+                    {sheet.name}
+                  </option>
+                ))}
+                <option value="create" className="font-semibold text-indigo-600">
+                  + Create New Report
+                </option>
+              </select>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {/* Action buttons section */}
