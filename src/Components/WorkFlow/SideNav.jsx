@@ -89,7 +89,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
       <div className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 py-4 flex items-center justify-between px-4">
         <div
           className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/home/dashboard")}
         >
           <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-md text-white">
             <Home

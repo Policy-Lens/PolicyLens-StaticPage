@@ -36,6 +36,10 @@ import SupportChat from "./wstest/SupportChat";
 import AdminDashboardRouter from "./Components/AdminView/AdminDashboardRouter";
 import Regulations from "./Components/HomeNav/Database/Regulations";
 import ISO27001 from "./Components/HomeNav/Database/ISO27001";
+import HomeLayout from "./Components/HomeNav/HomeLayout";
+import { NotificationProvider } from "./Context/NotificationContext";
+import NotificationToast from "./Components/Common/NotificationToast";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -50,70 +54,72 @@ const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: "/Dashboard",
-    element: <DashboardPage />,
-  },
-  {
-    path: "/auditors",
-    element: <AuditorsPage />,
-  },
-  {
-    path: "/company",
-    element: <CompaniesPage />,
-  },
-  {
-    path: "/dashboard",
-    element: <DashboardPage />,
-  },
-  {
-    path: "/documents",
-    element: <DocumentsPage />,
-  },
-  {
-    path: "/messaging",
-    element: <MessagingPage />,
-  },
-  {
-    path: "/settings",
-    element: <SettingsPage />,
-  },
-  {
-    path: "/questionlibrary",
-    element: <QuestionLibrary />,
-  },
-  // {
-  //   path: "/test",
-  //   element: <SSE />,
-  // },
-  {
-    path: "/database",
-    element: <Database />,
+    path: "home",
+    element: <HomeLayout />,
     children: [
       {
-        index: true,
-        element: <Navigate to="regulations" replace />,
+        path: "Dashboard",
+        element: <DashboardPage />,
       },
       {
-        path: "regulations",
-        element: <Regulations />,
+        path: "auditors",
+        element: <AuditorsPage />,
       },
       {
-        path: "iso27001",
-        element: <ISO27001 />,
+        path: "company",
+        element: <CompaniesPage />,
       },
       {
-        path: "iso4217",
-        element: <ISO4217 />,
+        path: "dashboard",
+        element: <DashboardPage />,
       },
       {
-        path: "gics",
-        element: <GICS />,
+        path: "documents",
+        element: <DocumentsPage />,
+      },
+      {
+        path: "messaging",
+        element: <MessagingPage />,
+      },
+      {
+        path: "settings",
+        element: <SettingsPage />,
+      },
+      {
+        path: "questionlibrary",
+        element: <QuestionLibrary />,
+      },
+      {
+        path: "database",
+        element: <Database />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="regulations" replace />,
+          },
+          {
+            path: "regulations",
+            element: <Regulations />,
+          },
+          {
+            path: "iso27001",
+            element: <ISO27001 />,
+          },
+          {
+            path: "iso4217",
+            element: <ISO4217 />,
+          },
+          {
+            path: "gics",
+            element: <GICS />,
+          },
+        ],
+      },
+      {
+        path: "projects",
+        element: <Projects />,
       },
     ],
-  },
-  {
-    path: "/projects",
-    element: <Projects />,
   },
   {
     path: "/ques",
@@ -128,7 +134,6 @@ const router = createBrowserRouter([
     element: <AdminLayout />,
     children: [
       {
-        // path: "plc",
         index: true,
         element: <CarouselHorizontalStepper />,
       },
@@ -136,7 +141,6 @@ const router = createBrowserRouter([
         path: "admindashboard/*",
         element: <AdminDashboardRouter />,
       },
-
       {
         path: "internalauditprocess",
         element: <InternalAuditProcess />,
@@ -188,10 +192,12 @@ const router = createBrowserRouter([
 const AppLayout = () => {
   return (
     <AuthProvider>
-      <ProjectProvider>
-        {/* Wrap the entire app with AuthProvider */}
-        <RouterProvider router={router} />
-      </ProjectProvider>
+      <NotificationProvider>
+        <ProjectProvider>
+          <RouterProvider router={router} />
+          <NotificationToast />
+        </ProjectProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 };

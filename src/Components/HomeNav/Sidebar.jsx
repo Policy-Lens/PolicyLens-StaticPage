@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext } from "react";
 import {
   Home,
   FolderKanban,
@@ -16,87 +16,87 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "antd";
-import { AuthContext } from "../../AuthContext"; // Import AuthContext
+import { AuthContext } from "../../AuthContext";
+import { useNotifications } from "../../Context/NotificationContext";
 
 const Sidebar = ({ onToggle }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { user, handleLogout } = useContext(AuthContext); // Get user role and logout function
+  const { user, handleLogout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
+
   const menuItems = [
     {
       key: "dashboard",
       icon: <Home size={20} />,
       label: "Dashboard",
-      path: "/dashboard",
+      path: "/home/dashboard",
     },
     {
       key: "projects",
       icon: <FolderKanban size={20} />,
       label: "Projects",
-      path: "/projects",
+      path: "/home/projects",
     },
     {
       key: "company",
       icon: <Building size={20} />,
       label: "Company",
-      path: "/company",
+      path: "/home/company",
     },
     {
       key: "auditors",
       icon: <Users size={20} />,
       label: "Auditors",
-      path: "/auditors",
+      path: "/home/auditors",
     },
     {
       key: "documents",
       icon: <FileText size={20} />,
       label: "Documents",
-      path: "/documents",
+      path: "/home/documents",
     },
     {
       key: "messages",
-      icon: <MessageSquare size={20} />,
+      icon: (
+        <div className="relative">
+          <MessageSquare size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+      ),
       label: "Messages",
-      path: "/messaging",
+      path: "/home/messaging",
     },
     {
       key: "settings",
       icon: <Settings size={20} />,
       label: "Settings",
-      path: "/settings",
+      path: "/home/settings",
     },
     {
       key: "database",
       icon: <Database size={20} />,
       label: "Database",
-      path: "/database",
+      path: "/home/database",
     },
   ];
+
   const policyLib = {
     key: "questionlibrary",
     icon: <Library size={20} />,
     label: "Question Library",
-    path: "/questionlibrary",
+    path: "/home/questionlibrary",
   };
-  const { checkLogin } = useContext(AuthContext);
+
   const handleToggle = () => {
     setCollapsed(!collapsed);
     onToggle(!collapsed);
   };
-  useEffect(() => {
-    // if (!loading && !user) {
-    //     navigate("/"); // Redirect to login if not authenticated
-    // }
-    const verifyLogin = async () => {
-      const isLoggedIn = await checkLogin();
-      if (!isLoggedIn) {
-        navigate("/"); // Redirect to the dashboard if logged in
-      }
-    };
-
-    verifyLogin();
-  }, []);
 
   return (
     <div style={{ display: "flex" }}>
@@ -113,7 +113,7 @@ const Sidebar = ({ onToggle }) => {
       >
         {/* Sidebar Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-          <Link to="/dashboard" className="flex items-center gap-4">
+          <Link to="/home/dashboard" className="flex items-center gap-4">
             <span className="text-xl text-blue-600">
               <Home size={22} />
             </span>
@@ -160,7 +160,7 @@ const Sidebar = ({ onToggle }) => {
               menuItem
             );
           })}
-          { user?.role === 'admin'&&
+          {user?.role === "admin" && (
             <li
               key={policyLib.key}
               className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
@@ -178,7 +178,7 @@ const Sidebar = ({ onToggle }) => {
                 )}
               </Link>
             </li>
-          }
+          )}
         </ul>
 
         {/* User Profile & Logout */}

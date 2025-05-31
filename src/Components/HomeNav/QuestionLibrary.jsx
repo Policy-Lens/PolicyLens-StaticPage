@@ -422,375 +422,350 @@ const QuestionLibrary = () => {
   // If not admin, show access denied message
   if (!isAdmin) {
     return (
-      <div className="flex">
-        <Sidebar onToggle={setIsSidebarCollapsed} />
-        <div
-          style={{ marginLeft: isSidebarCollapsed ? "80px" : "240px" }}
-          className="flex flex-col h-screen items-center justify-center bg-slate-50"
-        >
-          <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-red-500" />
-              </div>
+      <div className="flex flex-col h-screen items-center justify-center bg-slate-50">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Access Denied
-            </h1>
-            <p className="text-gray-600 mb-6">
-              You don't have permission to access the Question Library. This
-              area is restricted to administrators only.
-            </p>
-            <a
-              href="/dashboard"
-              className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              Return to Dashboard
-            </a>
           </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 mb-6">
+            You don't have permission to access the Question Library. This area
+            is restricted to administrators only.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            Return to Dashboard
+          </a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex ">
-      {/* Sidebar */}
-      <Sidebar onToggle={setIsSidebarCollapsed} />
-      {/* Main Content Area */}
-      <div
-        style={{ marginLeft: isSidebarCollapsed ? "80px" : "240px" }}
-        className="flex flex-1 overflow-hidden shadow-xl rounded-lg h-screen"
-      >
-        {/* Question List */}
-        <div className="flex flex-col w-full bg-white transition-width duration-300 ease-in-out">
-          {/* Top Bar: Header and Actions */}
-          <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
-            {/* Header and Actions */}
-            <div className="flex items-center p-4">
-              {/* Header */}
-              <h2 className="text-lg font-semibold text-slate-700">
-                Question Library
-              </h2>
+    <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg h-screen">
+      {/* Question List */}
+      <div className="flex flex-col w-full bg-white transition-width duration-300 ease-in-out">
+        {/* Top Bar: Header and Actions */}
+        <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
+          {/* Header and Actions */}
+          <div className="flex items-center p-4">
+            {/* Header */}
+            <h2 className="text-lg font-semibold text-slate-700">
+              Question Library
+            </h2>
 
-              {/* Search, Filter, and Actions */}
-              <div className="flex ml-auto gap-2">
-                {/* Search Input */}
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search questions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
-                  />
-                </div>
-
-                {/* Filter Button */}
-                <div className="relative">
-                  <button
-                    className={`px-4 py-2.5 border ${
-                      filterDropdownOpen
-                        ? "border-indigo-300 ring-2 ring-indigo-300"
-                        : "border-slate-200"
-                    } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
-                    onClick={toggleFilterDropdown}
-                  >
-                    <Filter
-                      size={16}
-                      className={`mr-2 ${
-                        Object.values(filters).some((f) => f !== "") ||
-                        searchQuery
-                          ? "text-indigo-500"
-                          : "text-slate-400"
-                      }`}
-                    />
-                    <span>Filter</span>
-                    {(filters.type || searchQuery) && (
-                      <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
-                        {
-                          [
-                            filters.type && "Type",
-                            searchQuery && "Search",
-                          ].filter(Boolean).length
-                        }{" "}
-                        Active
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Filter Dropdown Content */}
-                  {filterDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-[calc(100vh-120px)] flex flex-col">
-                      {/* Header */}
-                      <div className="p-3 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 flex justify-between items-center sticky top-0 z-10">
-                        <span>Filter Options</span>
-                      </div>
-
-                      {/* Scrollable Filters */}
-                      <div className="overflow-y-auto">
-                        {/* Type Filter */}
-                        <div className="p-3 border-b border-slate-200">
-                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
-                            <span>
-                              {activeTab === "clause" ? "Clause" : "Control"}{" "}
-                              Type
-                            </span>
-                            {filters.type && (
-                              <button
-                                onClick={() => handleFilterChange("type", "")}
-                                className="text-xs text-slate-500 hover:text-slate-700"
-                              >
-                                Clear
-                              </button>
-                            )}
-                          </h4>
-                          <div className="space-y-1">
-                            {typeChoices.map((type) => (
-                              <button
-                                key={type}
-                                onClick={() => handleFilterChange("type", type)}
-                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                  filters.type === type
-                                    ? "bg-indigo-50 text-indigo-700 font-medium"
-                                    : "text-slate-600 hover:bg-slate-50"
-                                }`}
-                              >
-                                {type}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Active Filters Summary */}
-                        {(filters.type || searchQuery) && (
-                          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
-                            <h4 className="text-xs font-medium text-slate-600 mb-1">
-                              Active Filters:
-                            </h4>
-                            <div className="flex flex-wrap gap-1">
-                              {filters.type && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                  {activeTab === "clause"
-                                    ? "Clause"
-                                    : "Control"}
-                                  : {filters.type}
-                                  <button
-                                    onClick={() =>
-                                      handleFilterChange("type", "")
-                                    }
-                                    className="ml-1 hover:text-indigo-900"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </span>
-                              )}
-                              {searchQuery && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                  Search: {searchQuery}
-                                  <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="ml-1 hover:text-indigo-900"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Footer Actions */}
-                      <div className="flex p-3 border-t border-slate-200 bg-slate-50 gap-2 sticky bottom-0 z-10">
-                        <button
-                          onClick={clearFilters}
-                          className="flex-1 py-2 text-center bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-                        >
-                          Clear All
-                        </button>
-                        <button
-                          onClick={() => setFilterDropdownOpen(false)}
-                          className="flex-1 py-2 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-                        >
-                          Apply Filters
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Upload Button */}
-                <button
-                  className="px-4 py-2.5 border border-slate-200 rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm"
-                  onClick={openUploadModal}
-                >
-                  <UploadCloud size={16} className="mr-2 text-slate-400" />
-                  <span>Upload Excel</span>
-                </button>
-
-                {/* Add Question Button */}
-                <button
-                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
-                  onClick={openAddModal}
-                >
-                  <Plus size={16} className="mr-1.5" />
-                  <span>Add Question</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex px-4 border-t border-slate-200">
-              <button
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "clause"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
-                onClick={() => setActiveTab("clause")}
-              >
-                Clause Questions
-              </button>
-              <button
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "control"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
-                onClick={() => setActiveTab("control")}
-              >
-                Control Questions
-              </button>
-            </div>
-          </div>
-
-          {/* Questions Table */}
-          <div className="flex-1 overflow-auto">
-            {isQuestionsLoading ? (
-              <div className="flex flex-col items-center justify-center h-64">
-                <Spin
-                  indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />}
-                  tip="Loading questions..."
-                  className="text-center"
+            {/* Search, Filter, and Actions */}
+            <div className="flex ml-auto gap-2">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search questions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
                 />
               </div>
-            ) : (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="w-32 p-4 text-left font-semibold text-slate-600">
-                      Reference
-                    </th>
-                    <th className="p-4 text-left font-semibold text-slate-600">
-                      Question
-                    </th>
-                    <th className="w-36 p-4 text-center font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause no." : "Control no."}
-                    </th>
-                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause name" : "Control name"}
-                    </th>
-                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                      Standard
-                    </th>
-                    {activeTab === "clause" && (
-                      <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                        PDCA Cycle
-                      </th>
-                    )}
-                    <th className="w-28 p-4 text-left font-semibold text-slate-600">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {questions.length > 0 ? (
-                    questions.map((question) => (
-                      <tr
-                        key={question.id}
-                        className="hover:bg-indigo-50/50 transition-colors"
-                      >
-                        <td className="p-4">
-                          <span className="text-indigo-600 font-semibold">
-                            {question.reference}
+
+              {/* Filter Button */}
+              <div className="relative">
+                <button
+                  className={`px-4 py-2.5 border ${
+                    filterDropdownOpen
+                      ? "border-indigo-300 ring-2 ring-indigo-300"
+                      : "border-slate-200"
+                  } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
+                  onClick={toggleFilterDropdown}
+                >
+                  <Filter
+                    size={16}
+                    className={`mr-2 ${
+                      Object.values(filters).some((f) => f !== "") ||
+                      searchQuery
+                        ? "text-indigo-500"
+                        : "text-slate-400"
+                    }`}
+                  />
+                  <span>Filter</span>
+                  {(filters.type || searchQuery) && (
+                    <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
+                      {
+                        [
+                          filters.type && "Type",
+                          searchQuery && "Search",
+                        ].filter(Boolean).length
+                      }{" "}
+                      Active
+                    </span>
+                  )}
+                </button>
+
+                {/* Filter Dropdown Content */}
+                {filterDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-[calc(100vh-120px)] flex flex-col">
+                    {/* Header */}
+                    <div className="p-3 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 flex justify-between items-center sticky top-0 z-10">
+                      <span>Filter Options</span>
+                    </div>
+
+                    {/* Scrollable Filters */}
+                    <div className="overflow-y-auto">
+                      {/* Type Filter */}
+                      <div className="p-3 border-b border-slate-200">
+                        <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
+                          <span>
+                            {activeTab === "clause" ? "Clause" : "Control"} Type
                           </span>
-                        </td>
-                        <td className="p-4 text-slate-700">
-                          <div
-                            className="line-clamp-2"
-                            title={question.question}
-                          >
-                            {question.question}
-                          </div>
-                        </td>
-                        <td className="p-4 text-slate-600 text-center">
-                          {question.type_description.split(" - ")[0]}
-                        </td>
-                        <td className="p-4 text-slate-600 text-center">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                            {question.type_description.split(" - ")[1]}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
-                            {question.standard}
-                          </span>
-                        </td>
-                        {activeTab === "clause" && (
-                          <td className="p-4 text-center">
-                            <span
-                              className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                question.pdca_cycle === "Plan"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : question.pdca_cycle === "Do"
-                                  ? "bg-pink-100 text-pink-700"
-                                  : question.pdca_cycle === "Check"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : question.pdca_cycle === "Act"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-slate-100 text-slate-700"
+                          {filters.type && (
+                            <button
+                              onClick={() => handleFilterChange("type", "")}
+                              className="text-xs text-slate-500 hover:text-slate-700"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </h4>
+                        <div className="space-y-1">
+                          {typeChoices.map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => handleFilterChange("type", type)}
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
+                                filters.type === type
+                                  ? "bg-indigo-50 text-indigo-700 font-medium"
+                                  : "text-slate-600 hover:bg-slate-50"
                               }`}
                             >
-                              {question.pdca_cycle}
-                            </span>
-                          </td>
-                        )}
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              className="p-1.5 text-slate-500 hover:text-indigo-600 transition-colors hover:bg-slate-100 rounded-full"
-                              onClick={() => openEditModal(question)}
-                              title="Edit Question"
-                            >
-                              <Edit size={16} />
+                              {type}
                             </button>
-                            <button
-                              className="p-1.5 text-slate-500 hover:text-red-600 transition-colors hover:bg-slate-100 rounded-full"
-                              onClick={() => confirmDeleteQuestion(question)}
-                              title="Delete Question"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Active Filters Summary */}
+                      {(filters.type || searchQuery) && (
+                        <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                          <h4 className="text-xs font-medium text-slate-600 mb-1">
+                            Active Filters:
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {filters.type && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                {activeTab === "clause" ? "Clause" : "Control"}:{" "}
+                                {filters.type}
+                                <button
+                                  onClick={() => handleFilterChange("type", "")}
+                                  className="ml-1 hover:text-indigo-900"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            )}
+                            {searchQuery && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                Search: {searchQuery}
+                                <button
+                                  onClick={() => setSearchQuery("")}
+                                  className="ml-1 hover:text-indigo-900"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center p-10 text-slate-500"
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="flex p-3 border-t border-slate-200 bg-slate-50 gap-2 sticky bottom-0 z-10">
+                      <button
+                        onClick={clearFilters}
+                        className="flex-1 py-2 text-center bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
                       >
-                        No questions found matching your criteria.
+                        Clear All
+                      </button>
+                      <button
+                        onClick={() => setFilterDropdownOpen(false)}
+                        className="flex-1 py-2 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                      >
+                        Apply Filters
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Button */}
+              <button
+                className="px-4 py-2.5 border border-slate-200 rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm"
+                onClick={openUploadModal}
+              >
+                <UploadCloud size={16} className="mr-2 text-slate-400" />
+                <span>Upload Excel</span>
+              </button>
+
+              {/* Add Question Button */}
+              <button
+                className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
+                onClick={openAddModal}
+              >
+                <Plus size={16} className="mr-1.5" />
+                <span>Add Question</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex px-4 border-t border-slate-200">
+            <button
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "clause"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => setActiveTab("clause")}
+            >
+              Clause Questions
+            </button>
+            <button
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "control"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => setActiveTab("control")}
+            >
+              Control Questions
+            </button>
+          </div>
+        </div>
+
+        {/* Questions Table */}
+        <div className="flex-1 overflow-auto">
+          {isQuestionsLoading ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <Spin
+                indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />}
+                tip="Loading questions..."
+                className="text-center"
+              />
+            </div>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="w-32 p-4 text-left font-semibold text-slate-600">
+                    Reference
+                  </th>
+                  <th className="p-4 text-left font-semibold text-slate-600">
+                    Question
+                  </th>
+                  <th className="w-36 p-4 text-center font-semibold text-slate-600">
+                    {activeTab === "clause" ? "Clause no." : "Control no."}
+                  </th>
+                  <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                    {activeTab === "clause" ? "Clause name" : "Control name"}
+                  </th>
+                  <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                    Standard
+                  </th>
+                  {activeTab === "clause" && (
+                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                      PDCA Cycle
+                    </th>
+                  )}
+                  <th className="w-28 p-4 text-left font-semibold text-slate-600">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {questions.length > 0 ? (
+                  questions.map((question) => (
+                    <tr
+                      key={question.id}
+                      className="hover:bg-indigo-50/50 transition-colors"
+                    >
+                      <td className="p-4">
+                        <span className="text-indigo-600 font-semibold">
+                          {question.reference}
+                        </span>
+                      </td>
+                      <td className="p-4 text-slate-700">
+                        <div className="line-clamp-2" title={question.question}>
+                          {question.question}
+                        </div>
+                      </td>
+                      <td className="p-4 text-slate-600 text-center">
+                        {question.type_description.split(" - ")[0]}
+                      </td>
+                      <td className="p-4 text-slate-600 text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                          {question.type_description.split(" - ")[1]}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
+                          {question.standard}
+                        </span>
+                      </td>
+                      {activeTab === "clause" && (
+                        <td className="p-4 text-center">
+                          <span
+                            className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              question.pdca_cycle === "Plan"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : question.pdca_cycle === "Do"
+                                ? "bg-pink-100 text-pink-700"
+                                : question.pdca_cycle === "Check"
+                                ? "bg-orange-100 text-orange-700"
+                                : question.pdca_cycle === "Act"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {question.pdca_cycle}
+                          </span>
+                        </td>
+                      )}
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 transition-colors hover:bg-slate-100 rounded-full"
+                            onClick={() => openEditModal(question)}
+                            title="Edit Question"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="p-1.5 text-slate-500 hover:text-red-600 transition-colors hover:bg-slate-100 rounded-full"
+                            onClick={() => confirmDeleteQuestion(question)}
+                            title="Delete Question"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center p-10 text-slate-500">
+                      No questions found matching your criteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

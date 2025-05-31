@@ -35,7 +35,7 @@ const LoginPage = () => {
     const verifyLogin = async () => {
       const isLoggedIn = await checkLogin();
       if (isLoggedIn) {
-        navigate("/dashboard"); // Redirect to the dashboard if logged in
+        navigate("/home/dashboard"); // Redirect to the dashboard if logged in
       }
     };
 
@@ -88,7 +88,7 @@ const LoginPage = () => {
 
         // Navigate after successful login
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("/home/dashboard");
         }, 1500);
       }
     } catch (error) {
