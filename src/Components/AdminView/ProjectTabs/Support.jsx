@@ -987,7 +987,7 @@ const Support = () => {
                           <td className="p-4">
                             <div className="flex items-center justify-center space-x-2">
                               {/* Chat icon - only for consultant admin, assigned-tickets, or my-tickets */}
-                              {(projectRole === "consultant admin" ||
+                              {(projectRole === "consultant admin" || ticket.assigned_to.includes(user.id) || ticket.created_by === user.id ||
                                 activeTab === "assigned-tickets" ||
                                 activeTab === "my-tickets") && (
                                 <button
