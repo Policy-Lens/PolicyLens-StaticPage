@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
         // } else {
         //     setUser(null);
         // }
-
       } catch (error) {
         console.error("Auth check failed:", error);
         setUser(null);
@@ -33,7 +32,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // const role = Cookies.get("role"); // Read role from cookies
     // if (role) {
-    //   setUser({ role }); 
+    //   setUser({ role });
     // }
     // checkLogin()
   }, []);
@@ -61,7 +60,7 @@ export const AuthProvider = ({ children }) => {
         );
         if (res.status == 200) {
           // console.log(res)
-          setUser(res.data.user)
+          setUser(res.data.user);
         }
         // console.log("API Response:", res); // Debugging
 
@@ -85,14 +84,16 @@ export const AuthProvider = ({ children }) => {
   const login = async (data) => {
     console.log(data);
     const res = await apiRequest("POST", "/api/auth/login/", data);
-    return res
+    return res;
   };
   // const signup = async (data)=>{
   //     return await apiRequest('POST','/api/auth/login/',data)
   // }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, checkLogin, handleLogout }}>
+    <AuthContext.Provider
+      value={{ user, setUser, loading, login, checkLogin, handleLogout }}
+    >
       {children}
     </AuthContext.Provider>
   );

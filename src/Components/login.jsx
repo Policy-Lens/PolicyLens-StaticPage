@@ -4,8 +4,9 @@ import axios from "axios";
 import Cookies from "js-cookie";
 // import {checkLogin} from '../AuthContext'
 import { AuthContext } from "../AuthContext";
-import { apiRequest } from "../utils/api";
+import { apiRequest, BASE_URL_WS } from "../utils/api";
 import { Eye, EyeOff } from "lucide-react";
+import { useNotifications } from "../Context/NotificationContext";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ const LoginPage = () => {
     password: "",
   });
   const { checkLogin, setUser } = useContext(AuthContext);
+  const { connectWebSocket, cleanupWebSocket } = useNotifications();
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
   const [isEyeOpen, setIsEyeOpen] = useState(false);
@@ -36,12 +38,15 @@ const LoginPage = () => {
       const isLoggedIn = await checkLogin();
       if (isLoggedIn) {
         navigate("/home/dashboard"); // Redirect to the dashboard if logged in
+      } else {
+        // Cleanup WebSocket if no valid token found
+        cleanupWebSocket();
       }
     };
 
     verifyLogin();
     // authCall();
-  }, []);
+  }, [checkLogin, navigate, cleanupWebSocket]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,15 +66,15 @@ const LoginPage = () => {
     if (!validate()) return;
 
     try {
-      // Set loading state to true right away when button is clicked
       setIsLoading(true);
 
       const res = await apiRequest("POST", "/api/auth/login/", {
         email: formData.username,
         password: formData.password,
       });
+
       if (res.status == 200) {
-        console.log(res);
+        // Set cookies
         Cookies.set("accessToken", res.data.access, {
           secure: true,
           sameSite: "Strict",
@@ -82,7 +87,11 @@ const LoginPage = () => {
           secure: true,
           sameSite: "Strict",
         });
+
+        // Set user and initialize WebSocket
         setUser(res.data.user);
+        connectWebSocket(); // Initialize WebSocket after successful login
+
         setMessage("Login successful!");
         setErrors({});
 
@@ -94,7 +103,6 @@ const LoginPage = () => {
     } catch (error) {
       console.error("Error during login:", error.error);
       setErrors({ server: error.error });
-      // Make sure to set loading to false if there's an error
       setIsLoading(false);
     }
   };
@@ -107,16 +115,38 @@ const LoginPage = () => {
 
         {message && (
           <div className="mt-4 bg-green-50 border border-green-200 rounded-md p-3 flex items-center animate-fade-in transform transition duration-300 ease-in-out">
-            <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            <svg
+              className="w-5 h-5 text-green-500 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 13l4 4L19 7"
+              ></path>
             </svg>
             <p className="text-green-700">{message}</p>
           </div>
         )}
         {errors.server && (
           <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3 flex items-center animate-fade-in transform transition duration-300 ease-in-out">
-            <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              className="w-5 h-5 text-red-500 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
             </svg>
             <p className="text-red-700">{errors.server}</p>
           </div>
@@ -175,9 +205,25 @@ const LoginPage = () => {
           >
             {isLoading ? (
               <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Logging in...
               </>

@@ -42,12 +42,16 @@ export const NotificationProvider = ({ children }) => {
     }
 
     // Close existing connection if any
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      console.log("Closing existing connection");
-      wsRef.current.close();
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        console.log("Closing existing connection");
+        wsRef.current.close(1000, "Reconnecting");
+      }
+      wsRef.current = null;
     }
 
     try {
+      console.log("Initializing WebSocket connection...");
       const ws = new WebSocket(
         `${BASE_URL_WS}/ws/notifications/?token=${accessToken}`
       );
@@ -66,7 +70,6 @@ export const NotificationProvider = ({ children }) => {
               handleNewNotification(data.data);
               break;
             case "notification_count":
-              // Update unread count from server
               setUnreadCount(data.count);
               break;
             default:
@@ -114,6 +117,30 @@ export const NotificationProvider = ({ children }) => {
     }
   }, []);
 
+  // Cleanup function
+  const cleanupWebSocket = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (wsRef.current) {
+      wsRef.current.close(1000, "Component unmounting");
+      wsRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+    setIsConnected(false);
+  }, []);
+
+  // Initialize WebSocket when component mounts
+  useEffect(() => {
+    const accessToken = Cookies.get("accessToken");
+    if (accessToken) {
+      connectWebSocket();
+    }
+
+    return cleanupWebSocket;
+  }, [connectWebSocket, cleanupWebSocket]);
+
   // Handle new notification
   const handleNewNotification = useCallback((notificationData) => {
     const newNotification = {
@@ -157,32 +184,16 @@ export const NotificationProvider = ({ children }) => {
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
   }, []);
 
-  // Connect WebSocket when component mounts
-  useEffect(() => {
-    connectWebSocket();
-
-    // Cleanup function
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (wsRef.current) {
-        wsRef.current.close(1000, "Component unmounting");
-        wsRef.current = null;
-      }
-      reconnectAttemptsRef.current = 0;
-    };
-  }, [connectWebSocket]);
-
   return (
     <NotificationContext.Provider
       value={{
         notifications,
         unreadCount,
+        isConnected,
+        connectWebSocket,
+        cleanupWebSocket,
         markNotificationsAsRead,
         removeNotification,
-        isConnected,
       }}
     >
       {children}
@@ -190,6 +201,14 @@ export const NotificationProvider = ({ children }) => {
   );
 };
 
-export const useNotifications = () => useContext(NotificationContext);
+export const useNotifications = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error(
+      "useNotifications must be used within a NotificationProvider"
+    );
+  }
+  return context;
+};
 
 export default NotificationContext;
