@@ -48,6 +48,8 @@ function ImplementPolicies() {
   const [stepId, setStepId] = useState(null);
   const [members, setMembers] = useState([]);
   const [taskAssignment, setTaskAssignment] = useState(null);
+  const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
+  const [process, setProcess] = useState("core");
 
   // File upload handlers
   const handleUploadChange = ({ fileList: newFileList }) => {
@@ -115,6 +117,14 @@ function ImplementPolicies() {
     }
     setFileList([]);
     setIsModalVisible(true);
+  };
+
+  const handleAssignTask = () => {
+    setIsAssignTaskVisible(true);
+  };
+
+  const handleAssignTaskClose = () => {
+    setIsAssignTaskVisible(false);
   };
 
   // Submit feedback data
@@ -218,16 +228,18 @@ function ImplementPolicies() {
 
   // Get step ID for this component (step 10)
   const get_step_id = async () => {
-    const step_id = await getStepId(projectid, 10);
-    if (step_id) {
-      setStepId(step_id);
-      const response = await getStepData(step_id);
-      if (response && response.status) {
-        setStepStatus(response.status);
-      }
-      await get_step_data(step_id);
-      await checkAssignedUser(step_id);
-      await getTaskAssignment(step_id);
+    const response = await getStepId(projectid, 10);
+    if (response) {
+      console.log("API Response (ImplementPolicies):", response);
+      console.log("Associated ISO Clause (ImplementPolicies):", response.associated_iso_clause);
+
+      setStepId(response.plc_step_id);
+      setStepStatus(response.status);
+      setAssociatedIsoClause(response.associated_iso_clause);
+      setProcess(response.process || "core");
+      await get_step_data(response.plc_step_id);
+      await checkAssignedUser(response.plc_step_id);
+      await getTaskAssignment(response.plc_step_id);
     }
   };
 
@@ -249,6 +261,27 @@ function ImplementPolicies() {
     } catch (error) {
       console.error("Error updating status:", error);
       message.error("Failed to update status");
+    }
+  };
+
+  const updateProcess = async (newProcess) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/plc/plc_step/${stepId}/update/`,
+        {
+          core_or_noncore: newProcess,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setProcess(newProcess);
+        message.success("Process updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating process:", error);
+      message.error("Failed to update process");
     }
   };
 
@@ -279,58 +312,76 @@ function ImplementPolicies() {
   return (
     <div className="bg-gray-50 min-h-full p-6">
       {/* Simple header with no background */}
-      <div className="mb-8 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Implement Policies
-          </h2>
-          {/* Status badge */}
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${stepStatus === "completed"
-            ? "bg-green-100 text-green-800"
-            : stepStatus === "in_progress"
-              ? "bg-blue-100 text-blue-800"
-              : "bg-yellow-100 text-yellow-800"
-            }`}>
-            {stepStatus === "completed"
-              ? "Completed"
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          Implement Policies
+        </h2>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            {/* Status badge */}
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${stepStatus === "completed"
+              ? "bg-green-100 text-green-800"
               : stepStatus === "in_progress"
-                ? "In Progress"
-                : "Pending"}
-          </span>
-        </div>
-        <div className="flex space-x-3">
-          {projectRole.includes("consultant admin") && (
-            <Button
-              type="default"
-              onClick={() => {
-                get_members();
-                handleAssignTask();
-              }}
-              className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
-            >
-              Assign Task
-            </Button>
-          )}
-          {(projectRole.includes("consultant admin") || isAssignedUser) && (
-            <Select
-              value={stepStatus}
-              onChange={updateStepStatus}
-              style={{ width: 140 }}
-            >
-              <Option value="pending">Pending</Option>
-              <Option value="in_progress">In Progress</Option>
-              <Option value="completed">Completed</Option>
-            </Select>
-          )}
-          {(projectRole.includes("consultant admin") || isAssignedUser) && (
-            <Button
-              type="primary"
-              onClick={handleAddData}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {implementPoliciesData.length > 0 ? "Update Data" : "Add Data"}
-            </Button>
-          )}
+                ? "bg-blue-100 text-blue-800"
+                : "bg-yellow-100 text-yellow-800"
+              }`}>
+              {stepStatus === "completed"
+                ? "Completed"
+                : stepStatus === "in_progress"
+                  ? "In Progress"
+                  : "Pending"}
+            </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              ISO: {associatedIsoClause || "No Clause"}
+            </span>
+          </div>
+          <div className="flex space-x-3">
+            {projectRole.includes("consultant admin") && (
+              <Button
+                type="default"
+                onClick={() => {
+                  get_members();
+                  handleAssignTask();
+                }}
+                className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
+              >
+                Assign Task
+              </Button>
+            )}
+            {projectRole.includes("consultant admin") && (
+              <Select
+                value={process}
+                onChange={updateProcess}
+                style={{ width: 120 }}
+              >
+                <Option value="core">Core</Option>
+                <Option value="non core">Non Core</Option>
+              </Select>
+            )}
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+              <Select
+                value={stepStatus}
+                onChange={updateStepStatus}
+                style={{ width: 140 }}
+              >
+                <Option value="pending">Pending</Option>
+                <Option value="in_progress">In Progress</Option>
+                <Option value="completed">Completed</Option>
+              </Select>
+            )}
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+              <Button
+                type="primary"
+                onClick={handleAddData}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {implementPoliciesData.length > 0 ? "Update Data" : "Add Data"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

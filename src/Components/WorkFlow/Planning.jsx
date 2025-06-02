@@ -37,6 +37,8 @@ const Planning = () => {
   const [members, setMembers] = useState([]);
   const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
   const [removedOldFiles, setRemovedOldFiles] = useState([]);
+  const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
+  const [process, setProcess] = useState("core");
 
   const { projectid } = useParams();
   const {
@@ -71,8 +73,13 @@ const Planning = () => {
     try {
       const response = await getStepId(projectid, 7);
       if (response) {
+        console.log("API Response (Planning):", response);
+        console.log("Associated ISO Clause (Planning):", response.associated_iso_clause);
+
         setStepId(response.plc_step_id);
         setStepStatus(response.status);
+        setAssociatedIsoClause(response.associated_iso_clause);
+        setProcess(response.process || "core");
         const isAuthorized = await checkStepAuth(response.plc_step_id);
         setIsAssignedUser(isAuthorized);
       }
@@ -143,6 +150,27 @@ const Planning = () => {
     } catch (error) {
       console.error("Error updating status:", error);
       message.error("Failed to update status");
+    }
+  };
+
+  const updateProcess = async (newProcess) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/plc/plc_step/${stepId}/update/`,
+        {
+          core_or_noncore: newProcess,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setProcess(newProcess);
+        message.success("Process updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating process:", error);
+      message.error("Failed to update process");
     }
   };
 
@@ -289,11 +317,11 @@ const Planning = () => {
   return (
     <div className="bg-gray-50 min-h-full p-6">
       {/* Simple header with no background */}
-      <div className="mb-8 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Create a Plan/Draft Policies
-          </h2>
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          Create a Plan/Draft Policies
+        </h2>
+        <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium
@@ -307,41 +335,57 @@ const Planning = () => {
               {stepStatus.charAt(0).toUpperCase() +
                 stepStatus.slice(1).replace("_", " ")}
             </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              ISO: {associatedIsoClause || "No Clause"}
+            </span>
           </div>
-        </div>
-        <div className="flex gap-2">
-          {projectRole.includes("consultant admin") && (
-            <Button
-              type="default"
-              onClick={() => {
-                get_members();
-                handleAssignTask();
-              }}
-              className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
-            >
-              Assign Task
-            </Button>
-          )}
-          {(projectRole.includes("consultant admin") || isAssignedUser) && (
-            <Select
-              value={stepStatus}
-              onChange={updateStepStatus}
-              style={{ width: 140 }}
-            >
-              <Option value="pending">Pending</Option>
-              <Option value="in_progress">In Progress</Option>
-              <Option value="completed">Completed</Option>
-            </Select>
-          )}
-          {(projectRole.includes("consultant admin") || isAssignedUser) && (
-            <Button
-              type="primary"
-              onClick={handleAddData}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {planningData.length > 0 ? "Update Plan" : "Add Plan"}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {projectRole.includes("consultant admin") && (
+              <Button
+                type="default"
+                onClick={() => {
+                  get_members();
+                  handleAssignTask();
+                }}
+                className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
+              >
+                Assign Task
+              </Button>
+            )}
+            {projectRole.includes("consultant admin") && (
+              <Select
+                value={process}
+                onChange={updateProcess}
+                style={{ width: 120 }}
+              >
+                <Option value="core">Core</Option>
+                <Option value="non core">Non Core</Option>
+              </Select>
+            )}
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+              <Select
+                value={stepStatus}
+                onChange={updateStepStatus}
+                style={{ width: 140 }}
+              >
+                <Option value="pending">Pending</Option>
+                <Option value="in_progress">In Progress</Option>
+                <Option value="completed">Completed</Option>
+              </Select>
+            )}
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+              <Button
+                type="primary"
+                onClick={handleAddData}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {planningData.length > 0 ? "Update Plan" : "Add Plan"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

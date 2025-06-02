@@ -50,6 +50,8 @@ function ServiceRequirements() {
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDeadline, setTaskDeadline] = useState(null);
   const [taskReferences, setTaskReferences] = useState("");
+  const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
+  const [process, setProcess] = useState("core");
 
   const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
 
@@ -165,9 +167,16 @@ function ServiceRequirements() {
     try {
       const response = await getStepId(projectid, 1);
       if (response) {
+        // Debug: Log the entire response to see what we're getting
+        console.log("API Response:", response);
+        console.log("Associated ISO Clause:", response.associated_iso_clause);
+        console.log("Process:", response.process);
+
         // Update step ID and status from the response
         setStepId(response.plc_step_id);
         setStepStatus(response.status);
+        setAssociatedIsoClause(response.associated_iso_clause);
+        setProcess(response.process || "core");
         // Call other functions with the plc_step_id
         await get_step_data(response.plc_step_id);
         await checkAssignedUser(response.plc_step_id);
@@ -233,6 +242,27 @@ function ServiceRequirements() {
     } catch (error) {
       console.error("Error updating status:", error);
       message.error("Failed to update status");
+    }
+  };
+
+  const updateProcess = async (newProcess) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/plc/plc_step/${stepId}/update/`,
+        {
+          core_or_noncore: newProcess,
+        },
+        true
+      );
+
+      if (response.status === 200) {
+        setProcess(newProcess);
+        message.success("Process updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating process:", error);
+      message.error("Failed to update process");
     }
   };
 
@@ -548,9 +578,13 @@ function ServiceRequirements() {
 
   return (
     <div className="p-6">
+      {/* Move heading above for better space management */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Service Requirements</h1>
+      </div>
+
       <div className="mb-4 flex justify-between items-center">
         <div className="flex items-center space-x-3">
-          <h1 className="text-2xl font-bold text-gray-800">Service Requirements</h1>
           {/* Status badge */}
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${stepStatus === "completed"
             ? "bg-green-100 text-green-800"
@@ -564,8 +598,15 @@ function ServiceRequirements() {
                 ? "In Progress"
                 : "Pending"}
           </span>
+          {/* ISO Clause badge */}
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            ISO: {associatedIsoClause || "No Clause"}
+          </span>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
           {/* Show Assign Task button only for consultant admin */}
           {projectRole === "consultant admin" && (
             <Button
@@ -577,13 +618,24 @@ function ServiceRequirements() {
             </Button>
           )}
 
-          {/* Status Update Button for Admin */}
+          {/* Process Update Dropdown for Admin */}
+          {projectRole === "consultant admin" && (
+            <Select
+              value={process}
+              onChange={updateProcess}
+              style={{ width: 120 }}
+            >
+              <Option value="core">Core</Option>
+              <Option value="non core">Non Core</Option>
+            </Select>
+          )}
+
+          {/* Status Update Dropdown for Admin */}
           {projectRole === "consultant admin" && (
             <Select
               value={stepStatus}
               onChange={updateStepStatus}
               style={{ width: 140 }}
-              className="ml-3"
             >
               <Option value="pending">Pending</Option>
               <Option value="in_progress">In Progress</Option>
