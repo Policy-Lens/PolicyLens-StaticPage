@@ -26,6 +26,7 @@ import {
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
+import InteractiveIsoClause from "../Common/InteractiveIsoClause";
 
 // Create a context for loading state
 export const LoadingContext = createContext({
@@ -255,16 +256,6 @@ const CarouselHorizontalStepper = () => {
     return targetStatus === "current" || targetStatus === "completed";
   };
 
-  // const handleTabClick = (tab) => {
-  //   setActiveTab(tab);
-  //
-  //   // For other tabs, keep the existing carousel behavior
-  //   const phase = phases.find((p) => p.name === tab);
-  //   if (phase && phase.steps.length > 0) {
-  //     setCurrentStep(phase.steps[0]);
-  //   }
-  // };
-
   // Modern Toggle Component
   const ViewToggle = () => (
     <div className="flex items-center space-x-3 bg-gray-100 rounded-lg p-1">
@@ -305,8 +296,8 @@ const CarouselHorizontalStepper = () => {
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Title</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Process</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">ISO Clause</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Standard</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">ISO Clause</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Progress</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Action</th>
                 </tr>
@@ -370,19 +361,19 @@ const CarouselHorizontalStepper = () => {
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          ISO: {associatedIsoClause || "No Clause"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           ISO27001
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          ISO: <InteractiveIsoClause isoClause={associatedIsoClause} />
                         </span>
                       </td>
                       <td className="py-4 px-6">

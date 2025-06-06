@@ -3,6 +3,7 @@ import { Button, Select, Modal, Input, DatePicker, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { apiRequest } from "../../utils/api";
+import InteractiveIsoClause from "../Common/InteractiveIsoClause";
 
 const { Option } = Select;
 
@@ -175,10 +176,10 @@ const RART = () => {
                   stepStatus.slice(1).replace("_", " ")}
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ISO: {associatedIsoClause || "No Clause"}
+                ISO: <InteractiveIsoClause isoClause={associatedIsoClause} />
               </span>
             </div>
             <div className="flex space-x-3">

@@ -11,10 +11,11 @@ import {
 } from "antd";
 import { UploadOutlined, FileTextOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { LoadingContext } from "./VertStepper";
 import { BASE_URL } from "../../utils/api";
 import { apiRequest } from "../../utils/api";
+import InteractiveIsoClause from "../Common/InteractiveIsoClause";
 const { Option } = Select;
 
 const DataAnalysis = () => {
@@ -41,6 +42,7 @@ const DataAnalysis = () => {
   const [process, setProcess] = useState("core");
 
   const { projectid } = useParams();
+  const navigate = useNavigate();
   const {
     addStepData,
     getStepData,
@@ -332,8 +334,13 @@ const DataAnalysis = () => {
     }
   };
 
+  // Function to navigate to ASIS Report
+  const handleOpenAsisReport = () => {
+    navigate(`/project/${projectid}/myreports?autoOpenAsis=true`);
+  };
+
   return (
-    <div className="bg-gray-50 min-h-full p-6">
+    <div className="min-h-full p-6">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Data Analysis</h2>
         <div className="flex justify-between items-center">
@@ -352,10 +359,10 @@ const DataAnalysis = () => {
             </span>
             {/* ISO Clause badge */}
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              ISO: {associatedIsoClause || "No Clause"}
+              ISO: <InteractiveIsoClause isoClause={associatedIsoClause} />
             </span>
           </div>
           <div className="flex space-x-3">
@@ -405,6 +412,15 @@ const DataAnalysis = () => {
                 {asisData.length > 0 ? "Update Data" : "Add Data"}
               </Button>
             )}
+
+            {/* ASIS Report Button */}
+            <Button
+              type="default"
+              onClick={handleOpenAsisReport}
+              className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
+            >
+              Open ASIS Report
+            </Button>
           </div>
         </div>
       </div>
