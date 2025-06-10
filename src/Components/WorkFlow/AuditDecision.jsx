@@ -32,6 +32,11 @@ const StakeholderInterviews = () => {
   const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
   const [process, setProcess] = useState("core");
 
+  // Needs More Info Modal states
+  const [isNeedsMoreInfoModalVisible, setIsNeedsMoreInfoModalVisible] = useState(false);
+  const [moreInfoComment, setMoreInfoComment] = useState("");
+  const [moreInfoFileList, setMoreInfoFileList] = useState([]);
+
   const { projectid } = useParams();
   const {
     addStepData,
@@ -285,11 +290,91 @@ const StakeholderInterviews = () => {
     }
   };
 
+  // Needs More Info Modal handlers
+  const handleNeedsMoreInfoSubmit = async () => {
+    if (!moreInfoComment.trim()) {
+      message.warning("Please provide a comment.");
+      return;
+    }
+
+    try {
+      // Here you would typically send the comment and files to your API
+      // For now, we'll just show a success message
+      message.success("More information request submitted successfully!");
+      setIsNeedsMoreInfoModalVisible(false);
+      setMoreInfoComment("");
+      setMoreInfoFileList([]);
+    } catch (error) {
+      message.error("Failed to submit more information request.");
+      console.error(error);
+    }
+  };
+
+  const handleMoreInfoFileChange = ({ fileList: newFileList }) => {
+    setMoreInfoFileList(newFileList);
+  };
+
+  const handleNeedsMoreInfoClose = () => {
+    setIsNeedsMoreInfoModalVisible(false);
+    setMoreInfoComment("");
+    setMoreInfoFileList([]);
+  };
+
   return (
     <div className="p-6 rounded-md">
       {/* Page Heading */}
       <div className="mb-4">
-        <h2 className="text-xl font-bold">Stakeholder Interviews</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold">Audit Decision Interviews</h2>
+          <div className="flex space-x-3">
+            {/* Send for Review button - only for consultant admin */}
+            {projectRole.includes("consultant admin") && (
+              <Button
+                type="default"
+                onClick={() => {
+                  // Static implementation - just show a success message
+                  message.success("Step sent for review successfully!");
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+              >
+                Send for Review
+              </Button>
+            )}
+
+            {/* Review buttons - only for Company */}
+            {projectRole === "company" && (
+              <>
+                <Button
+                  type="default"
+                  onClick={() => {
+                    message.success("Step accepted successfully!");
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                >
+                  Accept
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => {
+                    message.success("Step rejected successfully!");
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                >
+                  Reject
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => {
+                    setIsNeedsMoreInfoModalVisible(true);
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+                >
+                  Needs More Info
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Status badges and action buttons */}
@@ -370,7 +455,7 @@ const StakeholderInterviews = () => {
             {/* Header with metadata */}
             <div className="flex flex-wrap justify-between items-center mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">Stakeholder Interview Information</h3>
+                <h3 className="text-xl font-semibold text-gray-800">Audit Decision Interview Information</h3>
                 {interviewData[0]?.saved_at && (
                   <div className="flex items-center mt-1">
                     <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
@@ -454,9 +539,9 @@ const StakeholderInterviews = () => {
                 </svg>
               </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">No Stakeholder Interviews</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">No Audit Decision Interviews</h3>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              Stakeholder interviews help gather valuable insights from key project stakeholders. Add your first interview details to get started.
+              Audit decision interviews help gather valuable insights during the audit decision process. Add your first interview details to get started.
             </p>
             <Button
               onClick={handleAddData}
@@ -468,7 +553,7 @@ const StakeholderInterviews = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
-                <span>Add Stakeholder Interview</span>
+                <span>Add Audit Decision Interview</span>
               </span>
             </Button>
           </div>
@@ -545,18 +630,18 @@ const StakeholderInterviews = () => {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-blue-800">Download Template</h3>
               <div className="mt-2 text-sm text-blue-600">
-                <p>Please download and fill in the template below before submitting your stakeholder interview.</p>
+                <p>Please download and fill in the template below before submitting your audit decision interview.</p>
               </div>
               <div className="mt-3">
                 <a
                   href="/temp.txt"
-                  download="stakeholder_interview_template.txt"
+                  download="audit_decision_interview_template.txt"
                   className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <svg className="-ml-1 mr-2 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download Stakeholder Interview Template
+                  Download Audit Decision Interview Template
                 </a>
               </div>
             </div>
@@ -566,7 +651,7 @@ const StakeholderInterviews = () => {
         <div className="mb-4">
           <TextArea
             rows={6}
-            placeholder="Enter details from stakeholder interviews"
+            placeholder="Enter details from audit decision interviews"
             value={interviewText}
             onChange={(e) => setInterviewText(e.target.value)}
           />
@@ -693,6 +778,59 @@ const StakeholderInterviews = () => {
             value={taskReferences}
             onChange={(e) => setTaskReferences(e.target.value)}
           />
+        </div>
+      </Modal>
+
+      {/* Needs More Info Modal */}
+      <Modal
+        title="Request More Information"
+        open={isNeedsMoreInfoModalVisible}
+        onCancel={handleNeedsMoreInfoClose}
+        footer={[
+          <Button key="cancel" onClick={handleNeedsMoreInfoClose}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={handleNeedsMoreInfoSubmit}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            Submit Request
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comment <span className="text-red-500">*</span>
+            </label>
+            <TextArea
+              rows={4}
+              placeholder="Please provide details about what additional information is needed..."
+              value={moreInfoComment}
+              onChange={(e) => setMoreInfoComment(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attach Files (Optional)
+            </label>
+            <Upload
+              fileList={moreInfoFileList}
+              onChange={handleMoreInfoFileChange}
+              beforeUpload={() => false}
+              multiple
+              showUploadList={true}
+            >
+              <Button icon={<PaperClipOutlined />}>
+                Attach Files
+              </Button>
+            </Upload>
+          </div>
         </div>
       </Modal>
     </div>

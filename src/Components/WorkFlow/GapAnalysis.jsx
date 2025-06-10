@@ -49,6 +49,11 @@ const GapAnalysis = () => {
   const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
   const [process, setProcess] = useState("core");
 
+  // Needs More Info Modal states
+  const [isNeedsMoreInfoModalVisible, setIsNeedsMoreInfoModalVisible] = useState(false);
+  const [moreInfoComment, setMoreInfoComment] = useState("");
+  const [moreInfoFileList, setMoreInfoFileList] = useState([]);
+
   const { projectid } = useParams();
   const navigate = useNavigate();
   const {
@@ -409,6 +414,36 @@ const GapAnalysis = () => {
     }
   };
 
+  // Needs More Info Modal handlers
+  const handleNeedsMoreInfoSubmit = async () => {
+    if (!moreInfoComment.trim()) {
+      message.warning("Please provide a comment.");
+      return;
+    }
+
+    try {
+      // Here you would typically send the comment and files to your API
+      // For now, we'll just show a success message
+      message.success("More information request submitted successfully!");
+      setIsNeedsMoreInfoModalVisible(false);
+      setMoreInfoComment("");
+      setMoreInfoFileList([]);
+    } catch (error) {
+      message.error("Failed to submit more information request.");
+      console.error(error);
+    }
+  };
+
+  const handleMoreInfoFileChange = ({ fileList: newFileList }) => {
+    setMoreInfoFileList(newFileList);
+  };
+
+  const handleNeedsMoreInfoClose = () => {
+    setIsNeedsMoreInfoModalVisible(false);
+    setMoreInfoComment("");
+    setMoreInfoFileList([]);
+  };
+
   // Function to get stakeholder data for reference
   const getStakeholderData = async () => {
     if (stakeholderData) return; // Don't fetch if we already have it
@@ -499,7 +534,57 @@ const GapAnalysis = () => {
 
       {/* Simple header with no background */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Gap Analysis</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Gap Analysis</h2>
+          <div className="flex space-x-3">
+            {/* Send for Review button - only for consultant admin */}
+            {projectRole.includes("consultant admin") && (
+              <Button
+                type="default"
+                onClick={() => {
+                  // Static implementation - just show a success message
+                  message.success("Step sent for review successfully!");
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+              >
+                Send for Review
+              </Button>
+            )}
+
+            {/* Review buttons - only for Company */}
+            {projectRole === "company" && (
+              <>
+                <Button
+                  type="default"
+                  onClick={() => {
+                    message.success("Step accepted successfully!");
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                >
+                  Accept
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => {
+                    message.success("Step rejected successfully!");
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                >
+                  Reject
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => {
+                    setIsNeedsMoreInfoModalVisible(true);
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+                >
+                  Needs More Info
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span
@@ -1133,6 +1218,59 @@ const GapAnalysis = () => {
             value={taskReferences}
             onChange={(e) => setTaskReferences(e.target.value)}
           />
+        </div>
+      </Modal>
+
+      {/* Needs More Info Modal */}
+      <Modal
+        title="Request More Information"
+        open={isNeedsMoreInfoModalVisible}
+        onCancel={handleNeedsMoreInfoClose}
+        footer={[
+          <Button key="cancel" onClick={handleNeedsMoreInfoClose}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={handleNeedsMoreInfoSubmit}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            Submit Request
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comment <span className="text-red-500">*</span>
+            </label>
+            <TextArea
+              rows={4}
+              placeholder="Please provide details about what additional information is needed..."
+              value={moreInfoComment}
+              onChange={(e) => setMoreInfoComment(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attach Files (Optional)
+            </label>
+            <Upload
+              fileList={moreInfoFileList}
+              onChange={handleMoreInfoFileChange}
+              beforeUpload={() => false}
+              multiple
+              showUploadList={true}
+            >
+              <Button icon={<PaperClipOutlined />}>
+                Attach Files
+              </Button>
+            </Upload>
+          </div>
         </div>
       </Modal>
     </div>

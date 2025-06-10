@@ -3,10 +3,11 @@ import { Button, Input, Modal, Select, message } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
 import { AuthContext } from "../../AuthContext";
+import { ProjectContext } from "../../Context/ProjectContext";
 
 const { Option } = Select;
 
-const Sustainance = () => {
+const Sustenance = () => {
   const [isCreateProjectModalVisible, setIsCreateProjectModalVisible] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
@@ -15,6 +16,7 @@ const Sustainance = () => {
   const { projectid } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const { projectRole } = useContext(ProjectContext);
 
   const getCompanies = async () => {
     const res = await apiRequest("GET", "/api/auth/companies/", null, true);
@@ -48,8 +50,41 @@ const Sustainance = () => {
   return (
     <div className="p-6 rounded-md">
       {/* Page Heading */}
-      <div className="mb-4">
-        <h2 className="text-xl font-bold">Sustainance</h2>
+      <div className="mb-4 flex justify-between items-center">
+        <h2 className="text-xl font-bold">Sustenance</h2>
+        <div className="flex gap-2">
+          {/* Request for Sustenance button - only for Consultant Admin */}
+          {projectRole === "consultant admin" && (
+            <Button
+              type="primary"
+              className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+              onClick={() => message.success("Sustenance request sent successfully!")}
+            >
+              Request for Sustenance
+            </Button>
+          )}
+
+          {/* Accept/Reject buttons - only for Company */}
+          {projectRole === "company" && (
+            <>
+              <Button
+                type="primary"
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                onClick={() => message.success("Sustenance accepted successfully!")}
+              >
+                Accept
+              </Button>
+              <Button
+                type="primary"
+                danger
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                onClick={() => message.success("Sustenance rejected successfully!")}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Create New Project Section */}
@@ -64,9 +99,9 @@ const Sustainance = () => {
             </div>
             <h4 className="text-lg font-medium text-gray-800 mb-3">Ready for a New Project?</h4>
             <p className="text-gray-600 mb-4">
-              Once you've completed sustainance, you can start a new compliance project.
+              Once you've completed sustenance, you can start a new compliance project.
             </p>
-            {user?.role === "Super Consultant" && (
+            {(user?.role === "Super Consultant" || projectRole === "company") && (
               <Button
                 onClick={() => {
                   setIsCreateProjectModalVisible(true);
@@ -130,4 +165,4 @@ const Sustainance = () => {
   );
 };
 
-export default Sustainance;
+export default Sustenance;

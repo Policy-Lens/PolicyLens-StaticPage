@@ -13,7 +13,7 @@ import DiscussImplementation from "./DiscussImplementation";
 import ImplementPolicies from "./ImplementPolicies";
 import InternalAuditProcess from "./InternalAuditProcess";
 import AuditDecision from "./AuditDecision";
-import Sustainance from "./Sustainance";
+import Sustenance from "./Sustenance";
 import { ChevronLeft, ChevronRight, List, LayoutGrid } from "lucide-react";
 import {
   Calendar,
@@ -57,7 +57,7 @@ const steps = [
   { title: "Implementation of Policies", content: <DiscussImplementation /> },
   { title: "Internal Audit Process", content: <InternalAuditProcess /> },
   { title: "Audit Decision", content: <AuditDecision /> },
-  { title: "Sustainance", content: <Sustainance /> },
+  { title: "Sustenance", content: <Sustenance /> },
 ];
 
 const CarouselHorizontalStepper = () => {
@@ -128,7 +128,7 @@ const CarouselHorizontalStepper = () => {
         7: 8, // Implementation of Policies
         8: 9, // Internal Audit Process
         9: 10, // Audit Decision
-        10: 11, // Sustainance
+        10: 11, // Sustenance
       };
 
       for (let i = 0; i < steps.length; i++) {
