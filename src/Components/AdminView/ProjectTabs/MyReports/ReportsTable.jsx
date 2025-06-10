@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Edit, Trash2, Calendar, User, Users, Plus, Upload, Eye } from 'lucide-react';
+import { Edit, Trash2, Calendar, User, Users, Plus, Upload, Eye, UserPlus, X } from 'lucide-react';
 import { apiRequest } from '../../../../utils/api';
 import { message } from 'antd';
 
@@ -49,6 +49,14 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     const treatmentExcelFileInputRef = useRef(null);
     const vaptExcelFileInputRef = useRef(null);
     const asisExcelFileInputRef = useRef(null);
+
+    // Assign Report Modal state
+    const [isAssignReportModalOpen, setIsAssignReportModalOpen] = useState(false);
+    const [assignmentMethod, setAssignmentMethod] = useState("specific"); // specific, random, sequential
+    const [companyRepresentatives, setCompanyRepresentatives] = useState([]);
+    const [selectedRepresentative, setSelectedRepresentative] = useState(null);
+    const [selectedReports, setSelectedReports] = useState([]);
+    const [isAssigning, setIsAssigning] = useState(false);
 
     // Define fetchReports outside useEffect to avoid duplication
     const fetchReports = async () => {
@@ -685,6 +693,74 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
         }
     };
 
+    // Function to open the assign report modal
+    const openAssignReportModal = async () => {
+        setIsAssignReportModalOpen(true);
+        fetchCompanyRepresentatives();
+    };
+
+    // Function to fetch company representatives for assignment (static data)
+    const fetchCompanyRepresentatives = async () => {
+        // Static data - no API calls
+        const staticRepresentatives = [
+            {
+                id: 1,
+                name: "Company 1 Representative 2",
+                email: "com1c2@test.com"
+            },
+            {
+                id: 2,
+                name: "Company Representative",
+                email: "com1c1@test.com"
+            },
+            {
+                id: 3,
+                name: "Company 1 Representative 3",
+                email: "com1c3@test.com"
+            }
+        ];
+
+        // Simulate loading delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setCompanyRepresentatives(staticRepresentatives);
+    };
+
+    // Handle assign reports
+    const handleAssignReports = async () => {
+        if (assignmentMethod === "specific") {
+            if (!selectedRepresentative) {
+                message.warning("Please select a representative");
+                return;
+            }
+            if (selectedReports.length === 0) {
+                message.warning("Please select at least one report");
+                return;
+            }
+        }
+
+        setIsAssigning(true);
+        try {
+            // This is a static implementation - no actual API call
+            // In a real implementation, you would make an API call here
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+
+            message.success(`Successfully assigned ${selectedReports.length} report(s)`);
+            setIsAssignReportModalOpen(false);
+            setSelectedReports([]);
+            setSelectedRepresentative(null);
+        } catch (error) {
+            console.error("Error assigning reports:", error);
+            message.error("Failed to assign reports");
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
+    // Get unassigned reports for the modal
+    const getUnassignedReports = () => {
+        return reports.filter(report => report.assigned_to === 'Unassigned');
+    };
+
     // Simple delete confirmation modal
     const DeleteConfirmationModal = () => {
         if (!deleteModalOpen) return null;
@@ -1251,17 +1327,244 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
         );
     };
 
+    // Assign Report Modal
+    const AssignReportModal = () => {
+        if (!isAssignReportModalOpen) return null;
+
+        const unassignedReports = getUnassignedReports();
+
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                    {/* Modal Header */}
+                    <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
+                        <h2 className="text-lg font-semibold text-slate-800">
+                            Assign Reports
+                        </h2>
+                        <button
+                            className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+                            onClick={() => setIsAssignReportModalOpen(false)}
+                        >
+                            <X size={20} className="text-slate-500" />
+                        </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                        {/* Assignment Method Selector */}
+                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                            <label className="text-sm font-medium text-slate-700 mb-2 block">
+                                Assignment Method
+                            </label>
+                            <div className="flex gap-3">
+                                <button
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "specific"
+                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                    onClick={() => setAssignmentMethod("specific")}
+                                >
+                                    <span>Specific Assignment</span>
+                                </button>
+                                <button
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "random"
+                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                    onClick={() => setAssignmentMethod("random")}
+                                >
+                                    <span>Random Assignment</span>
+                                </button>
+                                <button
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "sequential"
+                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                    onClick={() => setAssignmentMethod("sequential")}
+                                >
+                                    <span>Sequential Assignment</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content based on assignment method */}
+                        {assignmentMethod === "specific" ? (
+                            <div className="flex flex-1 overflow-hidden">
+                                {/* Representative Selection */}
+                                <div className="w-1/3 border-r border-slate-200 p-4 overflow-auto">
+                                    <label className="text-sm font-medium text-slate-700 mb-2 block">
+                                        Select Representative
+                                    </label>
+                                    <div className="space-y-2">
+                                        {companyRepresentatives.map((rep) => (
+                                            <div
+                                                key={rep.id}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedRepresentative?.id === rep.id
+                                                    ? "border-indigo-300 bg-indigo-50"
+                                                    : "border-slate-200 hover:border-slate-300"
+                                                    }`}
+                                                onClick={() => setSelectedRepresentative(rep)}
+                                            >
+                                                <div className="flex items-center">
+                                                    <div className="h-8 w-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                                                        <User size={14} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-medium text-slate-900">
+                                                            {rep.name}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">
+                                                            {rep.email}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Reports Selection */}
+                                <div className="flex-1 overflow-auto p-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-sm font-medium text-slate-700">
+                                            Select Reports to Assign
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-slate-500">
+                                                {selectedReports.length} of{" "}
+                                                {unassignedReports.length} selected
+                                            </span>
+                                            {selectedReports.length > 0 && (
+                                                <button
+                                                    className="text-xs text-indigo-600 hover:text-indigo-800"
+                                                    onClick={() => setSelectedReports([])}
+                                                >
+                                                    Clear Selection
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {unassignedReports.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                                            <Users size={48} className="mb-4" />
+                                            <p className="text-lg font-medium mb-2">No unassigned reports found</p>
+                                            <p className="text-sm">All reports have been assigned</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {unassignedReports.map((report) => (
+                                                <div
+                                                    key={report.id}
+                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReports.includes(report.id)
+                                                        ? "border-indigo-300 bg-indigo-50"
+                                                        : "border-slate-200 hover:border-slate-300"
+                                                        }`}
+                                                    onClick={() => {
+                                                        setSelectedReports(prev =>
+                                                            prev.includes(report.id)
+                                                                ? prev.filter(id => id !== report.id)
+                                                                : [...prev, report.id]
+                                                        );
+                                                    }}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedReports.includes(report.id)}
+                                                            onChange={() => { }}
+                                                            className="mr-3"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="text-sm font-medium text-slate-900">
+                                                                {report.name}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500">
+                                                                {report.type}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center flex-1 p-8 text-slate-500">
+                                <Users size={48} className="mb-4" />
+                                <p className="text-lg font-medium mb-2">
+                                    {assignmentMethod === "random" ? "Random Assignment" : "Sequential Assignment"}
+                                </p>
+                                <p className="text-sm text-center">
+                                    {assignmentMethod === "random"
+                                        ? "Reports will be randomly assigned to available representatives"
+                                        : "Reports will be assigned sequentially to representatives in order"
+                                    }
+                                </p>
+                                <div className="mt-4 text-sm text-slate-400">
+                                    {companyRepresentatives.length} representative(s) available
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="p-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+                        <button
+                            className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                            onClick={() => setIsAssignReportModalOpen(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center disabled:opacity-50"
+                            onClick={handleAssignReports}
+                            disabled={
+                                isAssigning ||
+                                (assignmentMethod === "specific" &&
+                                    (selectedReports.length === 0 ||
+                                        !selectedRepresentative)) ||
+                                (assignmentMethod !== "specific" &&
+                                    companyRepresentatives.length === 0)
+                            }
+                        >
+                            {isAssigning && (
+                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                            )}
+                            {isAssigning
+                                ? "Assigning..."
+                                : `Assign ${assignmentMethod === "specific"
+                                    ? `${selectedReports.length} Report${selectedReports.length !== 1 ? "s" : ""
+                                    }`
+                                    : "Reports"
+                                }`}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="w-full h-full p-6">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Reports Table</h2>
-                <button
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-                    onClick={() => setCreateReportOpen(true)}
-                >
-                    <Plus size={18} className="mr-2" />
-                    Create Report
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
+                        onClick={openAssignReportModal}
+                    >
+                        <UserPlus size={18} className="mr-2" />
+                        Assign Reports
+                    </button>
+                    <button
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
+                        onClick={() => setCreateReportOpen(true)}
+                    >
+                        <Plus size={18} className="mr-2" />
+                        Create Report
+                    </button>
+                </div>
             </div>
 
             <div className="overflow-hidden bg-white rounded-lg shadow">
@@ -1428,6 +1731,7 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
             <RiskTreatmentUploadModal />
             <VaptUploadModal />
             <AsisUploadModal />
+            <AssignReportModal />
         </div>
     );
 };
