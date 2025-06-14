@@ -1,35 +1,77 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
-import {
-  Search,
-  Filter,
-  X,
-  Plus,
-  Edit,
-  Trash2,
-  AlertCircle,
-  UploadCloud,
-  Download,
-} from "lucide-react";
-import { AuthContext } from "../../../AuthContext";
+import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { message, Popconfirm, Spin } from "antd";
+import { Search, Plus, Upload, X, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiRequest } from "../../../utils/api";
-import { message, Spin } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import { AuthContext } from "../../../AuthContext";
+import { LoadingOutlined } from '@ant-design/icons';
+
+const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
+  const { currentPage, totalPages, totalCount, pageSize } = pagination;
+
+  if (!totalCount || totalCount === 0) return null;
+
+  return (
+    <div className="flex items-center justify-between p-4 bg-white border-t border-slate-200">
+      <div className="flex items-center gap-2">
+        <label htmlFor="pageSize" className="text-sm text-slate-600">
+          Rows per page:
+        </label>
+        <select
+          id="pageSize"
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(e.target.value)}
+          className="border border-slate-300 rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+      <div className="text-sm text-slate-600">
+        Page {currentPage} of {totalPages} ({totalCount} items)
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const ISO4217 = () => {
   const { user } = useContext(AuthContext);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  // States for data handling
+  const [searchQuery, setSearchQuery] = useState("");
   const [currencies, setCurrencies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Modal states
+  const [selectedAlphabeticCode, setSelectedAlphabeticCode] = useState("");
+  const [selectedNumericCode, setSelectedNumericCode] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+  });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  const [partialErrors, setPartialErrors] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState(""); // "add", "edit", "upload"
+  const [modalType, setModalType] = useState("");
   const [activeCurrency, setActiveCurrency] = useState(null);
-
-  // Form state
   const [currencyForm, setCurrencyForm] = useState({
     entity: "",
     currency: "",
@@ -38,65 +80,133 @@ const ISO4217 = () => {
     minor_unit: "",
   });
 
-  // File upload states
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // Delete confirmation states
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [currencyToDelete, setCurrencyToDelete] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Partial errors state for upload
-  const [partialErrorsWhileUploading, setPartialErrorsWhileUploading] =
-    useState([]);
-  const [partialErrors, setPartialErrors] = useState(false);
-
-  // Check if user is admin
   useEffect(() => {
-    setIsAdmin(user?.role === "admin");
+    if (user?.role === "admin") {
+      setIsAdmin(true);
+    }
   }, [user]);
-  // Fetch currencies
-  const fetchCurrencies = async () => {
-    setIsLoading(true);
-    const search = document.getElementById("search").value;
-    const params = search ? `?search=${search}` : "";
+
+  const fetchCurrencies = useCallback(async () => {
     try {
-      const response = await apiRequest(
-        "GET",
-        `/api/policylens/iso4217/${params}`,
-        null,
-        true
-      );
-      if (response.status === 200) {
-        setCurrencies(response.data);
-        console.log("Fetched currencies:", response.data);
+      setIsLoading(true);
+      let url = "/api/policylens/iso4217/";
+      const params = new URLSearchParams();
+      if (searchQuery) {
+        params.append("search", searchQuery);
       }
+      if (selectedAlphabeticCode) {
+        params.append("alphabetic_code", selectedAlphabeticCode);
+      }
+      if (selectedNumericCode) {
+        params.append("numeric_code", selectedNumericCode);
+      }
+      if (pagination.pageSize !== "all") {
+        params.append("page", pagination.currentPage);
+        params.append("page_size", pagination.pageSize);
+      } else {
+        params.append("page_size", "all");
+      }
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await apiRequest("GET", url, null, true);
+
+      let results = [];
+      let totalCount = 0;
+      let totalPages = 1;
+
+      if (Array.isArray(response.data)) {
+        results = response.data;
+        totalCount = results.length;
+        totalPages = 1;
+      } else if (response.data?.results) {
+        results = response.data.results;
+        totalCount = response.data.count || results.length;
+        totalPages = Math.ceil(totalCount / (pagination.pageSize !== "all" ? pagination.pageSize : totalCount)) || 1;
+      } else if (Array.isArray(response.data?.data)) {
+        results = response.data.data;
+        totalCount = results.length;
+        totalPages = 1;
+      } else {
+        console.warn("Unexpected response structure:", response.data);
+        message.warning("Unexpected response format from server");
+      }
+
+      setCurrencies(results);
+      setPagination((prev) => ({
+        ...prev,
+        totalCount,
+        totalPages,
+      }));
     } catch (error) {
-      console.error("Failed to fetch currencies:", error);
-      message.error("Failed to fetch currencies");
+      console.error("Error fetching currencies:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url,
+      });
+      const errorMessage = error.response?.data?.error || error.message || "Failed to fetch currencies";
+      message.error(`Failed to fetch currencies: ${errorMessage}`);
+      setCurrencies([]);
+      setPagination((prev) => ({
+        ...prev,
+        totalCount: 0,
+        totalPages: 1,
+      }));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchQuery, selectedAlphabeticCode, selectedNumericCode, pagination.currentPage, pagination.pageSize]);
 
-  // Effect to fetch currencies on mount and search
   useEffect(() => {
     fetchCurrencies();
-  }, [searchQuery]);
+  }, [fetchCurrencies]);
 
-  // Form handlers
-  const handleInputChange = (e) => {
+  const handlePageChange = useCallback((newPage) => {
+    if (newPage > 0 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+    }
+  }, [pagination.totalPages]);
+
+  const handlePageSizeChange = useCallback((newPageSize) => {
+    setPagination({
+      currentPage: 1,
+      pageSize: newPageSize === "all" ? "all" : parseInt(newPageSize, 10),
+      totalCount: pagination.totalCount,
+      totalPages: Math.ceil(pagination.totalCount / (newPageSize !== "all" ? parseInt(newPageSize, 10) : pagination.totalCount)) || 1,
+    });
+  }, [pagination.totalCount]);
+
+  const handleSearchChange = useCallback((e) => {
+    setSearchQuery(e.target.value);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const handleFilterChange = useCallback((filterType, value) => {
+    if (filterType === "alphabetic_code") setSelectedAlphabeticCode(value);
+    if (filterType === "numeric_code") setSelectedNumericCode(value);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSelectedAlphabeticCode("");
+    setSelectedNumericCode("");
+    setSearchQuery("");
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setCurrencyForm((prev) => ({
       ...prev,
       [name]: value,
     }));
-  };
+  }, []);
 
-  // Modal handlers
-  const openAddModal = () => {
+  const openAddModal = useCallback(() => {
+    setModalType("add");
+    setShowModal(true);
     setCurrencyForm({
       entity: "",
       currency: "",
@@ -104,11 +214,10 @@ const ISO4217 = () => {
       numeric_code: "",
       minor_unit: "",
     });
-    setModalType("add");
-    setShowModal(true);
-  };
+  }, []);
 
-  const openEditModal = (currency) => {
+  const openEditModal = useCallback((currency) => {
+    setModalType("edit");
     setActiveCurrency(currency);
     setCurrencyForm({
       entity: currency.entity,
@@ -117,11 +226,10 @@ const ISO4217 = () => {
       numeric_code: currency.numeric_code,
       minor_unit: currency.minor_unit,
     });
-    setModalType("edit");
     setShowModal(true);
-  };
+  }, []);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setShowModal(false);
     setModalType("");
     setActiveCurrency(null);
@@ -132,16 +240,19 @@ const ISO4217 = () => {
       numeric_code: "",
       minor_unit: "",
     });
-  };
+    setSelectedFile(null);
+    setPartialErrors([]);
+  }, []);
 
-  // Submit handlers
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!isAdmin) {
-      message.error("You don't have permission to perform this action.");
-      return;
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
     }
+  }, []);
 
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
     try {
       let response;
       if (modalType === "edit" && activeCurrency) {
@@ -162,34 +273,26 @@ const ISO4217 = () => {
 
       if (response.status === 200 || response.status === 201) {
         message.success(
-          `Currency ${
-            modalType === "edit" ? "updated" : "created"
-          } successfully`
+          `Currency ${modalType === "edit" ? "updated" : "created"} successfully`
         );
         fetchCurrencies();
         closeModal();
       }
     } catch (error) {
       console.error("Error submitting currency:", error);
-      message.error(`Failed to ${modalType} currency: ${error.message}`);
+      const errorMessage = error.response?.data?.error || "Failed to save currency";
+      message.error(`Failed to ${modalType} currency: ${errorMessage}`);
     }
-  };
+  }, [modalType, activeCurrency, currencyForm, fetchCurrencies, closeModal]);
 
-  // File upload handlers
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleFileUpload = async () => {
-    if (!selectedFile || !isAdmin) return;
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+  const handleFileUpload = useCallback(async () => {
+    if (!selectedFile) return;
 
     try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
       const response = await apiRequest(
         "POST",
         "/api/policylens/iso4217/upload/",
@@ -200,184 +303,224 @@ const ISO4217 = () => {
 
       if (response.status === 201 || response.status === 207) {
         message.success(
-          `Successfully created ${response.data.currencies_created} currencies`
+          `Successfully created ${response.data.currencies_created || 0} currencies`
         );
-
-        if (response.data.currencies?.length > 0) {
-          fetchCurrencies();
-        }
-
         if (response.data.errors?.length > 0) {
-          setPartialErrorsWhileUploading(response.data.errors);
-          setPartialErrors(true);
+          setPartialErrors(response.data.errors);
         }
-
+        fetchCurrencies();
         closeModal();
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
         setSelectedFile(null);
       }
     } catch (error) {
       console.error("Error uploading file:", error);
-      message.error("Failed to upload file");
+      const errorMessage = error.response?.data?.error || "Failed to upload file";
+      message.error(errorMessage);
+      if (error.response?.data?.errors) {
+        setPartialErrors(error.response.data.errors);
+      }
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [selectedFile, fetchCurrencies, closeModal]);
 
-  // Delete handlers
-  const confirmDelete = (currency) => {
-    setCurrencyToDelete(currency);
-    setShowDeleteConfirmation(true);
-  };
-
-  const handleDelete = async () => {
-    if (!currencyToDelete || !isAdmin) return;
-
-    setIsDeleting(true);
+  const handleDelete = useCallback(async (id) => {
     try {
       const response = await apiRequest(
         "DELETE",
-        `/api/policylens/iso4217/${currencyToDelete.id}/delete/`,
+        `/api/policylens/iso4217/${id}/delete/`,
         null,
         true
       );
-
       if (response.status === 204) {
         message.success("Currency deleted successfully");
         fetchCurrencies();
-        setShowDeleteConfirmation(false);
-        setCurrencyToDelete(null);
       }
     } catch (error) {
       console.error("Error deleting currency:", error);
-      message.error("Failed to delete currency");
-    } finally {
-      setIsDeleting(false);
+      const errorMessage = error.response?.data?.error || "Failed to delete currency";
+      message.error(errorMessage);
     }
-  };
-  return (
-    <div className="h-full flex flex-col ">
-      <div className="p-6 flex items-center justify-between">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search currencies..."
-            value={searchQuery}
-            id="search"
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 w-64"
-          />
-        </div>
-        {isAdmin && (
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                setModalType("upload");
-                setShowModal(true);
-              }}
-              className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
-            >
-              <UploadCloud size={16} />
-              Upload Excel
-            </button>
-            <button
-              onClick={openAddModal}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Add Currency
-            </button>
-          </div>
-        )}
-      </div>
+  }, [fetchCurrencies]);
 
-      {/* Table */}
-      <div className="flex-1 mx-6 mb-6 bg-white rounded-lg shadow overflow-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Spin
-              indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />}
+  return (
+    <div className="h-full flex flex-col">
+      <div className="bg-white p-6 shadow-sm flex-none">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 min-w-[200px] relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search currencies..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <Search
+              size={20}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
             />
           </div>
+          <select
+            value={selectedAlphabeticCode}
+            onChange={(e) => handleFilterChange("alphabetic_code", e.target.value)}
+            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">All Alphabetic Codes</option>
+            {[...new Set(currencies.map((c) => c.alphabetic_code))].sort().map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedNumericCode}
+            onChange={(e) => handleFilterChange("numeric_code", e.target.value)}
+            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">All Numeric Codes</option>
+            {[...new Set(currencies.map((c) => c.numeric_code))].sort().map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+          {(selectedAlphabeticCode || selectedNumericCode || searchQuery) && (
+            <button
+              onClick={handleClearFilters}
+              className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
+            >
+              Clear Filters
+            </button>
+          )}
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => {
+                  setModalType("excel");
+                  setShowModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+              >
+                <Upload size={18} />
+                Upload Excel
+              </button>
+              <button
+                onClick={openAddModal}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                <Plus size={18} />
+                Add Currency
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 mx-3 mb-3 bg-white rounded-lg shadow overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />} />
+          </div>
         ) : (
-          <div className="relative">
-            <table className="w-full border-collapse">
-              <thead className="bg-slate-200 sticky top-0 z-10">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
-                    Entity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
-                    Currency
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
-                    Code
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
-                    Numeric
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-black">
-                    Minor Unit
-                  </th>
-                  {isAdmin && (
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-black">
-                      Actions
+          <>
+            <div className="sticky top-0 z-20 bg-white border-b border-slate-200">
+              <PaginationControls
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
+            <div className="relative">
+              <table className="w-full border-collapse">
+                <thead className="bg-slate-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Entity
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y h-64 divide-slate-200 overflow-y-auto">
-                {currencies &&
-                  currencies.map((currency) => (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Currency
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Alphabetic Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Numeric Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Minor Unit
+                    </th>
+                    {isAdmin && (
+                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {currencies.map((currency) => (
                     <tr key={currency.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 text-sm text-slate-600">
+                      <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[200px]">
                         {currency.entity}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
+                      <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[200px]">
                         {currency.currency}
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-indigo-600">
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-blue-600">
                         {currency.alphabetic_code}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
                         {currency.numeric_code}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
                         {currency.minor_unit}
                       </td>
                       {isAdmin && (
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end gap-2">
                             <button
                               onClick={() => openEditModal(currency)}
-                              className="p-1 hover:bg-slate-100 rounded"
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              aria-label="Edit currency"
+                              title="Edit Currency"
                             >
-                              <Edit size={16} className="text-slate-600" />
+                              <Edit size={18} />
                             </button>
-                            <button
-                              onClick={() => confirmDelete(currency)}
-                              className="p-1 hover:bg-slate-100 rounded"
+                            <Popconfirm
+                              title="Delete this currency?"
+                              description="This action cannot be undone."
+                              onConfirm={() => handleDelete(currency.id)}
+                              okText="Yes"
+                              cancelText="No"
+                              okButtonProps={{ className: 'bg-red-500' }}
                             >
-                              <Trash2 size={16} className="text-slate-600" />
-                            </button>
+                              <button
+                                className="text-red-600 hover:text-red-800 transition-colors"
+                                aria-label="Delete currency"
+                                title="Delete Currency"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </Popconfirm>
                           </div>
                         </td>
                       )}
                     </tr>
                   ))}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-slate-200">
+              <PaginationControls
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
+          </>
         )}
       </div>
-
-      {/* Add/Edit Modal */}
-      {showModal && (modalType === "add" || modalType === "edit") && (
+      {showModal && modalType !== "excel" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-medium text-slate-900">
                 {modalType === "add" ? "Add New Currency" : "Edit Currency"}
@@ -386,8 +529,8 @@ const ISO4217 = () => {
                 <X size={20} className="text-slate-400" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
                     Entity
@@ -397,7 +540,7 @@ const ISO4217 = () => {
                     name="entity"
                     value={currencyForm.entity}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md"
+                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -410,7 +553,7 @@ const ISO4217 = () => {
                     name="currency"
                     value={currencyForm.currency}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md"
+                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -423,7 +566,7 @@ const ISO4217 = () => {
                     name="alphabetic_code"
                     value={currencyForm.alphabetic_code}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md"
+                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -435,7 +578,7 @@ const ISO4217 = () => {
                     name="numeric_code"
                     value={currencyForm.numeric_code}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md"
+                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -447,7 +590,7 @@ const ISO4217 = () => {
                     name="minor_unit"
                     value={currencyForm.minor_unit}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md"
+                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -455,13 +598,13 @@ const ISO4217 = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 border border-slate-300 rounded-md"
+                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   {modalType === "add" ? "Add Currency" : "Save Changes"}
                 </button>
@@ -470,128 +613,74 @@ const ISO4217 = () => {
           </div>
         </div>
       )}
-
-      {/* Upload Modal */}
-      {showModal && modalType === "upload" && (
+      {showModal && modalType === "excel" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-medium text-slate-900">
-                Upload Currencies
+                Upload Currencies Excel File
               </h3>
               <button onClick={closeModal}>
                 <X size={20} className="text-slate-400" />
               </button>
             </div>
-            <div className="p-6">
-              <div className="mb-4">
-                <div
-                  className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <UploadCloud
-                    size={24}
-                    className="mx-auto text-slate-400 mb-2"
-                  />
-                  <p className="text-sm text-slate-600">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Excel files only (.xlsx)
-                  </p>
+            <div className="p-6 overflow-y-auto">
+              <div className="space-y-4">
+                <div>
                   <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
-                    accept=".xlsx"
-                    className="hidden"
+                    accept=".xlsx,.xls"
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
+                  {selectedFile && (
+                    <p className="mt-2 text-sm text-slate-600">
+                      Selected file: {selectedFile.name}
+                    </p>
+                  )}
                 </div>
-                {selectedFile && (
-                  <div className="mt-2 text-sm text-slate-600">
-                    Selected: {selectedFile.name}
+                {partialErrors.length > 0 && (
+                  <div className="mt-4 p-4 bg-red-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-red-800 mb-2">
+                      The following errors occurred:
+                    </h4>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {partialErrors.map((error, index) => (
+                        <li key={index} className="text-sm text-red-600">
+                          Row {error.row}: {Object.entries(error.errors || {}).map(([field, msg]) => `${field}: ${msg}`).join(", ") || error}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
-              <div className="flex justify-end gap-3">
+              <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 border border-slate-300 rounded-md"
+                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleFileUpload}
                   disabled={!selectedFile || isUploading}
-                  className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50"
+                  className={`px-4 py-2 rounded-md text-white ${!selectedFile || isUploading
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                    }`}
                 >
-                  {isUploading ? "Uploading..." : "Upload"}
+                  {isUploading ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Uploading...
+                    </div>
+                  ) : (
+                    "Upload File"
+                  )}
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-slate-900 mb-4">
-              Delete Currency
-            </h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Are you sure you want to delete this currency? This action cannot
-              be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirmation(false)}
-                className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 border border-slate-300 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Partial Errors Modal */}
-      {partialErrors && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-slate-900 mb-4">
-              Upload Results
-            </h3>
-            <div className="max-h-96 overflow-y-auto">
-              {partialErrorsWhileUploading.map((error, index) => (
-                <div
-                  key={index}
-                  className="mb-2 p-3 bg-red-50 border border-red-200 rounded"
-                >
-                  <p className="text-sm text-red-700">
-                    Row {error.row}: {JSON.stringify(error.errors)}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => {
-                  setPartialErrors(false);
-                  setPartialErrorsWhileUploading([]);
-                }}
-                className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 border border-slate-300 rounded-md"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>
