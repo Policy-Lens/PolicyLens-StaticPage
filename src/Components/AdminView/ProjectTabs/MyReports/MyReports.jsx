@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { apiRequest } from "../../../../utils/api";
 import Vapt from "./Vapt";
 import RiskTreatment from "./RiskTreatment";
@@ -941,6 +941,9 @@ const MyReports = () => {
   // State to track active tab
   const [activeTab, setActiveTab] = useState("table"); // Set default to 'table', not 'riskAssessment'
 
+  // Add a ref to track if auto-opening has been processed
+  const autoOpenProcessedRef = useRef(false);
+
   // Handle tab changes, preserve reportId if it exists in URL
   const changeTab = (tab) => {
     try {
@@ -1082,6 +1085,76 @@ const MyReports = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   // Add state for create report modal
   const [showCreateReportModal, setShowCreateReportModal] = useState(false);
+
+  // Multi-tab state management
+  const [openReportTabs, setOpenReportTabs] = useState([]);
+  const [activeReportTabId, setActiveReportTabId] = useState(null);
+
+  // Multi-tab management functions
+  const openReportTab = (reportData) => {
+    const tabId = `${reportData.type}-${reportData.id}`;
+
+    // Check if tab already exists
+    const existingTab = openReportTabs.find(tab => tab.id === tabId);
+    if (existingTab) {
+      setActiveReportTabId(tabId);
+      setActiveTab("reports");
+      return;
+    }
+
+    // Create new tab
+    const newTab = {
+      id: tabId,
+      reportId: reportData.id,
+      reportType: reportData.type,
+      reportName: reportData.name,
+      url: `/project/${projectid}/myreports/${reportData.type}?reportId=${reportData.id}`
+    };
+
+    setOpenReportTabs(prev => [...prev, newTab]);
+    setActiveReportTabId(tabId);
+    setActiveTab("reports");
+  };
+
+  const closeReportTab = (tabId) => {
+    setOpenReportTabs(prev => prev.filter(tab => tab.id !== tabId));
+
+    // If closing active tab, switch to another tab or table
+    if (activeReportTabId === tabId) {
+      const remainingTabs = openReportTabs.filter(tab => tab.id !== tabId);
+      if (remainingTabs.length > 0) {
+        setActiveReportTabId(remainingTabs[remainingTabs.length - 1].id);
+      } else {
+        setActiveTab("table");
+        setActiveReportTabId(null);
+      }
+    }
+  };
+
+  const switchToTab = (tabId) => {
+    if (tabId === "table") {
+      setActiveTab("table");
+      setActiveReportTabId(null);
+    } else {
+      setActiveTab("reports");
+      setActiveReportTabId(tabId);
+    }
+  };
+
+  const getReportTypeLabel = (reportType) => {
+    switch (reportType) {
+      case "riskAssessment":
+        return "Risk Assessment";
+      case "riskTreatment":
+        return "Risk Treatment";
+      case "vapt":
+        return "VAPT";
+      case "asisReport":
+        return "ASIS Report";
+      default:
+        return reportType;
+    }
+  };
 
   // Toggle dropdown function
   const toggleDropdown = () => {
@@ -2355,8 +2428,55 @@ const MyReports = () => {
     // Parse URL search params to get reportId if it exists
     const searchParams = new URLSearchParams(location.search);
     const reportId = searchParams.get('reportId');
+    const autoOpenAsis = searchParams.get('autoOpenAsis');
 
-    console.log("URL params:", { reportType, reportId, pathname: location.pathname, search: location.search });
+    console.log("URL params:", { reportType, reportId, autoOpenAsis, pathname: location.pathname, search: location.search });
+
+    // Handle auto-opening ASIS report from external navigation
+    if (autoOpenAsis === 'true' && !autoOpenProcessedRef.current) {
+      autoOpenProcessedRef.current = true; // Mark as processed to prevent duplicates
+      setActiveTab('table'); // First show the table
+
+      // Fetch available ASIS reports and auto-open the first one
+      const autoOpenAsisReport = async () => {
+        try {
+          const response = await apiRequest(
+            "GET",
+            `/api/rarpt/project/${projectid}/asis-reports/`,
+            null,
+            true
+          );
+
+          if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+            // Open the first ASIS report in a tab
+            const firstAsisReport = response.data[0];
+            openReportTab({
+              id: firstAsisReport.id,
+              type: "asisReport",
+              name: firstAsisReport.name
+            });
+
+            // Clean up the URL by removing the autoOpenAsis parameter
+            const newUrl = `/project/${projectid}/myreports`;
+            navigate(newUrl, { replace: true });
+          } else {
+            // No ASIS reports available, just show the table
+            message.info("No ASIS reports available. Please create one first.");
+          }
+        } catch (error) {
+          console.error("Error fetching ASIS reports for auto-open:", error);
+          message.error("Failed to load ASIS reports");
+        }
+      };
+
+      autoOpenAsisReport();
+      return; // Don't execute the rest of the logic
+    }
+
+    // Reset the auto-open flag when not auto-opening
+    if (autoOpenAsis !== 'true') {
+      autoOpenProcessedRef.current = false;
+    }
 
     // If the URL contains a valid report type, set it as the active tab
     if (['riskAssessment', 'riskTreatment', 'vapt', 'asisReport'].includes(reportType)) {
@@ -2635,6 +2755,629 @@ const MyReports = () => {
     });
   };
 
+  // Helper function to render tab content
+  const renderTabContent = () => {
+    if (activeTab === "table") {
+      return (
+        <>
+          <ReportsTable refreshTrigger={refreshCounter} onReportOpen={openReportTab} />
+          <CreateReportModal
+            isOpen={showCreateReportModal}
+            onClose={() => setShowCreateReportModal(false)}
+            projectid={projectid}
+            onSuccess={handleReportCreationSuccess}
+          />
+        </>
+      );
+    }
+
+    if (activeTab === "reports" && activeReportTabId) {
+      const currentTab = openReportTabs.find(tab => tab.id === activeReportTabId);
+      if (!currentTab) return <div>Tab not found</div>;
+
+      // Render the appropriate component based on report type
+      if (currentTab.reportType === "riskAssessment") {
+        // Return the full Risk Assessment content (keep existing implementation)
+        return renderRiskAssessmentContent();
+      } else if (currentTab.reportType === "riskTreatment") {
+        return (
+          <div className="p-5">
+            <RiskTreatment />
+          </div>
+        );
+      } else if (currentTab.reportType === "vapt") {
+        return (
+          <div className="p-5">
+            <Vapt />
+          </div>
+        );
+      } else if (currentTab.reportType === "asisReport") {
+        return (
+          <div className="p-5">
+            <ASISReport />
+          </div>
+        );
+      } else {
+        return <div>Unknown report type: {currentTab.reportType}</div>;
+      }
+    }
+
+    // Handle direct navigation to specific report types without multi-tab structure
+    if (activeTab === "asisReport") {
+      return (
+        <div className="p-5">
+          <ASISReport />
+        </div>
+      );
+    }
+
+    if (activeTab === "riskAssessment") {
+      return renderRiskAssessmentContent();
+    }
+
+    if (activeTab === "riskTreatment") {
+      return (
+        <div className="p-5">
+          <RiskTreatment />
+        </div>
+      );
+    }
+
+    if (activeTab === "vapt") {
+      return (
+        <div className="p-5">
+          <Vapt />
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // Helper function to render Risk Assessment content (extracted from existing code)
+  const renderRiskAssessmentContent = () => {
+    return (
+      <>
+        {/* Risk Assessment Content - Keep all existing code unchanged */}
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 p-2 bg-white sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center">
+            <h2 className="text-xl font-bold text-slate-800">
+              Risk Assessment Reports
+            </h2>
+            <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
+              {riskData.length}
+            </div>
+
+            {/* Report Selection Dropdown */}
+            {sheets && sheets.length > 0 && (
+              <div className="ml-4 relative">
+                <select
+                  value={selectedSheet ? selectedSheet.id : ""}
+                  onChange={(e) => handleSheetChange(e.target.value)}
+                  className="pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-48"
+                  disabled={isLoading}
+                >
+                  {!selectedSheet && (
+                    <option value="" disabled>
+                      Select a report...
+                    </option>
+                  )}
+                  {sheets.map((sheet) => (
+                    <option key={sheet.id} value={sheet.id}>
+                      {sheet.name}
+                    </option>
+                  ))}
+                  <option value="create">+ Create New Report</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md flex items-center"
+              onClick={() => openModal("create")}
+              disabled={!selectedSheet}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5 mr-2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+              <span>Add Risk</span>
+            </button>
+            <button
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-md flex items-center"
+              onClick={() => openModal("excel")}
+              disabled={!selectedSheet}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5 mr-2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                />
+              </svg>
+              <span>Upload Excel</span>
+            </button>
+            <button
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-md flex items-center"
+              onClick={toggleLegendsModal}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5 mr-2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                />
+              </svg>
+              <span>Legend</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-1">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+          </div>
+        )}
+
+        {/* Risk table or empty state - Keep all existing content */}
+        {!isLoading && (
+          <>
+            {/* Show message when no sheet is selected */}
+            {!selectedSheet && (
+              <div className="p-6 text-center">
+                <p className="text-gray-500 mb-2">No risk assessment sheet selected</p>
+                <p className="text-gray-500">
+                  Please select a report or create a new one to get started.
+                </p>
+              </div>
+            )}
+
+            {/* Show table with data when sheet is selected and has risks */}
+            {selectedSheet && riskData.length > 0 && (
+              <div className="overflow-x-auto">
+                <div className="inline-block min-w-full whitespace-nowrap">
+                  <table className="min-w-full border-collapse shadow-lg rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        {/* Action column */}
+                        <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
+                          Actions
+                        </th>
+
+                        {/* Basic columns */}
+                        <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Risk ID</th>
+                        <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Vulnerability Type</th>
+                        <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Threat Description</th>
+                        <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Context</th>
+                        <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">Applicable Activity</th>
+
+                        {/* Impact Assessment column group */}
+                        <th
+                          className="border border-slate-200 bg-indigo-50 p-3.5 cursor-pointer text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors duration-300"
+                          onClick={() => toggleGroup('impactAssessment')}
+                          colSpan={expandedGroups.impactAssessment ? 5 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Impact Assessment</span>
+                            {renderExpandIcon(expandedGroups.impactAssessment)}
+                          </div>
+                        </th>
+
+                        {/* Impact Ratings column group */}
+                        <th
+                          className="border border-slate-200 bg-indigo-50 p-3.5 cursor-pointer text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors duration-300"
+                          onClick={() => toggleGroup('impactRatings')}
+                          colSpan={expandedGroups.impactRatings ? 4 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Impact Ratings</span>
+                            {renderExpandIcon(expandedGroups.impactRatings)}
+                          </div>
+                        </th>
+
+                        {/* Severity column group */}
+                        <th
+                          className="border border-slate-200 bg-amber-50 p-3.5 cursor-pointer text-amber-700 font-semibold hover:bg-amber-100 transition-colors duration-300"
+                          onClick={() => toggleGroup('severity')}
+                          colSpan={expandedGroups.severity ? 2 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Severity</span>
+                            {renderExpandIcon(expandedGroups.severity)}
+                          </div>
+                        </th>
+
+                        {/* Control Assessment column group */}
+                        <th
+                          className="border border-slate-200 bg-slate-200 p-3.5 cursor-pointer text-slate-700 font-semibold hover:bg-slate-300 transition-colors duration-300"
+                          onClick={() => toggleGroup('controlAssessment')}
+                          colSpan={expandedGroups.controlAssessment ? 2 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Control Assessment</span>
+                            {renderExpandIcon(expandedGroups.controlAssessment)}
+                          </div>
+                        </th>
+
+                        {/* Risk Assessment column group */}
+                        <th
+                          className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
+                          onClick={() => toggleGroup('riskAssessment')}
+                          colSpan={expandedGroups.riskAssessment ? 5 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Risk Assessment</span>
+                            {renderExpandIcon(expandedGroups.riskAssessment)}
+                          </div>
+                        </th>
+
+                        {/* Risk Revision column group */}
+                        <th
+                          className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
+                          onClick={() => toggleGroup('riskRevision')}
+                          colSpan={expandedGroups.riskRevision ? 6 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Risk Revision</span>
+                            {renderExpandIcon(expandedGroups.riskRevision)}
+                          </div>
+                        </th>
+
+                        {/* Mitigation Plan column group */}
+                        <th
+                          className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
+                          onClick={() => toggleGroup('mitigationPlan')}
+                          colSpan={expandedGroups.mitigationPlan ? 7 : 1}
+                        >
+                          <div className="flex items-center justify-center">
+                            <span>Mitigation Plan</span>
+                            {renderExpandIcon(expandedGroups.mitigationPlan)}
+                          </div>
+                        </th>
+                      </tr>
+
+                      {/* Second row for subheaders */}
+                      <tr className="bg-slate-50">
+                        <th className="border border-slate-200 p-3 font-medium"></th>
+                        <th className="border border-slate-200 p-3 font-medium"></th>
+                        <th className="border border-slate-200 p-3 font-medium"></th>
+                        <th className="border border-slate-200 p-3 font-medium"></th>
+                        <th className="border border-slate-200 p-3 font-medium"></th>
+                        <th className="border border-slate-200 p-3 font-medium"></th>
+
+                        {/* Impact Assessment subheaders */}
+                        {expandedGroups.impactAssessment ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Confidentiality</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Integrity</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Availability</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Legal Obligation</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Legal Obligation Description</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-50"></th>
+                        )}
+
+                        {/* Impact Ratings subheaders */}
+                        {expandedGroups.impactRatings ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">On Customer</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Service Capability</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Financial Damage</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">Spread Magnitude</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-50"></th>
+                        )}
+
+                        {/* Severity subheaders */}
+                        {expandedGroups.severity ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-amber-50 transition-all duration-300">Consequence rating</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-amber-50 transition-all duration-300">Likelihood rating</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-amber-50"></th>
+                        )}
+
+                        {/* Control Assessment subheaders */}
+                        {expandedGroups.controlAssessment ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">Description</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">Rating</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-slate-100"></th>
+                        )}
+
+                        {/* Risk Assessment subheaders */}
+                        {expandedGroups.riskAssessment ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Rating</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Category</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Department / BU</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Owner</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Mitigation Strategy</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
+                        )}
+
+                        {/* Risk Revision subheaders */}
+                        {expandedGroups.riskRevision ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">Applicable SoA Control</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">SoA Control Description</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">Will the planned controls meet legal/ other requirements? (Y/N)</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">Revised control rating</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">Residual risk rating</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">Revised Risk Acceptable to risk owner? (Y/N)</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-indigo-100"></th>
+                        )}
+
+                        {/* Mitigation Plan subheaders */}
+                        {expandedGroups.mitigationPlan ? (
+                          <>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Further Planned Action</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Task ID</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Task Description</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Task Owner</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Is Ongoing?</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Is Recurrent?</th>
+                            <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">Planned Completion Date</th>
+                          </>
+                        ) : (
+                          <th className="border border-slate-200 p-3 font-medium bg-green-100"></th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {riskData.map((risk, index) => (
+                        <tr key={risk.id || index} className="hover:bg-slate-50 transition-colors cursor-pointer">
+                          {/* Actions column */}
+                          <td className="border border-slate-200 p-3">
+                            <div className="flex space-x-2">
+                              <button
+                                className="p-1.5 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors focus:outline-none"
+                                onClick={() => handleViewRisk(risk.id)}
+                                title="View"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              </button>
+                              <button
+                                className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                onClick={() => handleEditRiskByObject(risk)}
+                                title="Edit"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-green-600">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                              </button>
+                              <button
+                                className="p-1.5 bg-red-50 rounded-full hover:bg-red-100 transition-colors focus:outline-none"
+                                onClick={() => handleDeleteRisk(risk.id)}
+                                title="Delete"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-red-600">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Basic cells */}
+                          <td className="border border-slate-200 p-3">{risk.risk_id}</td>
+                          <td className="border border-slate-200 p-3">{risk.vulnerabilityType}</td>
+                          <td className="border border-slate-200 p-3">{risk.threatDescription}</td>
+                          <td className="border border-slate-200 p-3">{risk.context}</td>
+                          <td className="border border-slate-200 p-3">{risk.applicableActivity}</td>
+
+                          {/* Impact Assessment cells */}
+                          {expandedGroups.impactAssessment ? (
+                            <>
+                              <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.confidentiality)}`}>
+                                {risk.impactAssessment.confidentiality}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.integrity)}`}>
+                                {risk.impactAssessment.integrity}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.availability)}`}>
+                                {risk.impactAssessment.availability}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.legalObligation)}`}>
+                                {risk.impactAssessment.legalObligation}
+                              </td>
+                              <td className="border border-slate-200 p-3">
+                                {risk.impactAssessment.legalObligationDesc}
+                              </td>
+                            </>
+                          ) : (
+                            <td className="border border-slate-200 p-3 text-center">
+                              {risk.impactAssessment.confidentiality}/{risk.impactAssessment.integrity}/{risk.impactAssessment.availability}
+                            </td>
+                          )}
+
+                          {/* Impact Ratings cells */}
+                          {expandedGroups.impactRatings ? (
+                            <>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.customer)}`}>
+                                {risk.impactRatings.customer}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.serviceCapability)}`}>
+                                {risk.impactRatings.serviceCapability}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.financialDamage)}`}>
+                                {risk.impactRatings.financialDamage}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.spreadMagnitude)}`}>
+                                {risk.impactRatings.spreadMagnitude}
+                              </td>
+                            </>
+                          ) : (
+                            <td className="border border-slate-200 p-3 text-center">
+                              C:{risk.impactRatings.customer} S:{risk.impactRatings.serviceCapability}
+                            </td>
+                          )}
+
+                          {/* Severity cells */}
+                          {expandedGroups.severity ? (
+                            <>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.severity.consequenceRating)}`}>
+                                {risk.severity.consequenceRating}
+                              </td>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.severity.likelihoodRating)}`}>
+                                {risk.severity.likelihoodRating}
+                              </td>
+                            </>
+                          ) : (
+                            <td className="border border-slate-200 p-3 text-center">
+                              C:{risk.severity.consequenceRating} L:{risk.severity.likelihoodRating}
+                            </td>
+                          )}
+
+                          {/* Control Assessment cells */}
+                          {expandedGroups.controlAssessment ? (
+                            <>
+                              <td className="border border-slate-200 p-3">{risk.controlAssessment.description}</td>
+                              <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.controlAssessment.rating)}`}>
+                                {risk.controlAssessment.rating}
+                              </td>
+                            </>
+                          ) : (
+                            <td className="border border-slate-200 p-3 text-center">
+                              Rating: {risk.controlAssessment.rating}
+                            </td>
+                          )}
+
+                          {/* Risk Assessment cells */}
+                          {expandedGroups.riskAssessment ? (
+                            <>
+                              <td className={`border border-slate-200 p-3 text-center ${risk.riskAssessment.riskRating > 20 ? "bg-red-500 text-white" : "bg-slate-50"}`}>
+                                {risk.riskAssessment.riskRating}
+                              </td>
+                              <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.riskCategory}</td>
+                              <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.departmentBU}</td>
+                              <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.riskOwner}</td>
+                              <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.mitigationStrategy}</td>
+                            </>
+                          ) : (
+                            <td className={`border border-slate-200 p-3 text-center ${risk.riskAssessment.riskRating > 20 ? "bg-red-500 text-white" : ""}`}>
+                              {risk.riskAssessment.riskRating}
+                            </td>
+                          )}
+
+                          {/* Risk Revision cells */}
+                          {expandedGroups.riskRevision ? (
+                            <>
+                              <td className="border border-slate-200 p-3 bg-indigo-50">{risk.riskRevision.soaControl}</td>
+                              <td className="border border-slate-200 p-3 bg-indigo-50">{risk.riskRevision.soaControlDesc}</td>
+                              <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.meetsRequirements}</td>
+                              <td className={`border border-slate-200 p-3 text-center bg-yellow-200`}>
+                                {risk.riskRevision.revisedControlRating}
+                              </td>
+                              <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.residualRiskRating}</td>
+                              <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.acceptableToOwner}</td>
+                            </>
+                          ) : (
+                            <td className="border border-slate-200 p-3 text-center bg-indigo-50">
+                              RR: {risk.riskRevision.residualRiskRating}
+                            </td>
+                          )}
+
+                          {/* Mitigation Plan cells */}
+                          {expandedGroups.mitigationPlan ? (
+                            <>
+                              <td className="border border-slate-200 p-3 bg-green-50">{risk.mitigationPlan?.furtherPlannedAction || '-'}</td>
+                              <td className="border border-slate-200 p-3 bg-green-50">{risk.mitigationPlan?.taskId || '-'}</td>
+                              <td className="border border-slate-200 p-3 bg-green-50">{risk.mitigationPlan?.taskDescription || '-'}</td>
+                              <td className="border border-slate-200 p-3 bg-green-50">{risk.mitigationPlan?.taskOwner || '-'}</td>
+                              <td className="border border-slate-200 p-3 text-center bg-green-50">{risk.mitigationPlan?.isOngoing || 'N'}</td>
+                              <td className="border border-slate-200 p-3 text-center bg-green-50">{risk.mitigationPlan?.isRecurrent || 'N'}</td>
+                              <td className="border border-slate-200 p-3 bg-green-50">{risk.mitigationPlan?.plannedCompletionDate || '-'}</td>
+                            </>
+                          ) : (
+                            <td className="border border-slate-200 p-3 text-center bg-green-50">
+                              Task: {risk.mitigationPlan?.taskId || 'None'}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Show empty state when sheet is selected but no risks */}
+            {selectedSheet && riskData.length === 0 && (
+              <div className="overflow-x-auto">
+                <div className="inline-block min-w-full whitespace-nowrap">
+                  <table className="min-w-full border-collapse shadow-lg rounded-lg overflow-hidden">
+                    <tbody>
+                      <tr>
+                        <td colSpan="100%" className="p-4 text-center text-gray-500">
+                          No risks found in this report. Click "Add Risk" to create your first risk assessment entry, or upload from Excel.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       {/* Error display */}
@@ -2654,1030 +3397,64 @@ const MyReports = () => {
       {/* Main Content */}
       <div className="flex flex-1 overflow-auto shadow-xl rounded-lg">
         <div className="flex flex-col w-full bg-white border-r border-slate-200 relative overflow-auto">
-          {activeTab === 'table' ? (
-            /* Table view */
-            <>
-              <ReportsTable refreshTrigger={refreshCounter} />
 
-              {/* Create Report Modal */}
-              <CreateReportModal
-                isOpen={showCreateReportModal}
-                onClose={() => setShowCreateReportModal(false)}
-                projectid={projectid}
-                onSuccess={handleReportCreationSuccess}
-              />
-            </>
-          ) : (
-            /* Tab views */
-            <>
-              {/* Tab Navigation with Back Button */}
-              <div className="flex border-b border-slate-200 relative">
-                <button
-                  className={`py-4 px-6 font-medium transition-colors ${activeTab === "table"
-                    ? "text-indigo-600 border-b-2 border-indigo-600"
-                    : "text-slate-600 hover:text-slate-800"}`}
-                  onClick={() => changeTab("table")}
-                >
-                  Reports Table
-                </button>
+          {/* Multi-Tab Navigation - Show when there are report tabs open */}
+          {(activeTab === "reports" || openReportTabs.length > 0) && (
+            <div className="flex border-b border-slate-200 relative overflow-x-auto">
+              {/* Reports Table Tab - Always visible */}
+              <button
+                className={`py-4 px-6 font-medium whitespace-nowrap flex-shrink-0 transition-colors ${activeTab === "table"
+                  ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50"
+                  : "text-slate-600 hover:text-slate-800"}`}
+                onClick={() => switchToTab("table")}
+              >
+                Reports Table
+              </button>
 
-                {activeTab === "riskAssessment" && (
+              {/* Dynamic Report Tabs */}
+              {openReportTabs.map((tab) => (
+                <div key={tab.id} className="flex items-center">
                   <button
-                    className="py-4 px-6 font-medium transition-colors text-indigo-600 border-b-2 border-indigo-600"
+                    className={`py-4 px-4 font-medium whitespace-nowrap flex items-center transition-colors ${activeReportTabId === tab.id
+                      ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50"
+                      : "text-slate-600 hover:text-slate-800"
+                      }`}
+                    onClick={() => switchToTab(tab.id)}
                   >
-                    Risk Assessment
+                    <span className="max-w-[150px] truncate">
+                      {tab.reportName}
+                    </span>
                   </button>
-                )}
 
-                {activeTab === "riskTreatment" && (
+                  {/* Close button */}
                   <button
-                    className="py-4 px-6 font-medium transition-colors text-indigo-600 border-b-2 border-indigo-600"
+                    className="p-1 ml-1 mr-2 hover:bg-slate-200 rounded transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeReportTab(tab.id);
+                    }}
+                    title="Close tab"
                   >
-                    Risk Treatment
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
-                )}
-
-                {activeTab === "vapt" && (
-                  <button
-                    className="py-4 px-6 font-medium transition-colors text-indigo-600 border-b-2 border-indigo-600"
-                  >
-                    VAPT
-                  </button>
-                )}
-
-                {activeTab === "asisReport" && (
-                  <button
-                    className="py-4 px-6 font-medium transition-colors text-indigo-600 border-b-2 border-indigo-600"
-                  >
-                    ASIS Report
-                  </button>
-                )}
-
-                {/* Close/Back button on the right end */}
-                <button
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 py-2 px-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-full"
-                  onClick={goBackToTable}
-                  title="Back to Reports"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              {activeTab === "riskAssessment" && (
-                <>
-                  {/* Header */}
-                  <div className="flex items-center justify-between border-b border-slate-200 p-2 bg-white sticky top-0 z-10 shadow-sm">
-                    <div className="flex items-center">
-                      <h2 className="text-xl font-bold text-slate-800">
-                        Risk Assessment Reports
-                      </h2>
-                      <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
-                        {riskData.length}
-                      </div>
-
-                      {/* Report Selection Dropdown */}
-                      {sheets && sheets.length > 0 && (
-                        <div className="ml-4 relative">
-                          <select
-                            value={selectedSheet ? selectedSheet.id : ""}
-                            onChange={(e) => handleSheetChange(e.target.value)}
-                            className="pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-48"
-                            disabled={isLoading}
-                          >
-                            {!selectedSheet && (
-                              <option value="" disabled>
-                                Select a report...
-                              </option>
-                            )}
-                            {sheets.map((sheet) => (
-                              <option key={sheet.id} value={sheet.id}>
-                                {sheet.name}
-                              </option>
-                            ))}
-                            <option value="create">+ Create New Report</option>
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                            <svg
-                              className="w-5 h-5 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M19 9l-7 7-7-7"
-                              ></path>
-                            </svg>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md flex items-center"
-                        onClick={() => openModal("create")}
-                        disabled={!selectedSheet}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-5 h-5 mr-2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M12 4.5v15m7.5-7.5h-15"
-                          />
-                        </svg>
-                        <span>Add Risk</span>
-                      </button>
-                      <button
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-md flex items-center"
-                        onClick={() => openModal("excel")}
-                        disabled={!selectedSheet}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-5 h-5 mr-2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                          />
-                        </svg>
-                        <span>Upload Excel</span>
-                      </button>
-                      <button
-                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-md flex items-center"
-                        onClick={toggleLegendsModal}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-5 h-5 mr-2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-                          />
-                        </svg>
-                        <span>Legend</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Loading indicator */}
-                  {isLoading && (
-                    <div className="flex justify-center items-center py-1">
-                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
-                    </div>
-                  )}
-
-                  {/* Risk table or empty state */}
-                  {!isLoading && (
-                    <>
-                      {/* Show message when no sheet is selected */}
-                      {!selectedSheet && (
-                        <div className="p-6 text-center">
-                          <p className="text-gray-500 mb-2">No risk assessment sheet selected</p>
-                          <p className="text-gray-500">
-                            Please select a report or create a new one to get started.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Show table with data when sheet is selected and has risks */}
-                      {selectedSheet && riskData.length > 0 && (
-                        <div className="overflow-x-auto">
-                          <div className="inline-block min-w-full whitespace-nowrap">
-                            <table className="min-w-full border-collapse shadow-lg rounded-lg overflow-hidden">
-                              <thead>
-                                <tr className="bg-slate-100">
-                                  {/* Action column */}
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Actions
-                                  </th>
-
-                                  {/* Basic columns */}
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Risk ID
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Vulnerability Type
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Threat Description
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Context
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Applicable Activity
-                                  </th>
-
-                                  {/* Impact Assessment column group */}
-                                  <th
-                                    className="border border-slate-200 bg-indigo-50 p-3.5 cursor-pointer text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors duration-300"
-                                    onClick={() => toggleGroup("impactAssessment")}
-                                    colSpan={expandedGroups.impactAssessment ? 5 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Impact Assessment</span>
-                                      {renderExpandIcon(expandedGroups.impactAssessment)}
-                                    </div>
-                                  </th>
-
-                                  {/* Impact Ratings column group */}
-                                  <th
-                                    className="border border-slate-200 bg-indigo-50 p-3.5 cursor-pointer text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors duration-300"
-                                    onClick={() => toggleGroup("impactRatings")}
-                                    colSpan={expandedGroups.impactRatings ? 4 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Impact Ratings</span>
-                                      {renderExpandIcon(expandedGroups.impactRatings)}
-                                    </div>
-                                  </th>
-
-                                  {/* Severity column group */}
-                                  <th
-                                    className="border border-slate-200 bg-amber-50 p-3.5 cursor-pointer text-amber-700 font-semibold hover:bg-amber-100 transition-colors duration-300"
-                                    onClick={() => toggleGroup("severity")}
-                                    colSpan={expandedGroups.severity ? 2 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Severity</span>
-                                      {renderExpandIcon(expandedGroups.severity)}
-                                    </div>
-                                  </th>
-
-                                  {/* Control Assessment column group */}
-                                  <th
-                                    className="border border-slate-200 bg-slate-100 p-3.5 cursor-pointer text-slate-700 font-semibold hover:bg-slate-200 transition-colors duration-300"
-                                    onClick={() => toggleGroup("controlAssessment")}
-                                    colSpan={expandedGroups.controlAssessment ? 2 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Control Assessment</span>
-                                      {renderExpandIcon(expandedGroups.controlAssessment)}
-                                    </div>
-                                  </th>
-
-                                  {/* Risk Assessment column group */}
-                                  <th
-                                    className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
-                                    onClick={() => toggleGroup("riskAssessment")}
-                                    colSpan={expandedGroups.riskAssessment ? 5 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Risk Assessment</span>
-                                      {renderExpandIcon(expandedGroups.riskAssessment)}
-                                    </div>
-                                  </th>
-
-                                  {/* Risk Revision column group */}
-                                  <th
-                                    className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
-                                    onClick={() => toggleGroup("riskRevision")}
-                                    colSpan={expandedGroups.riskRevision ? 7 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Risk Revision</span>
-                                      {renderExpandIcon(expandedGroups.riskRevision)}
-                                    </div>
-                                  </th>
-
-                                  {/* Mitigation Plan column group */}
-                                  <th
-                                    className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
-                                    onClick={() => toggleGroup("mitigationPlan")}
-                                    colSpan={expandedGroups.mitigationPlan ? 8 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Mitigation Plan</span>
-                                      {renderExpandIcon(expandedGroups.mitigationPlan)}
-                                    </div>
-                                  </th>
-                                </tr>
-
-                                {/* Second row of headers for expanded column groups */}
-                                <tr className="bg-slate-50">
-                                  {/* Empty cells for fixed columns */}
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-
-                                  {/* Impact Assessment subheaders */}
-                                  {expandedGroups.impactAssessment ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Impact on Confidentiality? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Impact on Integrity? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Impact on Availability? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Breach of legal obligation? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Description of legal obligation
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-indigo-50"></th>
-                                  )}
-
-                                  {/* Impact Ratings subheaders */}
-                                  {expandedGroups.impactRatings ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        On customer
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        On service capability
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Financial damage
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Spread / Magnitude
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-indigo-50"></th>
-                                  )}
-
-                                  {/* Severity subheaders */}
-                                  {expandedGroups.severity ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-amber-50 transition-all duration-300">
-                                        Consequence Rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-amber-50 transition-all duration-300">
-                                        Likelihood Rating
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-amber-50"></th>
-                                  )}
-
-                                  {/* Control Assessment subheaders */}
-                                  {expandedGroups.controlAssessment ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Description
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Rating
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-slate-100"></th>
-                                  )}
-
-                                  {/* Risk Assessment subheaders */}
-                                  {expandedGroups.riskAssessment ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Rating</th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Category</th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Department / BU</th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Owner</th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white transition-all duration-300">Risk Mitigation Strategy</th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-slate-600 text-white"></th>
-                                  )}
-
-                                  {/* Risk Revision subheaders */}
-                                  {expandedGroups.riskRevision ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Applicable SOA Control
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        SOA Control Description
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Planned controls meet requirements? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Revised control rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Revised consequence rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Revised likelihood rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Residual risk rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white transition-all duration-300">
-                                        Acceptable to risk owner? (Y/N)
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-indigo-600 text-white"></th>
-                                  )}
-
-                                  {/* Mitigation Plan subheaders */}
-                                  {expandedGroups.mitigationPlan ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Further planned action? (Yes/No)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Task ID
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Task description
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Task owner
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Ongoing? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Planned completion date
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Recurrent? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Frequency
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-green-100"></th>
-                                  )}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {Array.isArray(riskData) && riskData.map((risk, index) => (
-                                  <tr
-                                    key={risk.id}
-                                    className={
-                                      index % 2 === 0
-                                        ? "bg-white hover:bg-indigo-50 transition-colors duration-150"
-                                        : "bg-slate-50 hover:bg-indigo-50 transition-colors duration-150"
-                                    }
-                                  >
-                                    {/* Action buttons */}
-                                    <td className="border border-slate-200 p-3">
-                                      <div className="flex space-x-2">
-                                        <button
-                                          className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
-                                          title="View Details"
-                                          onClick={() => handleViewRiskByObject(risk)}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth={1.5}
-                                            stroke="currentColor"
-                                            className="w-5 h-5 text-blue-600"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                                            />
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                            />
-                                          </svg>
-                                        </button>
-                                        <button
-                                          className="p-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
-                                          title="Edit Risk"
-                                          onClick={() => handleEditRiskByObject(risk)}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth={1.5}
-                                            stroke="currentColor"
-                                            className="w-5 h-5 text-blue-600"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                                            />
-                                          </svg>
-                                        </button>
-                                        <button
-                                          className="p-1 bg-red-100 rounded hover:bg-red-200 transition-colors"
-                                          title="Delete Risk"
-                                          onClick={() => handleDeleteRisk(risk.id)}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth={1.5}
-                                            stroke="currentColor"
-                                            className="w-5 h-5 text-red-600"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                            />
-                                          </svg>
-                                        </button>
-                                      </div>
-                                    </td>
-
-                                    {/* Basic data cells */}
-                                    <td className="border border-slate-200 p-3">{risk.risk_id}</td>
-                                    <td className="border border-slate-200 p-3">{risk.vulnerabilityType}</td>
-                                    <td className="border border-slate-200 p-3">{risk.threatDescription}</td>
-                                    <td className="border border-slate-200 p-3">{risk.context}</td>
-                                    <td className="border border-slate-200 p-3">{risk.applicableActivity}</td>
-
-                                    {/* Impact Assessment cells */}
-                                    {expandedGroups.impactAssessment ? (
-                                      <>
-                                        <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.confidentiality)}`}>
-                                          {risk.impactAssessment.confidentiality}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.integrity)}`}>
-                                          {risk.impactAssessment.integrity}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.availability)}`}>
-                                          {risk.impactAssessment.availability}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getImpactColor(risk.impactAssessment.legalObligation)}`}>
-                                          {risk.impactAssessment.legalObligation}
-                                        </td>
-                                        <td className="border border-slate-200 p-3">
-                                          {risk.impactAssessment.legalObligationDesc}
-                                        </td>
-                                      </>
-                                    ) : (
-                                      <td className="border border-slate-200 p-3 text-center">
-                                        {risk.impactAssessment.confidentiality}/{risk.impactAssessment.integrity}/{risk.impactAssessment.availability}
-                                      </td>
-                                    )}
-
-                                    {/* Impact Ratings cells */}
-                                    {expandedGroups.impactRatings ? (
-                                      <>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.customer)}`}>
-                                          {risk.impactRatings.customer}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.serviceCapability)}`}>
-                                          {risk.impactRatings.serviceCapability}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.financialDamage)}`}>
-                                          {risk.impactRatings.financialDamage}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.impactRatings.spreadMagnitude)}`}>
-                                          {risk.impactRatings.spreadMagnitude}
-                                        </td>
-                                      </>
-                                    ) : (
-                                      <td className="border border-slate-200 p-3 text-center">
-                                        {((risk.impactRatings.customer + risk.impactRatings.serviceCapability +
-                                          risk.impactRatings.financialDamage + risk.impactRatings.spreadMagnitude) / 4).toFixed(1)}
-                                      </td>
-                                    )}
-
-                                    {/* Severity cells */}
-                                    {expandedGroups.severity ? (
-                                      <>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.severity.consequenceRating)}`}>
-                                          {risk.severity.consequenceRating}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.severity.likelihoodRating)}`}>
-                                          {risk.severity.likelihoodRating}
-                                        </td>
-                                      </>
-                                    ) : (
-                                      <td className="border border-slate-200 p-3 text-center">
-                                        C:{risk.severity.consequenceRating} L:{risk.severity.likelihoodRating}
-                                      </td>
-                                    )}
-
-                                    {/* Control Assessment cells */}
-                                    {expandedGroups.controlAssessment ? (
-                                      <>
-                                        <td className="border border-slate-200 p-3">{risk.controlAssessment.description}</td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.controlAssessment.rating)}`}>
-                                          {risk.controlAssessment.rating}
-                                        </td>
-                                      </>
-                                    ) : (
-                                      <td className="border border-slate-200 p-3 text-center">
-                                        Rating: {risk.controlAssessment.rating}
-                                      </td>
-                                    )}
-
-                                    {/* Risk Assessment cells */}
-                                    {expandedGroups.riskAssessment ? (
-                                      <>
-                                        <td className={`border border-slate-200 p-3 text-center ${risk.riskAssessment.riskRating > 20 ? "bg-red-500 text-white" : "bg-slate-50"}`}>
-                                          {risk.riskAssessment.riskRating}
-                                        </td>
-                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.riskCategory}</td>
-                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.departmentBU}</td>
-                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.riskOwner}</td>
-                                        <td className="border border-slate-200 p-3 bg-slate-50">{risk.riskAssessment.mitigationStrategy}</td>
-                                      </>
-                                    ) : (
-                                      <td className={`border border-slate-200 p-3 text-center ${risk.riskAssessment.riskRating > 20 ? "bg-red-500 text-white" : ""}`}>
-                                        {risk.riskAssessment.riskRating}
-                                      </td>
-                                    )}
-
-                                    {/* Risk Revision cells */}
-                                    {expandedGroups.riskRevision ? (
-                                      <>
-                                        <td className="border border-slate-200 p-3 bg-indigo-50">{risk.riskRevision.soaControl}</td>
-                                        <td className="border border-slate-200 p-3 bg-indigo-50">{risk.riskRevision.soaControlDesc}</td>
-                                        <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.meetsRequirements}</td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.revisedControlRating)}`}>
-                                          {risk.riskRevision.revisedControlRating}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.revisedConsequenceRating)}`}>
-                                          {risk.riskRevision.revisedConsequenceRating}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.revisedLikelihoodRating)}`}>
-                                          {risk.riskRevision.revisedLikelihoodRating}
-                                        </td>
-                                        <td className={`border border-slate-200 p-3 text-center ${getRatingColor(risk.riskRevision.residualRiskRating)}`}>
-                                          {risk.riskRevision.residualRiskRating}
-                                        </td>
-                                        <td className="border border-slate-200 p-3 text-center bg-indigo-50">{risk.riskRevision.acceptableToOwner}</td>
-                                      </>
-                                    ) : (
-                                      <td className={`border border-slate-200 p-3 text-center bg-indigo-50 ${getRatingColor(risk.riskRevision.residualRiskRating)}`}>
-                                        RR: {risk.riskRevision.residualRiskRating}
-                                      </td>
-                                    )}
-
-                                    {/* Mitigation Plan cells */}
-                                    {expandedGroups.mitigationPlan ? (
-                                      <>
-                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.furtherPlannedAction}</td>
-                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskId}</td>
-                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskDescription}</td>
-                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.taskOwner}</td>
-                                        <td className="border border-slate-200 p-3 text-center">{risk.mitigationPlan.isOngoing}</td>
-                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.plannedCompletionDate}</td>
-                                        <td className="border border-slate-200 p-3 text-center">{risk.mitigationPlan.isRecurrent}</td>
-                                        <td className="border border-slate-200 p-3">{risk.mitigationPlan.frequency}</td>
-                                      </>
-                                    ) : (
-                                      <td className="border border-slate-200 p-3 text-center">
-                                        {risk.mitigationPlan.taskId || 'No tasks'}
-                                      </td>
-                                    )}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Show message when sheet is selected but has no risks */}
-                      {selectedSheet && riskData.length === 0 && (
-                        <div className="overflow-x-auto">
-                          <div className="inline-block min-w-full whitespace-nowrap">
-                            <table className="min-w-full border-collapse shadow-lg rounded-lg overflow-hidden">
-                              <thead>
-                                <tr className="bg-slate-100">
-                                  {/* Action column */}
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Actions
-                                  </th>
-
-                                  {/* Basic columns */}
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Risk ID
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Vulnerability Type
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Risk Category
-                                  </th>
-                                  <th className="border border-slate-200 p-3.5 text-left text-slate-700 font-semibold bg-slate-50">
-                                    Risk Rating
-                                  </th>
-
-                                  {/* Impact Assessment column group */}
-                                  <th
-                                    className="border border-slate-200 bg-indigo-50 p-3.5 cursor-pointer text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors duration-300"
-                                    onClick={() => toggleGroup("impactAssessment")}
-                                    colSpan={expandedGroups.impactAssessment ? 5 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Impact Assessment</span>
-                                      {renderExpandIcon(expandedGroups.impactAssessment)}
-                                    </div>
-                                  </th>
-
-                                  {/* Impact Ratings column group */}
-                                  <th
-                                    className="border border-slate-200 bg-indigo-50 p-3.5 cursor-pointer text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors duration-300"
-                                    onClick={() => toggleGroup("impactRatings")}
-                                    colSpan={expandedGroups.impactRatings ? 4 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Impact Ratings</span>
-                                      {renderExpandIcon(expandedGroups.impactRatings)}
-                                    </div>
-                                  </th>
-
-                                  {/* Severity column group */}
-                                  <th
-                                    className="border border-slate-200 bg-amber-50 p-3.5 cursor-pointer text-amber-700 font-semibold hover:bg-amber-100 transition-colors duration-300"
-                                    onClick={() => toggleGroup("severity")}
-                                    colSpan={expandedGroups.severity ? 2 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Severity</span>
-                                      {renderExpandIcon(expandedGroups.severity)}
-                                    </div>
-                                  </th>
-
-                                  {/* Control Assessment column group */}
-                                  <th
-                                    className="border border-slate-200 bg-slate-100 p-3.5 cursor-pointer text-slate-700 font-semibold hover:bg-slate-200 transition-colors duration-300"
-                                    onClick={() => toggleGroup("controlAssessment")}
-                                    colSpan={expandedGroups.controlAssessment ? 2 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Control Assessment</span>
-                                      {renderExpandIcon(expandedGroups.controlAssessment)}
-                                    </div>
-                                  </th>
-
-                                  {/* Risk Assessment column group */}
-                                  <th
-                                    className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
-                                    onClick={() => toggleGroup("riskAssessment")}
-                                    colSpan={expandedGroups.riskAssessment ? 5 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Risk Assessment</span>
-                                      {renderExpandIcon(expandedGroups.riskAssessment)}
-                                    </div>
-                                  </th>
-
-                                  {/* Risk Revision column group */}
-                                  <th
-                                    className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
-                                    onClick={() => toggleGroup("riskRevision")}
-                                    colSpan={expandedGroups.riskRevision ? 6 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Risk Revision</span>
-                                      {renderExpandIcon(expandedGroups.riskRevision)}
-                                    </div>
-                                  </th>
-
-                                  {/* Mitigation Plan column group */}
-                                  <th
-                                    className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
-                                    onClick={() => toggleGroup("mitigationPlan")}
-                                    colSpan={expandedGroups.mitigationPlan ? 8 : 1}
-                                  >
-                                    <div className="flex items-center justify-center">
-                                      <span>Mitigation Plan</span>
-                                      {renderExpandIcon(expandedGroups.mitigationPlan)}
-                                    </div>
-                                  </th>
-                                </tr>
-
-                                {/* Second row of headers for expanded column groups */}
-                                <tr className="bg-slate-50">
-                                  {/* Empty cell for action column */}
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-
-                                  {/* Empty cells for the basic columns */}
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-                                  <th className="border border-slate-200 p-3 font-medium"></th>
-
-                                  {/* Impact Assessment subheaders */}
-                                  {expandedGroups.impactAssessment ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Impact on Confidentiality? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Impact on Integrity? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Impact on Availability? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Breach of legal obligation? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Description of legal obligation
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-indigo-50"></th>
-                                  )}
-
-                                  {/* Impact Ratings subheaders */}
-                                  {expandedGroups.impactRatings ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        On customer
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        On service capability
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Financial damage
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-50 transition-all duration-300">
-                                        Spread / Magnitude
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-indigo-50"></th>
-                                  )}
-
-                                  {/* Severity subheaders */}
-                                  {expandedGroups.severity ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-amber-50 transition-all duration-300">
-                                        Consequence Rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-amber-50 transition-all duration-300">
-                                        Likelihood Rating
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-amber-50"></th>
-                                  )}
-
-                                  {/* Control Assessment subheaders */}
-                                  {expandedGroups.controlAssessment ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Description
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Rating
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-slate-100"></th>
-                                  )}
-
-                                  {/* Risk Assessment subheaders */}
-                                  {expandedGroups.riskAssessment ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Risk Rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Risk Category
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Department / BU
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Risk Owner
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-slate-100 transition-all duration-300">
-                                        Mitigation Strategy
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-slate-100"></th>
-                                  )}
-
-                                  {/* Risk Revision subheaders */}
-                                  {expandedGroups.riskRevision ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
-                                        Applicable SOA Control
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
-                                        SOA Control Description
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
-                                        Planned controls meet requirements? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
-                                        Revised Control Rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
-                                        Residual Risk Rating
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-indigo-100 transition-all duration-300">
-                                        Acceptable to Risk Owner? (Y/N)
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-indigo-100"></th>
-                                  )}
-
-                                  {/* Mitigation Plan subheaders */}
-                                  {expandedGroups.mitigationPlan ? (
-                                    <>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Further Planned Action?
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Task ID
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Task Description
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Task Owner
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Is Ongoing? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Planned Completion Date
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Is Recurrent? (Y/N)
-                                      </th>
-                                      <th className="border border-slate-200 p-3 font-medium bg-green-100 transition-all duration-300">
-                                        Frequency
-                                      </th>
-                                    </>
-                                  ) : (
-                                    <th className="border border-slate-200 p-3 font-medium bg-green-100"></th>
-                                  )}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td colSpan="100%" className="p-4 text-center text-gray-500">
-                                    No risks found in this report. Click "Add Risk" to create your first risk assessment entry, or upload from Excel.
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-              {activeTab === "riskTreatment" && (
-                <div className="p-5">
-                  <RiskTreatment />
                 </div>
-              )}
-              {activeTab === "vapt" && (
-                <div className="p-5">
-                  <Vapt />
-                </div>
-              )}
-              {activeTab === "asisReport" && (
-                <div className="p-5">
-                  <ASISReport />
-                </div>
-              )}
-            </>
+              ))}
+
+              {/* Add Tab Button */}
+              <button
+                className="py-4 px-4 text-slate-400 hover:text-slate-600 transition-colors"
+                title="Open new report from table"
+                onClick={() => switchToTab("table")}
+              >
+                +
+              </button>
+            </div>
           )}
+
+          {/* Tab Content */}
+          {renderTabContent()}
 
           {/* Modals */}
           <LegendsModal isOpen={showLegendsModal} onClose={toggleLegendsModal} />

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, createContext } from "react";
+import { useState, useRef, useEffect, createContext, useContext } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
 import ServiceRequirements from "./ServiceRequirements";
 import GapAnalysis from "./GapAnalysis";
@@ -13,7 +13,7 @@ import DiscussImplementation from "./DiscussImplementation";
 import ImplementPolicies from "./ImplementPolicies";
 import InternalAuditProcess from "./InternalAuditProcess";
 import AuditDecision from "./AuditDecision";
-import Sustainance from "./Sustainance";
+import Sustenance from "./Sustenance";
 import { ChevronLeft, ChevronRight, List, LayoutGrid } from "lucide-react";
 import {
   Calendar,
@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
+import { ProjectContext } from "../../Context/ProjectContext";
+import InteractiveIsoClause from "../Common/InteractiveIsoClause";
 
 // Create a context for loading state
 export const LoadingContext = createContext({
@@ -55,11 +57,12 @@ const steps = [
   { title: "Implementation of Policies", content: <DiscussImplementation /> },
   { title: "Internal Audit Process", content: <InternalAuditProcess /> },
   { title: "Audit Decision", content: <AuditDecision /> },
-  { title: "Sustainance", content: <Sustainance /> },
+  { title: "Sustenance", content: <Sustenance /> },
 ];
 
 const CarouselHorizontalStepper = () => {
   const { projectid } = useParams();
+  const { getStepId } = useContext(ProjectContext);
   const [currentStep, setCurrentStep] = useState(() => {
     // Load from project-step mapping in localStorage
     try {
@@ -78,6 +81,7 @@ const CarouselHorizontalStepper = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState("carousel"); // "carousel" or "table"
+  const [stepData, setStepData] = useState({}); // Store step data for each step
 
   // Save current step to localStorage whenever it changes or projectid changes
   useEffect(() => {
@@ -104,6 +108,55 @@ const CarouselHorizontalStepper = () => {
     } catch (e) {
       console.error("Error loading step on project change:", e);
     }
+  }, [projectid]);
+
+  // Fetch step data for all workflow steps
+  const fetchAllStepData = async () => {
+    if (!projectid || !getStepId) return;
+
+    try {
+      const stepDataMap = {};
+      // Map each step index to its corresponding step number in the API
+      const stepApiMapping = {
+        0: 1, // Service Requirements
+        1: 2, // Inquiry Section  
+        2: 3, // Finalize Contract
+        3: 4, // Gap Analysis
+        4: 5, // Data Analysis
+        5: 6, // RART
+        6: 7, // Planning and Discussing Policies
+        7: 8, // Implementation of Policies
+        8: 9, // Internal Audit Process
+        9: 10, // Audit Decision
+        10: 11, // Sustenance
+      };
+
+      for (let i = 0; i < steps.length; i++) {
+        try {
+          const apiStepNumber = stepApiMapping[i];
+          if (apiStepNumber) {
+            const response = await getStepId(projectid, apiStepNumber);
+            if (response) {
+              stepDataMap[i] = {
+                process: response.process || response.core_or_noncore || "core",
+                associatedIsoClause: response.associated_iso_clause,
+                status: response.status || "pending"
+              };
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching data for step ${i}:`, error);
+        }
+      }
+      setStepData(stepDataMap);
+    } catch (error) {
+      console.error("Error fetching step data:", error);
+    }
+  };
+
+  // Load step data when component mounts or project changes
+  useEffect(() => {
+    fetchAllStepData();
   }, [projectid]);
 
   useEffect(() => {
@@ -203,16 +256,6 @@ const CarouselHorizontalStepper = () => {
     return targetStatus === "current" || targetStatus === "completed";
   };
 
-  // const handleTabClick = (tab) => {
-  //   setActiveTab(tab);
-  //
-  //   // For other tabs, keep the existing carousel behavior
-  //   const phase = phases.find((p) => p.name === tab);
-  //   if (phase && phase.steps.length > 0) {
-  //     setCurrentStep(phase.steps[0]);
-  //   }
-  // };
-
   // Modern Toggle Component
   const ViewToggle = () => (
     <div className="flex items-center space-x-3 bg-gray-100 rounded-lg p-1">
@@ -252,6 +295,9 @@ const CarouselHorizontalStepper = () => {
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Step</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Title</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Process</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Standard</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">ISO Clause</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Progress</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Action</th>
                 </tr>
@@ -260,6 +306,10 @@ const CarouselHorizontalStepper = () => {
                 {steps.map((step, index) => {
                   const status = getStepStatus(index);
                   const isAccessible = canNavigateToStep(index);
+                  const currentStepData = stepData[index] || {};
+                  const process = currentStepData.process || "core";
+                  const associatedIsoClause = currentStepData.associatedIsoClause;
+
                   return (
                     <tr
                       key={index}
@@ -298,6 +348,32 @@ const CarouselHorizontalStepper = () => {
                             : status === "current"
                               ? "In Progress"
                               : "Pending"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${process === "core"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-orange-100 text-orange-800"
+                            }`}
+                        >
+                          {process === "core" ? "Core" : "Non Core"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          ISO27001
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          ISO: <InteractiveIsoClause isoClause={associatedIsoClause} />
                         </span>
                       </td>
                       <td className="py-4 px-6">

@@ -18,7 +18,7 @@ const DiscussImplementation = () => {
   };
 
   return (
-    <div className="p-16 pt-8 bg-gray-50 flex-grow relative">
+    <div className="p-16 pt-8 flex-grow relative">
       <h1 className="text-2xl font-bold text-gray-800 mb-10">Policy Lens</h1>
 
       {/* Discuss Implementation Section */}

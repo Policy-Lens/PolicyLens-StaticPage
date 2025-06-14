@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Edit, Trash2, Calendar, User, Users, Plus, Upload } from 'lucide-react';
+import { Edit, Trash2, Calendar, User, Users, Plus, Upload, Eye, UserPlus, X } from 'lucide-react';
 import { apiRequest } from '../../../../utils/api';
 import { message } from 'antd';
 
-const ReportsTable = ({ refreshTrigger }) => {
+const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     const { projectid } = useParams();
     const navigate = useNavigate();
     const [reports, setReports] = useState([]);
@@ -20,6 +20,43 @@ const ReportsTable = ({ refreshTrigger }) => {
     const fileInputRef = useRef(null);
     const [isUploading, setIsUploading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+
+    // New state for Risk Assessment upload modal
+    const [riskAssessmentUploadOpen, setRiskAssessmentUploadOpen] = useState(false);
+    const [selectedRiskReport, setSelectedRiskReport] = useState(null);
+    const [excelFile, setExcelFile] = useState(null);
+    const [isUploadingExcel, setIsUploadingExcel] = useState(false);
+
+    // New state for Risk Treatment upload modal
+    const [riskTreatmentUploadOpen, setRiskTreatmentUploadOpen] = useState(false);
+    const [selectedTreatmentReport, setSelectedTreatmentReport] = useState(null);
+    const [treatmentExcelFile, setTreatmentExcelFile] = useState(null);
+    const [isUploadingTreatmentExcel, setIsUploadingTreatmentExcel] = useState(false);
+
+    // New state for VAPT upload modal
+    const [vaptUploadOpen, setVaptUploadOpen] = useState(false);
+    const [selectedVaptReport, setSelectedVaptReport] = useState(null);
+    const [vaptExcelFile, setVaptExcelFile] = useState(null);
+    const [isUploadingVaptExcel, setIsUploadingVaptExcel] = useState(false);
+
+    // New state for ASIS upload modal
+    const [asisUploadOpen, setAsisUploadOpen] = useState(false);
+    const [selectedAsisReport, setSelectedAsisReport] = useState(null);
+    const [asisExcelFile, setAsisExcelFile] = useState(null);
+    const [isUploadingAsisExcel, setIsUploadingAsisExcel] = useState(false);
+
+    const excelFileInputRef = useRef(null);
+    const treatmentExcelFileInputRef = useRef(null);
+    const vaptExcelFileInputRef = useRef(null);
+    const asisExcelFileInputRef = useRef(null);
+
+    // Assign Report Modal state
+    const [isAssignReportModalOpen, setIsAssignReportModalOpen] = useState(false);
+    const [assignmentMethod, setAssignmentMethod] = useState("specific"); // specific, random, sequential
+    const [companyRepresentatives, setCompanyRepresentatives] = useState([]);
+    const [selectedRepresentative, setSelectedRepresentative] = useState(null);
+    const [selectedReports, setSelectedReports] = useState([]);
+    const [isAssigning, setIsAssigning] = useState(false);
 
     // Define fetchReports outside useEffect to avoid duplication
     const fetchReports = async () => {
@@ -120,54 +157,322 @@ const ReportsTable = ({ refreshTrigger }) => {
     }, [refreshTrigger, projectid]);
 
     // Handle navigation to report
-    const navigateToReport = (reportId, reportTab) => {
+    const navigateToReport = (reportId, reportTab, reportName) => {
         try {
-            // Ensure reportId is correctly passed (as a string)
-            console.log(`Navigating to report with ID ${reportId} in tab ${reportTab}`);
+            // Ensure reportId is correctly passed
+            console.log(`Opening report with ID ${reportId} in tab ${reportTab}`);
 
             // Important: Check that reportId is a valid value
             if (!reportId) {
                 console.error("Invalid report ID for navigation:", reportId);
-                message.error("Cannot navigate to report: Invalid report ID");
+                message.error("Cannot open report: Invalid report ID");
                 return;
             }
 
-            // Make sure we're using the actual report ID from the API, not an index
-            navigate(`/project/${projectid}/myreports/${reportTab}?reportId=${reportId}`);
+            // If onReportOpen prop is provided, use it for multi-tab functionality
+            if (onReportOpen) {
+                onReportOpen({
+                    id: reportId,
+                    type: reportTab,
+                    name: reportName,
+                    report_tab: reportTab
+                });
+            } else {
+                // Fallback to direct navigation for backward compatibility
+                navigate(`/project/${projectid}/myreports/${reportTab}?reportId=${reportId}`);
+            }
         } catch (error) {
             console.error("Navigation error:", error);
-            message.error("Error navigating to report");
+            message.error("Error opening report");
         }
     };
 
     // Handle view report
     const handleView = (e, report) => {
         e.stopPropagation();
-        navigateToReport(report.id, report.report_tab);
+        navigateToReport(report.id, report.report_tab, report.name);
     };
 
     // Handle edit report
     const handleEdit = (e, report) => {
         e.stopPropagation();
-
-        // Check if the report type actually supports editing
-        const hasEditSupport = report.type === 'Risk Assessment' || report.type === 'Risk Treatment';
-
-        if (!hasEditSupport) {
-            // For report types without edit API support, show an informative message
-            message.info(`Editing ${report.type} reports is currently view-only`);
-        }
-
-        // Navigate to the report regardless - the individual tab components will handle
-        // showing appropriate controls based on edit capabilities
-        navigateToReport(report.id, report.report_tab);
+        console.log('Edit report:', report);
+        // Implement edit functionality here
     };
 
-    // Open delete confirmation
+    // Handle delete button click
     const handleDeleteClick = (e, report) => {
         e.stopPropagation();
         setReportToDelete(report);
         setDeleteModalOpen(true);
+    };
+
+    // Handle Risk Assessment Excel upload
+    const handleRiskAssessmentUpload = (e, report) => {
+        e.stopPropagation();
+        setSelectedRiskReport(report);
+        setRiskAssessmentUploadOpen(true);
+        setExcelFile(null);
+    };
+
+    // Handle Excel file selection for Risk Assessment
+    const handleExcelFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const allowedTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+            if (allowedTypes.includes(file.type)) {
+                setExcelFile(file);
+            } else {
+                message.error('Please select a valid Excel file (.xlsx or .xls)');
+                e.target.value = '';
+            }
+        }
+    };
+
+    // Submit Risk Assessment Excel upload
+    const handleRiskAssessmentExcelSubmit = async () => {
+        if (!excelFile) {
+            message.error('Please select an Excel file');
+            return;
+        }
+
+        if (!selectedRiskReport) {
+            message.error('No report selected');
+            return;
+        }
+
+        setIsUploadingExcel(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', excelFile);
+
+            const response = await apiRequest(
+                'POST',
+                `/api/rarpt/assessment-sheets/${selectedRiskReport.id}/risks/create/`,
+                formData,
+                true
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success('Risk Assessment Excel file uploaded successfully');
+                setRiskAssessmentUploadOpen(false);
+                setExcelFile(null);
+                if (excelFileInputRef.current) {
+                    excelFileInputRef.current.value = '';
+                }
+                fetchReports(); // Refresh the reports list
+            }
+        } catch (error) {
+            console.error('Error uploading Risk Assessment Excel:', error);
+            message.error('Failed to upload Excel file');
+        } finally {
+            setIsUploadingExcel(false);
+        }
+    };
+
+    // Handle Risk Treatment Excel upload
+    const handleRiskTreatmentUpload = (e, report) => {
+        e.stopPropagation();
+        setSelectedTreatmentReport(report);
+        setRiskTreatmentUploadOpen(true);
+        setTreatmentExcelFile(null);
+    };
+
+    // Handle Excel file selection for Risk Treatment
+    const handleTreatmentExcelFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const allowedTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+            if (allowedTypes.includes(file.type)) {
+                setTreatmentExcelFile(file);
+            } else {
+                message.error('Please select a valid Excel file (.xlsx or .xls)');
+                e.target.value = '';
+            }
+        }
+    };
+
+    // Submit Risk Treatment Excel upload
+    const handleRiskTreatmentExcelSubmit = async () => {
+        if (!treatmentExcelFile) {
+            message.error('Please select an Excel file');
+            return;
+        }
+
+        if (!selectedTreatmentReport) {
+            message.error('No report selected');
+            return;
+        }
+
+        setIsUploadingTreatmentExcel(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', treatmentExcelFile);
+
+            const response = await apiRequest(
+                'POST',
+                `/api/rarpt/treatment-sheets/${selectedTreatmentReport.id}/risks/create/`,
+                formData,
+                true
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success('Risk Treatment Excel file uploaded successfully');
+                setRiskTreatmentUploadOpen(false);
+                setTreatmentExcelFile(null);
+                if (treatmentExcelFileInputRef.current) {
+                    treatmentExcelFileInputRef.current.value = '';
+                }
+                fetchReports(); // Refresh the reports list
+            }
+        } catch (error) {
+            console.error('Error uploading Risk Treatment Excel:', error);
+            message.error('Failed to upload Excel file');
+        } finally {
+            setIsUploadingTreatmentExcel(false);
+        }
+    };
+
+    // Handle VAPT Excel upload
+    const handleVaptUpload = (e, report) => {
+        e.stopPropagation();
+        setSelectedVaptReport(report);
+        setVaptUploadOpen(true);
+        setVaptExcelFile(null);
+    };
+
+    // Handle Excel file selection for VAPT
+    const handleVaptExcelFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const allowedTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+            if (allowedTypes.includes(file.type)) {
+                setVaptExcelFile(file);
+            } else {
+                message.error('Please select a valid Excel file (.xlsx or .xls)');
+                e.target.value = '';
+            }
+        }
+    };
+
+    // Submit VAPT Excel upload
+    const handleVaptExcelSubmit = async () => {
+        if (!vaptExcelFile) {
+            message.error('Please select an Excel file');
+            return;
+        }
+
+        if (!selectedVaptReport) {
+            message.error('No report selected');
+            return;
+        }
+
+        setIsUploadingVaptExcel(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', vaptExcelFile);
+
+            const response = await apiRequest(
+                'POST',
+                `/api/rarpt/vapt/${selectedVaptReport.id}/risks/create/`,
+                formData,
+                true
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success('VAPT Excel file uploaded successfully');
+                setVaptUploadOpen(false);
+                setVaptExcelFile(null);
+                if (vaptExcelFileInputRef.current) {
+                    vaptExcelFileInputRef.current.value = '';
+                }
+                fetchReports(); // Refresh the reports list
+            }
+        } catch (error) {
+            console.error('Error uploading VAPT Excel:', error);
+            message.error('Failed to upload Excel file');
+        } finally {
+            setIsUploadingVaptExcel(false);
+        }
+    };
+
+    // Handle ASIS Excel upload
+    const handleAsisUpload = (e, report) => {
+        e.stopPropagation();
+        setSelectedAsisReport(report);
+        setAsisUploadOpen(true);
+        setAsisExcelFile(null);
+    };
+
+    // Handle Excel file selection for ASIS
+    const handleAsisExcelFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const allowedTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+            if (allowedTypes.includes(file.type)) {
+                setAsisExcelFile(file);
+            } else {
+                message.error('Please select a valid Excel file (.xlsx or .xls)');
+                e.target.value = '';
+            }
+        }
+    };
+
+    // Submit ASIS Excel upload
+    const handleAsisExcelSubmit = async () => {
+        if (!asisExcelFile) {
+            message.error('Please select an Excel file');
+            return;
+        }
+
+        if (!selectedAsisReport) {
+            message.error('No report selected');
+            return;
+        }
+
+        setIsUploadingAsisExcel(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', asisExcelFile);
+
+            const response = await apiRequest(
+                'POST',
+                `/api/rarpt/asis-reports/${selectedAsisReport.id}/risks/create/`,
+                formData,
+                true
+            );
+
+            if (response.status === 200 || response.status === 201) {
+                message.success('ASIS Report Excel file uploaded successfully');
+                setAsisUploadOpen(false);
+                setAsisExcelFile(null);
+                if (asisExcelFileInputRef.current) {
+                    asisExcelFileInputRef.current.value = '';
+                }
+                fetchReports(); // Refresh the reports list
+            }
+        } catch (error) {
+            console.error('Error uploading ASIS Excel:', error);
+            message.error('Failed to upload Excel file');
+        } finally {
+            setIsUploadingAsisExcel(false);
+        }
     };
 
     // Handle delete report - use specific API endpoints based on report type
@@ -388,6 +693,74 @@ const ReportsTable = ({ refreshTrigger }) => {
         }
     };
 
+    // Function to open the assign report modal
+    const openAssignReportModal = async () => {
+        setIsAssignReportModalOpen(true);
+        fetchCompanyRepresentatives();
+    };
+
+    // Function to fetch company representatives for assignment (static data)
+    const fetchCompanyRepresentatives = async () => {
+        // Static data - no API calls
+        const staticRepresentatives = [
+            {
+                id: 1,
+                name: "Company 1 Representative 2",
+                email: "com1c2@test.com"
+            },
+            {
+                id: 2,
+                name: "Company Representative",
+                email: "com1c1@test.com"
+            },
+            {
+                id: 3,
+                name: "Company 1 Representative 3",
+                email: "com1c3@test.com"
+            }
+        ];
+
+        // Simulate loading delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setCompanyRepresentatives(staticRepresentatives);
+    };
+
+    // Handle assign reports
+    const handleAssignReports = async () => {
+        if (assignmentMethod === "specific") {
+            if (!selectedRepresentative) {
+                message.warning("Please select a representative");
+                return;
+            }
+            if (selectedReports.length === 0) {
+                message.warning("Please select at least one report");
+                return;
+            }
+        }
+
+        setIsAssigning(true);
+        try {
+            // This is a static implementation - no actual API call
+            // In a real implementation, you would make an API call here
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+
+            message.success(`Successfully assigned ${selectedReports.length} report(s)`);
+            setIsAssignReportModalOpen(false);
+            setSelectedReports([]);
+            setSelectedRepresentative(null);
+        } catch (error) {
+            console.error("Error assigning reports:", error);
+            message.error("Failed to assign reports");
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
+    // Get unassigned reports for the modal
+    const getUnassignedReports = () => {
+        return reports.filter(report => report.assigned_to === 'Unassigned');
+    };
+
     // Simple delete confirmation modal
     const DeleteConfirmationModal = () => {
         if (!deleteModalOpen) return null;
@@ -543,17 +916,655 @@ const ReportsTable = ({ refreshTrigger }) => {
         );
     };
 
+    // Risk Assessment Excel Upload Modal
+    const RiskAssessmentUploadModal = () => {
+        if (!riskAssessmentUploadOpen) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">
+                            Upload Risk Assessment Excel
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Upload Excel file for: <span className="font-medium">{selectedRiskReport?.name}</span>
+                        </p>
+                    </div>
+                    <div className="p-6">
+                        <div className="space-y-4">
+                            {/* Template Download Section */}
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h4 className="text-sm font-medium text-blue-800">Download Template</h4>
+                                        <p className="mt-1 text-sm text-blue-600">
+                                            Download the Risk Assessment template before uploading your data.
+                                        </p>
+                                        <div className="mt-2">
+                                            <a
+                                                href="/risk_assessment_template.xlsx"
+                                                download="risk_assessment_template.xlsx"
+                                                className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50"
+                                            >
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                Download Template
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File Upload Section */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Excel File
+                                </label>
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                            <p className="mb-2 text-sm text-gray-500">
+                                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                            </p>
+                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                                        </div>
+                                        <input
+                                            ref={excelFileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleExcelFileChange}
+                                            accept=".xlsx,.xls"
+                                        />
+                                    </label>
+                                </div>
+                                {excelFile && (
+                                    <div className="mt-2 text-sm text-green-600 flex items-center">
+                                        <div className="mr-2">✓</div>
+                                        <div>File selected: {excelFile.name}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                                setRiskAssessmentUploadOpen(false);
+                                setExcelFile(null);
+                                if (excelFileInputRef.current) {
+                                    excelFileInputRef.current.value = '';
+                                }
+                            }}
+                            disabled={isUploadingExcel}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                            onClick={handleRiskAssessmentExcelSubmit}
+                            disabled={!excelFile || isUploadingExcel}
+                        >
+                            {isUploadingExcel ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Uploading...
+                                </>
+                            ) : 'Upload Excel'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Risk Treatment Excel Upload Modal
+    const RiskTreatmentUploadModal = () => {
+        if (!riskTreatmentUploadOpen) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">
+                            Upload Risk Treatment Excel
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Upload Excel file for: <span className="font-medium">{selectedTreatmentReport?.name}</span>
+                        </p>
+                    </div>
+                    <div className="p-6">
+                        <div className="space-y-4">
+                            {/* Template Download Section */}
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h4 className="text-sm font-medium text-blue-800">Download Template</h4>
+                                        <p className="mt-1 text-sm text-blue-600">
+                                            Download the Risk Treatment template before uploading your data.
+                                        </p>
+                                        <div className="mt-2">
+                                            <a
+                                                href="/risk_treatment_template.xlsx"
+                                                download="risk_treatment_template.xlsx"
+                                                className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50"
+                                            >
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                Download Template
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File Upload Section */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Excel File
+                                </label>
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                            <p className="mb-2 text-sm text-gray-500">
+                                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                            </p>
+                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                                        </div>
+                                        <input
+                                            ref={treatmentExcelFileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleTreatmentExcelFileChange}
+                                            accept=".xlsx,.xls"
+                                        />
+                                    </label>
+                                </div>
+                                {treatmentExcelFile && (
+                                    <div className="mt-2 text-sm text-green-600 flex items-center">
+                                        <div className="mr-2">✓</div>
+                                        <div>File selected: {treatmentExcelFile.name}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                                setRiskTreatmentUploadOpen(false);
+                                setTreatmentExcelFile(null);
+                                if (treatmentExcelFileInputRef.current) {
+                                    treatmentExcelFileInputRef.current.value = '';
+                                }
+                            }}
+                            disabled={isUploadingTreatmentExcel}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                            onClick={handleRiskTreatmentExcelSubmit}
+                            disabled={!treatmentExcelFile || isUploadingTreatmentExcel}
+                        >
+                            {isUploadingTreatmentExcel ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Uploading...
+                                </>
+                            ) : 'Upload Excel'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // VAPT Excel Upload Modal
+    const VaptUploadModal = () => {
+        if (!vaptUploadOpen) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">
+                            Upload VAPT Excel
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Upload Excel file for: <span className="font-medium">{selectedVaptReport?.name}</span>
+                        </p>
+                    </div>
+                    <div className="p-6">
+                        <div className="space-y-4">
+                            {/* File Upload Section - No template for VAPT */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Excel File
+                                </label>
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                            <p className="mb-2 text-sm text-gray-500">
+                                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                            </p>
+                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                                        </div>
+                                        <input
+                                            ref={vaptExcelFileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleVaptExcelFileChange}
+                                            accept=".xlsx,.xls"
+                                        />
+                                    </label>
+                                </div>
+                                {vaptExcelFile && (
+                                    <div className="mt-2 text-sm text-green-600 flex items-center">
+                                        <div className="mr-2">✓</div>
+                                        <div>File selected: {vaptExcelFile.name}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                                setVaptUploadOpen(false);
+                                setVaptExcelFile(null);
+                                if (vaptExcelFileInputRef.current) {
+                                    vaptExcelFileInputRef.current.value = '';
+                                }
+                            }}
+                            disabled={isUploadingVaptExcel}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                            onClick={handleVaptExcelSubmit}
+                            disabled={!vaptExcelFile || isUploadingVaptExcel}
+                        >
+                            {isUploadingVaptExcel ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Uploading...
+                                </>
+                            ) : 'Upload Excel'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // ASIS Excel Upload Modal
+    const AsisUploadModal = () => {
+        if (!asisUploadOpen) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">
+                            Upload ASIS Report Excel
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Upload Excel file for: <span className="font-medium">{selectedAsisReport?.name}</span>
+                        </p>
+                    </div>
+                    <div className="p-6">
+                        <div className="space-y-4">
+                            {/* Template Download Section */}
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h4 className="text-sm font-medium text-blue-800">Download Template</h4>
+                                        <p className="mt-1 text-sm text-blue-600">
+                                            Download the ASIS Report template before uploading your data.
+                                        </p>
+                                        <div className="mt-2">
+                                            <a
+                                                href="/asis_report_template.xlsx"
+                                                download="asis_report_template.xlsx"
+                                                className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50"
+                                            >
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                Download Template
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File Upload Section */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Excel File
+                                </label>
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                            <p className="mb-2 text-sm text-gray-500">
+                                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                            </p>
+                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                                        </div>
+                                        <input
+                                            ref={asisExcelFileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleAsisExcelFileChange}
+                                            accept=".xlsx,.xls"
+                                        />
+                                    </label>
+                                </div>
+                                {asisExcelFile && (
+                                    <div className="mt-2 text-sm text-green-600 flex items-center">
+                                        <div className="mr-2">✓</div>
+                                        <div>File selected: {asisExcelFile.name}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                                setAsisUploadOpen(false);
+                                setAsisExcelFile(null);
+                                if (asisExcelFileInputRef.current) {
+                                    asisExcelFileInputRef.current.value = '';
+                                }
+                            }}
+                            disabled={isUploadingAsisExcel}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                            onClick={handleAsisExcelSubmit}
+                            disabled={!asisExcelFile || isUploadingAsisExcel}
+                        >
+                            {isUploadingAsisExcel ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Uploading...
+                                </>
+                            ) : 'Upload Excel'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Assign Report Modal
+    const AssignReportModal = () => {
+        if (!isAssignReportModalOpen) return null;
+
+        const unassignedReports = getUnassignedReports();
+
+        return (
+            <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                    {/* Modal Header */}
+                    <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
+                        <h2 className="text-lg font-semibold text-slate-800">
+                            Assign Reports
+                        </h2>
+                        <button
+                            className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+                            onClick={() => setIsAssignReportModalOpen(false)}
+                        >
+                            <X size={20} className="text-slate-500" />
+                        </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                        {/* Assignment Method Selector */}
+                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                            <label className="text-sm font-medium text-slate-700 mb-2 block">
+                                Assignment Method
+                            </label>
+                            <div className="flex gap-3">
+                                <button
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "specific"
+                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                    onClick={() => setAssignmentMethod("specific")}
+                                >
+                                    <span>Specific Assignment</span>
+                                </button>
+                                <button
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "random"
+                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                    onClick={() => setAssignmentMethod("random")}
+                                >
+                                    <span>Random Assignment</span>
+                                </button>
+                                <button
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "sequential"
+                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                    onClick={() => setAssignmentMethod("sequential")}
+                                >
+                                    <span>Sequential Assignment</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content based on assignment method */}
+                        {assignmentMethod === "specific" ? (
+                            <div className="flex flex-1 overflow-hidden">
+                                {/* Representative Selection */}
+                                <div className="w-1/3 border-r border-slate-200 p-4 overflow-auto">
+                                    <label className="text-sm font-medium text-slate-700 mb-2 block">
+                                        Select Representative
+                                    </label>
+                                    <div className="space-y-2">
+                                        {companyRepresentatives.map((rep) => (
+                                            <div
+                                                key={rep.id}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedRepresentative?.id === rep.id
+                                                    ? "border-indigo-300 bg-indigo-50"
+                                                    : "border-slate-200 hover:border-slate-300"
+                                                    }`}
+                                                onClick={() => setSelectedRepresentative(rep)}
+                                            >
+                                                <div className="flex items-center">
+                                                    <div className="h-8 w-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                                                        <User size={14} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-medium text-slate-900">
+                                                            {rep.name}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">
+                                                            {rep.email}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Reports Selection */}
+                                <div className="flex-1 overflow-auto p-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-sm font-medium text-slate-700">
+                                            Select Reports to Assign
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-slate-500">
+                                                {selectedReports.length} of{" "}
+                                                {unassignedReports.length} selected
+                                            </span>
+                                            {selectedReports.length > 0 && (
+                                                <button
+                                                    className="text-xs text-indigo-600 hover:text-indigo-800"
+                                                    onClick={() => setSelectedReports([])}
+                                                >
+                                                    Clear Selection
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {unassignedReports.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                                            <Users size={48} className="mb-4" />
+                                            <p className="text-lg font-medium mb-2">No unassigned reports found</p>
+                                            <p className="text-sm">All reports have been assigned</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {unassignedReports.map((report) => (
+                                                <div
+                                                    key={report.id}
+                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReports.includes(report.id)
+                                                        ? "border-indigo-300 bg-indigo-50"
+                                                        : "border-slate-200 hover:border-slate-300"
+                                                        }`}
+                                                    onClick={() => {
+                                                        setSelectedReports(prev =>
+                                                            prev.includes(report.id)
+                                                                ? prev.filter(id => id !== report.id)
+                                                                : [...prev, report.id]
+                                                        );
+                                                    }}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedReports.includes(report.id)}
+                                                            onChange={() => { }}
+                                                            className="mr-3"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="text-sm font-medium text-slate-900">
+                                                                {report.name}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500">
+                                                                {report.type}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center flex-1 p-8 text-slate-500">
+                                <Users size={48} className="mb-4" />
+                                <p className="text-lg font-medium mb-2">
+                                    {assignmentMethod === "random" ? "Random Assignment" : "Sequential Assignment"}
+                                </p>
+                                <p className="text-sm text-center">
+                                    {assignmentMethod === "random"
+                                        ? "Reports will be randomly assigned to available representatives"
+                                        : "Reports will be assigned sequentially to representatives in order"
+                                    }
+                                </p>
+                                <div className="mt-4 text-sm text-slate-400">
+                                    {companyRepresentatives.length} representative(s) available
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="p-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+                        <button
+                            className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                            onClick={() => setIsAssignReportModalOpen(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center disabled:opacity-50"
+                            onClick={handleAssignReports}
+                            disabled={
+                                isAssigning ||
+                                (assignmentMethod === "specific" &&
+                                    (selectedReports.length === 0 ||
+                                        !selectedRepresentative)) ||
+                                (assignmentMethod !== "specific" &&
+                                    companyRepresentatives.length === 0)
+                            }
+                        >
+                            {isAssigning && (
+                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                            )}
+                            {isAssigning
+                                ? "Assigning..."
+                                : `Assign ${assignmentMethod === "specific"
+                                    ? `${selectedReports.length} Report${selectedReports.length !== 1 ? "s" : ""
+                                    }`
+                                    : "Reports"
+                                }`}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="w-full h-full p-6">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Report List</h2>
-                <button
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-                    onClick={() => setCreateReportOpen(true)}
-                >
-                    <Plus size={18} className="mr-2" />
-                    Create Report
-                </button>
+                <h2 className="text-xl font-semibold text-gray-800">Reports Table</h2>
+                <div className="flex gap-3">
+                    <button
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
+                        onClick={openAssignReportModal}
+                    >
+                        <UserPlus size={18} className="mr-2" />
+                        Assign Reports
+                    </button>
+                    <button
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
+                        onClick={() => setCreateReportOpen(true)}
+                    >
+                        <Plus size={18} className="mr-2" />
+                        Create Report
+                    </button>
+                </div>
             </div>
 
             <div className="overflow-hidden bg-white rounded-lg shadow">
@@ -591,7 +1602,7 @@ const ReportsTable = ({ refreshTrigger }) => {
                                     <tr
                                         key={report.id}
                                         className="hover:bg-gray-50 cursor-pointer"
-                                        onClick={() => navigateToReport(report.id, report.report_tab)}
+                                        onClick={() => navigateToReport(report.id, report.report_tab, report.name)}
                                     >
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900">
@@ -628,12 +1639,64 @@ const ReportsTable = ({ refreshTrigger }) => {
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             <div className="flex justify-center space-x-3">
                                                 <button
+                                                    className="p-1.5 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors focus:outline-none"
+                                                    onClick={(e) => handleView(e, report)}
+                                                    title="View"
+                                                >
+                                                    <Eye size={18} className="text-blue-600" />
+                                                </button>
+                                                <button
                                                     className="p-1.5 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors focus:outline-none"
                                                     onClick={(e) => handleEdit(e, report)}
                                                     title="Edit"
                                                 >
                                                     <Edit size={18} className="text-indigo-600" />
                                                 </button>
+
+                                                {/* Risk Assessment Upload Button */}
+                                                {report.type === 'Risk Assessment' && (
+                                                    <button
+                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                                        onClick={(e) => handleRiskAssessmentUpload(e, report)}
+                                                        title="Upload Excel"
+                                                    >
+                                                        <Upload size={18} className="text-green-600" />
+                                                    </button>
+                                                )}
+
+                                                {/* Risk Treatment Upload Button */}
+                                                {report.type === 'Risk Treatment' && (
+                                                    <button
+                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                                        onClick={(e) => handleRiskTreatmentUpload(e, report)}
+                                                        title="Upload Excel"
+                                                    >
+                                                        <Upload size={18} className="text-green-600" />
+                                                    </button>
+                                                )}
+
+                                                {/* VAPT Upload Button */}
+                                                {report.type === 'VAPT' && (
+                                                    <button
+                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                                        onClick={(e) => handleVaptUpload(e, report)}
+                                                        title="Upload Excel"
+                                                    >
+                                                        <Upload size={18} className="text-green-600" />
+                                                    </button>
+                                                )}
+
+                                                {/* ASIS Upload Button */}
+                                                {report.type === 'ASIS' && (
+                                                    <button
+                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                                        onClick={(e) => handleAsisUpload(e, report)}
+                                                        title="Upload Excel"
+                                                    >
+                                                        <Upload size={18} className="text-green-600" />
+                                                    </button>
+                                                )}
+
                                                 <button
                                                     className="p-1.5 bg-red-50 rounded-full hover:bg-red-100 transition-colors focus:outline-none"
                                                     onClick={(e) => handleDeleteClick(e, report)}
@@ -664,6 +1727,11 @@ const ReportsTable = ({ refreshTrigger }) => {
 
             <DeleteConfirmationModal />
             <CreateReportModal />
+            <RiskAssessmentUploadModal />
+            <RiskTreatmentUploadModal />
+            <VaptUploadModal />
+            <AsisUploadModal />
+            <AssignReportModal />
         </div>
     );
 };

@@ -59,6 +59,9 @@ const StakeholderInterviews = () => {
   const get_step_id = async () => {
     const response = await getStepId(projectid, 5);
     if (response) {
+      // Debug: Log the entire response to see what we're getting
+      console.log("API Response (Stakeholder Interviews):", response);
+
       setStepId(response.plc_step_id);
       setStepStatus(response.status);
       await get_step_data(response.plc_step_id);

@@ -26,5 +26,4 @@ dist-ssr
 .env
 
 #Feature testing folders
-wstest
 test

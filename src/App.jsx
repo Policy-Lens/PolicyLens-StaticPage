@@ -5,7 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper";
-import AdminDashboard from "./Components/AdminView/AdminDashboard";
+import AdminDashboard from "./Components/AdminView/DashboardComponents/AdminDashboard";
 import ProjectTeam from "./Components/AdminView/ProjectTeam";
 import AdminPreview from "./Components/AdminView/AdminPreview";
 import AuditorsPage from "./Components/HomeNav/Auditors";
@@ -33,7 +33,7 @@ import ISO4217 from "./Components/HomeNav/Database/ISO4217";
 import GICS from "./Components/HomeNav/Database/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
-import AdminDashboardRouter from "./Components/AdminView/AdminDashboardRouter";
+import AdminDashboardRouter from "./Components/AdminView/DashboardComponents/AdminDashboardRouter";
 import Regulations from "./Components/HomeNav/Database/Regulations";
 import ISO27001 from "./Components/HomeNav/Database/ISO27001";
 import HomeLayout from "./Components/HomeNav/HomeLayout";
@@ -57,6 +57,10 @@ const router = createBrowserRouter([
     path: "home",
     element: <HomeLayout />,
     children: [
+      {
+        index: true,
+        element: <Navigate to="dashboard" replace />,
+      },
       {
         path: "Dashboard",
         element: <DashboardPage />,
