@@ -1,14 +1,11 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-// const BASE_URL = "https://backend.prolense.in";
-// const BASE_URL_WS = "wss://backend.prolense.in";
-// const BASE_HOST = "backend.prolense.in";
+// Environment variables for API configuration
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const BASE_URL_WS = import.meta.env.VITE_API_BASE_URL_WS || "ws://localhost:8000";
+const BASE_HOST = import.meta.env.VITE_API_BASE_HOST || "localhost:8000";
 
-// Uncomment the line below for local development
-const BASE_URL = "http://localhost:8000";
-const BASE_URL_WS = "ws://localhost:8000";
-const BASE_HOST = "localhost:8000";
 const apiRequest = async (
   method,
   endpoint,

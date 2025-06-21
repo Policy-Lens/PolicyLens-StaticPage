@@ -23,7 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment variables
 .env
+.env.production
+.env.local
 
 #Feature testing folders
 test
