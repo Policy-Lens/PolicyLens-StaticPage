@@ -56,7 +56,7 @@ const Projects = () => {
   };
 
   const getCompanies = async () => {
-    const res = await apiRequest("GET", "/api/auth/companies/", null, true);
+    const res = await apiRequest("GET", "/api/auth/companies/?company_type=client", null, true);
     console.log(res);
     if (res.status == 200) {
       setCompanies(res.data);

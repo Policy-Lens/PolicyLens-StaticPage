@@ -39,6 +39,7 @@ import ISO27001 from "./Components/HomeNav/Database/ISO27001";
 import HomeLayout from "./Components/HomeNav/HomeLayout";
 import { NotificationProvider } from "./Context/NotificationContext";
 import NotificationToast from "./Components/Common/NotificationToast";
+import ConsultantTeamPage from "./Components/HomeNav/ConsultantTeamPage";
 
 const router = createBrowserRouter([
   {
@@ -122,6 +123,10 @@ const router = createBrowserRouter([
       {
         path: "projects",
         element: <Projects />,
+      },
+      {
+        path: "consultant-team",
+        element: <ConsultantTeamPage />,
       },
     ],
   },

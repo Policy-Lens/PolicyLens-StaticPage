@@ -156,9 +156,14 @@ const ProjectTeamPage = () => {
 
     setUsersLoading(true);
     try {
+      const companyId = project?.consultant_company?.id || project?.consultant_company_id;
+      let endpoint = `/api/auth/users/?role=${role === "consultant admin" ? "consultant" : role}`;
+      if (companyId) {
+        endpoint += `&company_id=${companyId}`;
+      }
       const res = await apiRequest(
         "GET",
-        `/api/auth/users/?role=${role === "consultant admin" ? "consultant" : role}`,
+        endpoint,
         null,
         true
       );

@@ -11,7 +11,7 @@ const CompaniesPage = () => {
 
   const getCompanies = async () => {
     setLoading(true);
-    const res = await apiRequest("GET", "/api/auth/companies/", null, true);
+    const res = await apiRequest("GET", "/api/auth/companies/?company_type=client", null, true);
     if (res.status == 200) {
       setCompanies(res.data);
     }

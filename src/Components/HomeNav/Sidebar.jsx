@@ -26,7 +26,7 @@ const Sidebar = ({ onToggle }) => {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
 
-  const menuItems = [
+  let menuItems = [
     {
       key: "dashboard",
       icon: <Home size={20} />,
@@ -44,6 +44,13 @@ const Sidebar = ({ onToggle }) => {
       icon: <Building size={20} />,
       label: "Company",
       path: "/home/company",
+    },
+    {
+      key: "consultant-team",
+      icon: <Users size={20} />,
+      label: "Consultant Team",
+      path: "/home/consultant-team",
+      roles: ["Super Consultant", "consultant"],
     },
     {
       key: "auditors",
@@ -85,6 +92,11 @@ const Sidebar = ({ onToggle }) => {
       path: "/home/database",
     },
   ];
+
+  // Conditionally filter the menu items based on the user's role
+  if (user?.role !== 'Super Consultant' && user?.role !== 'consultant') {
+    menuItems = menuItems.filter(item => item.key !== 'consultant-team');
+  }
 
   const policyLib = {
     key: "questionlibrary",
@@ -131,6 +143,10 @@ const Sidebar = ({ onToggle }) => {
         {/* Menu Items */}
         <ul className="mt-4 flex-1">
           {menuItems.map((item) => {
+            if (item.roles && !item.roles.includes(user?.role)) {
+              return null;
+            }
+
             const isActive = location.pathname === item.path;
             const menuItem = (
               <li
