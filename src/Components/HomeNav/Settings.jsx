@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Layout } from "antd";
+import { Layout, message } from "antd";
 import { apiRequest } from "../../utils/api";
 import { AuthContext } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -7,17 +7,29 @@ import { useNavigate } from "react-router-dom";
 const { Content } = Layout;
 
 const SettingsPage = () => {
+  const { user, loading, checkLogin, setUser } = useContext(AuthContext);
   const [profileDetails, setProfileDetails] = useState({
     name: "",
     email: "",
+    contact: "",
   });
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const { user, loading, checkLogin } = useContext(AuthContext);
+  const [isProfileEditable, setIsProfileEditable] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      setProfileDetails({
+        name: user.name || "",
+        email: user.email || "",
+        contact: user.contact || "",
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     const verifyLogin = async () => {
@@ -38,30 +50,72 @@ const SettingsPage = () => {
     setPasswords({ ...passwords, [e.target.name]: e.target.value });
   };
 
-  const saveProfile = () => {
-    console.log("Profile details saved:", profileDetails);
+  const saveProfile = async () => {
+    try {
+      const res = await apiRequest(
+        "PATCH",
+        `/api/auth/users/${user.id}/`,
+        profileDetails,
+        true
+      );
+      if (res.status === 200) {
+        message.success("Profile updated successfully!");
+        setUser({ ...user, ...profileDetails });
+        setIsProfileEditable(false);
+      } else {
+        message.error("Failed to update profile.");
+      }
+    } catch (error) {
+      message.error("An error occurred while updating profile.");
+      console.error(error);
+    }
   };
 
   const updatePassword = async () => {
-    if (
-      passwords.currentPassword === passwords.newPassword ||
-      passwords.newPassword !== passwords.confirmPassword
-    ) {
-      console.log(
-        "your new password is same as current password or new password and confirm password are different"
-      );
+    const { currentPassword, newPassword, confirmPassword } = passwords;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      message.error("Please fill in all password fields.");
       return;
     }
-    const res = await apiRequest(
-      "POST",
-      "/api/auth/password/reset/",
-      {
-        old_password: passwords.currentPassword,
-        new_password: passwords.newPassword,
-      },
-      true
-    );
-    console.log(res);
+
+    if (newPassword === currentPassword) {
+      message.error("New password cannot be the same as the current password.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      message.error("New password and confirm password do not match.");
+      return;
+    }
+
+    try {
+      const res = await apiRequest(
+        "POST",
+        "/api/auth/password/reset/",
+        {
+          old_password: currentPassword,
+          new_password: newPassword,
+        },
+        true
+      );
+
+      if (res.status === 200) {
+        message.success("Password updated successfully!");
+        setPasswords({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        const errorMessage = res.data?.detail || "Failed to update password. Please check your current password.";
+        message.error(errorMessage);
+      }
+    } catch (error) {
+      const errorMessage = error.data?.detail || "An error occurred while updating the password.";
+      message.error(errorMessage);
+      console.error(error);
+    }
   };
 
   return (
@@ -87,8 +141,9 @@ const SettingsPage = () => {
                   name="name"
                   value={profileDetails.name}
                   onChange={handleProfileChange}
-                  className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
                   placeholder="Enter your name"
+                  disabled={!isProfileEditable}
                 />
               </div>
               <div>
@@ -100,16 +155,53 @@ const SettingsPage = () => {
                   name="email"
                   value={profileDetails.email}
                   onChange={handleProfileChange}
-                  className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
                   placeholder="Enter your email"
+                  disabled={!isProfileEditable}
                 />
               </div>
-              <button
-                onClick={saveProfile}
-                className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
-              >
-                Save Profile
-              </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-600">
+                  Contact
+                </label>
+                <input
+                  type="text"
+                  name="contact"
+                  value={profileDetails.contact}
+                  onChange={handleProfileChange}
+                  className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  placeholder="Enter your contact number"
+                  disabled={!isProfileEditable}
+                />
+              </div>
+              <div className="flex gap-2">
+                {isProfileEditable ? (
+                  <>
+                    <button
+                      onClick={saveProfile}
+                      className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
+                    >
+                      Save Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsProfileEditable(false);
+                        setProfileDetails({ name: user.name, email: user.email, contact: user.contact });
+                      }}
+                      className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsProfileEditable(true)}
+                    className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
+                  >
+                    Edit Profile
+                  </button>
+                )}
+              </div>
             </div>
           </section>
 

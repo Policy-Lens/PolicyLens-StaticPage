@@ -26,7 +26,7 @@ const HomeLayout = () => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 transition-all duration-300 ${
+        className={`flex-1 transition-all duration-300 bg-gray-100 ${
           collapsed ? "ml-16" : "ml-[220px]"
         }`}
         style={{

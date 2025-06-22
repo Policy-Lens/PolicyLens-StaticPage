@@ -89,7 +89,7 @@ const ConsultantTeamPage = () => {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Consultant Team</h1>
       
       <div className="flex justify-between items-center mb-4">
@@ -222,6 +222,7 @@ const ConsultantTeamPage = () => {
               </th>
               <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide">Name</th>
               <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide">Email</th>
+              <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide">Role</th>
               <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide">Phone</th>
               <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide">Company</th>
             </tr>
@@ -259,13 +260,9 @@ const ConsultantTeamPage = () => {
                       {consultant.email}
                     </a>
                   </td>
-                  <td className="py-4 px-6 text-gray-700">{consultant.contact || "-"}</td>
-                  <td className="py-4 px-6 text-gray-700">
-                    {consultant.company_name ||
-                      (typeof consultant.company === "object" && consultant.company
-                        ? consultant.company.name
-                        : consultant.company || "-")}
-                  </td>
+                  <td className="py-4 px-6 text-gray-700 capitalize">{consultant.role}</td>
+                  <td className="py-4 px-6 text-gray-700">{consultant.contact}</td>
+                  <td className="py-4 px-6 text-gray-700">{consultant.company.name}</td>
                 </tr>
               ))
             )}

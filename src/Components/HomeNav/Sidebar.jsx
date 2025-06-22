@@ -52,18 +52,18 @@ const Sidebar = ({ onToggle }) => {
       path: "/home/consultant-team",
       roles: ["Super Consultant", "consultant"],
     },
-    {
+    /* {
       key: "auditors",
       icon: <Users size={20} />,
       label: "Auditors",
       path: "/home/auditors",
-    },
-    {
+    }, */
+    /* {
       key: "documents",
       icon: <FileText size={20} />,
       label: "Documents",
       path: "/home/documents",
-    },
+    }, */
     {
       key: "messages",
       icon: (
@@ -80,16 +80,16 @@ const Sidebar = ({ onToggle }) => {
       path: "/home/messaging",
     },
     {
-      key: "settings",
-      icon: <Settings size={20} />,
-      label: "Settings",
-      path: "/home/settings",
-    },
-    {
       key: "database",
       icon: <Database size={20} />,
       label: "Database",
       path: "/home/database",
+    },
+    {
+      key: "settings",
+      icon: <Settings size={20} />,
+      label: "Settings",
+      path: "/home/settings",
     },
   ];
 
