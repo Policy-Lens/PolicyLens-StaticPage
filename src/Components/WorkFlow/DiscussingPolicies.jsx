@@ -914,7 +914,7 @@ const DiscussingPolicies = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-700">Assigned To:</p>
                   <ul className="list-disc list-inside mt-2">
-                    {taskAssignment.assigned_to.map((user) => (
+                    {(taskAssignment.assigned_to || []).map((user) => (
                       <li key={user.id} className="text-sm text-gray-600">
                         {user.name} - {user.email}
                       </li>

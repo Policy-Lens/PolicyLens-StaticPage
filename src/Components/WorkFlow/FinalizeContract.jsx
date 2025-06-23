@@ -722,7 +722,7 @@ function FinalizeContract() {
                     Assigned To:
                   </p>
                   <ul className="list-disc list-inside mt-2">
-                    {taskAssignment.assigned_to.map((user) => (
+                    {(taskAssignment.assigned_to || []).map((user) => (
                       <li key={user.id} className="text-sm text-gray-600">
                         {user.name} - {user.email}
                       </li>
