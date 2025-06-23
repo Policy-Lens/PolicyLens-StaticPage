@@ -498,119 +498,110 @@ const ISO27001 = () => {
                 </thead>
 
                 <tbody>
-                  {controls
-                    .slice(
-                      pagination.pageSize === "all"
-                        ? 0
-                        : (pagination.currentPage - 1) * pagination.pageSize,
-                      pagination.pageSize === "all"
-                        ? controls.length
-                        : pagination.currentPage * pagination.pageSize
-                    )
-                    .map((control) => (
-                      <tr key={control.ctrl_id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                          {control.reg_id}
-                        </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                          {control.parent_ctrl_id}
-                        </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                          {control.parent_ctrl_name}
-                        </td>
-                        <td className="px-6 py-4 align-top whitespace-pre-wrap text-sm text-slate-600">
-                          {control.parent_ctrl_description}
-                        </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                          {control.ctrl_id}
-                        </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                          {control.ctrl_number}
-                        </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
-                          {control.ctrl_name}
-                        </td>
-                        <td
-                          className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap cursor-pointer"
-                          onClick={() => toggleCellExpansion(control.ctrl_id, 'ctrl_definition')}
-                          role="button"
-                          tabIndex={0}
-                          aria-expanded={expandedCells[`${control.ctrl_id}-ctrl_definition`] || false}
-                          aria-label="Toggle control definition"
-                          onKeyDown={(e) => e.key === 'Enter' && toggleCellExpansion(control.ctrl_id, 'ctrl_definition')}
-                        >
-                          <div className={`${expandedCells[`${control.ctrl_id}-ctrl_definition`] ? '' : 'line-clamp-3'}`}>
-                            {control.ctrl_definition}
-                          </div>
-                          <span className="text-blue-600 hover:text-blue-800">
-                            {expandedCells[`${control.ctrl_id}-ctrl_definition`] ? 'Show Less' : '...'}
-                          </span>
-                        </td>
-                        <td
-                          className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap cursor-pointer"
-                          onClick={() => toggleCellExpansion(control.ctrl_id, 'ctrl_guidance_text')}
-                          role="button"
-                          tabIndex={0}
-                          aria-expanded={expandedCells[`${control.ctrl_id}-ctrl_guidance_text`] || false}
-                          aria-label="Toggle control guidance"
-                          onKeyDown={(e) => e.key === 'Enter' && toggleCellExpansion(control.ctrl_id, 'ctrl_guidance_text')}
-                        >
-                          <div className={`${expandedCells[`${control.ctrl_id}-ctrl_guidance_text`] ? '' : 'line-clamp-3'}`}>
-                            {control.ctrl_guidance_text}
-                          </div>
-                          <span className="text-blue-600 hover:text-blue-800">
-                            {expandedCells[`${control.ctrl_id}-ctrl_guidance_text`] ? 'Show Less' : '...'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-slate-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setKeyPointsModal({
-                                  isOpen: true,
-                                  control: control,
-                                });
-                              }}
-                              title="View Key Point Details"
-                              aria-label="View key point details"
-                              aria-describedby={`key-point-${control.ctrl_id}`}
-                            >
-                              <Eye size={16} />
-                            </button>
-                            {isAdmin && (
-                              <>
+                  {controls.map((control) => (
+                    <tr key={control.ctrl_id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
+                        {control.reg_id}
+                      </td>
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
+                        {control.parent_ctrl_id}
+                      </td>
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
+                        {control.parent_ctrl_name}
+                      </td>
+                      <td className="px-6 py-4 align-top whitespace-pre-wrap text-sm text-slate-600">
+                        {control.parent_ctrl_description}
+                      </td>
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
+                        {control.ctrl_id}
+                      </td>
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
+                        {control.ctrl_number}
+                      </td>
+                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
+                        {control.ctrl_name}
+                      </td>
+                      <td
+                        className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap cursor-pointer"
+                        onClick={() => toggleCellExpansion(control.ctrl_id, 'ctrl_definition')}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expandedCells[`${control.ctrl_id}-ctrl_definition`] || false}
+                        aria-label="Toggle control definition"
+                        onKeyDown={(e) => e.key === 'Enter' && toggleCellExpansion(control.ctrl_id, 'ctrl_definition')}
+                      >
+                        <div className={`${expandedCells[`${control.ctrl_id}-ctrl_definition`] ? '' : 'line-clamp-3'}`}>
+                          {control.ctrl_definition}
+                        </div>
+                        <span className="text-blue-600 hover:text-blue-800">
+                          {expandedCells[`${control.ctrl_id}-ctrl_definition`] ? 'Show Less' : '...'}
+                        </span>
+                      </td>
+                      <td
+                        className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap cursor-pointer"
+                        onClick={() => toggleCellExpansion(control.ctrl_id, 'ctrl_guidance_text')}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expandedCells[`${control.ctrl_id}-ctrl_guidance_text`] || false}
+                        aria-label="Toggle control guidance"
+                        onKeyDown={(e) => e.key === 'Enter' && toggleCellExpansion(control.ctrl_id, 'ctrl_guidance_text')}
+                      >
+                        <div className={`${expandedCells[`${control.ctrl_id}-ctrl_guidance_text`] ? '' : 'line-clamp-3'}`}>
+                          {control.ctrl_guidance_text}
+                        </div>
+                        <span className="text-blue-600 hover:text-blue-800">
+                          {expandedCells[`${control.ctrl_id}-ctrl_guidance_text`] ? 'Show Less' : '...'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-slate-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setKeyPointsModal({
+                                isOpen: true,
+                                control: control,
+                              });
+                            }}
+                            title="View Key Point Details"
+                            aria-label="View key point details"
+                            aria-describedby={`key-point-${control.ctrl_id}`}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(control)}
+                                className="text-blue-600 hover:text-blue-800 transition-colors"
+                                aria-label="Edit control"
+                                title="Edit Control"
+                              >
+                                <Edit size={18} />
+                              </button>
+                              <Popconfirm
+                                title="Delete this control?"
+                                description="This action cannot be undone."
+                                onConfirm={() => handleDelete(control.ctrl_id)}
+                                okText="Yes"
+                                cancelText="No"
+                                okButtonProps={{ className: 'bg-red-500' }}
+                              >
                                 <button
-                                  onClick={() => openEditModal(control)}
-                                  className="text-blue-600 hover:text-blue-800 transition-colors"
-                                  aria-label="Edit control"
-                                  title="Edit Control"
+                                  className="text-red-600 hover:text-red-800 transition-colors"
+                                  aria-label="Delete control"
+                                  title="Delete Control"
                                 >
-                                  <Edit size={18} />
+                                  <Trash2 size={18} />
                                 </button>
-                                <Popconfirm
-                                  title="Delete this control?"
-                                  description="This action cannot be undone."
-                                  onConfirm={() => handleDelete(control.ctrl_id)}
-                                  okText="Yes"
-                                  cancelText="No"
-                                  okButtonProps={{ className: 'bg-red-500' }}
-                                >
-                                  <button
-                                    className="text-red-600 hover:text-red-800 transition-colors"
-                                    aria-label="Delete control"
-                                    title="Delete Control"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                </Popconfirm>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              </Popconfirm>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
