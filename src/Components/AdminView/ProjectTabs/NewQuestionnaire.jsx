@@ -273,10 +273,68 @@ const NewQuestionnaire = () => {
     }));
   }, [activeTab]);
 
+  // Local answer history state
+  const [localAnswerHistory, setLocalAnswerHistory] = useState([]);
+
+  // Add localStorage helper functions
+  const getAnswerHistoryKey = () => `question_answers_${projectid}`;
+
+  const saveAnswerToHistory = (questionId, answerData) => {
+    try {
+      const key = getAnswerHistoryKey();
+      const existingData = JSON.parse(localStorage.getItem(key) || '{}');
+
+      if (!existingData[questionId]) {
+        existingData[questionId] = [];
+      }
+
+      const newAnswer = {
+        id: Date.now(), // Simple ID based on timestamp
+        timestamp: new Date().toISOString(),
+        response: answerData.response,
+        policy: answerData.policy || '',
+        document_reference: answerData.document_reference || '',
+        comments: answerData.comments || '',
+        files: answerData.files ? answerData.files.map(file => file.name) : [],
+        user: user?.name || 'Unknown User',
+        status: 'submitted'
+      };
+
+      existingData[questionId].push(newAnswer);
+      localStorage.setItem(key, JSON.stringify(existingData));
+
+      // Update local state if this is for the current question
+      if (questionId === activeQuestion?.id) {
+        setLocalAnswerHistory(existingData[questionId]);
+      }
+    } catch (error) {
+      console.error('Error saving answer to localStorage:', error);
+    }
+  };
+
+  const loadAnswerHistory = (questionId) => {
+    try {
+      const key = getAnswerHistoryKey();
+      const existingData = JSON.parse(localStorage.getItem(key) || '{}');
+      return existingData[questionId] || [];
+    } catch (error) {
+      console.error('Error loading answer history from localStorage:', error);
+      return [];
+    }
+  };
+
   // Effect to refetch questions when dependencies change
   useEffect(() => {
     handleGetQuestions();
   }, [searchQuery, filters, projectid, activeTab]);
+
+  // Effect to load answer history when active question changes
+  useEffect(() => {
+    if (activeQuestion) {
+      const history = loadAnswerHistory(activeQuestion.id);
+      setLocalAnswerHistory(history);
+    }
+  }, [activeQuestion]);
 
   // Handle click outside assign dropdown
   useEffect(() => {
@@ -731,6 +789,9 @@ const NewQuestionnaire = () => {
       if (response.status === 200 || response.status === 201) {
         message.success("Answer submitted successfully");
 
+        // Save to localStorage (NEW)
+        saveAnswerToHistory(activeQuestion.id, newAnswer);
+
         // Update active question
         if (activeQuestion.id === response.data.id) {
           setActiveQuestion(response.data);
@@ -1050,9 +1111,8 @@ const NewQuestionnaire = () => {
       <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg">
         {/* Left Panel: Questions List */}
         <div
-          className={`flex flex-col ${
-            activeQuestion ? "w-3/4" : "w-full"
-          } bg-white border-r border-slate-200 transition-width duration-300 ease-in-out`}
+          className={`flex flex-col ${activeQuestion ? "w-3/4" : "w-full"
+            } bg-white border-r border-slate-200 transition-width duration-300 ease-in-out`}
         >
           {/* Top Bar: Header and Actions */}
           <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
@@ -1080,39 +1140,37 @@ const NewQuestionnaire = () => {
                 {/* Filter Button */}
                 <div className="relative">
                   <button
-                    className={`px-4 py-2.5 border ${
-                      filterDropdownOpen
-                        ? "border-indigo-300 ring-2 ring-indigo-300"
-                        : "border-slate-200"
-                    } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
+                    className={`px-4 py-2.5 border ${filterDropdownOpen
+                      ? "border-indigo-300 ring-2 ring-indigo-300"
+                      : "border-slate-200"
+                      } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
                     onClick={toggleFilterDropdown}
                   >
                     <Filter
                       size={16}
-                      className={`mr-2 ${
-                        Object.values(filters).some((f) => f !== "") ||
+                      className={`mr-2 ${Object.values(filters).some((f) => f !== "") ||
                         searchQuery
-                          ? "text-indigo-500"
-                          : "text-slate-400"
-                      }`}
+                        ? "text-indigo-500"
+                        : "text-slate-400"
+                        }`}
                     />
                     <span>Filter</span>
                     {(filters.type ||
                       filters.standard ||
                       filters.status ||
                       searchQuery) && (
-                      <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
-                        {
-                          [
-                            filters.type && "Type",
-                            filters.standard && "Standard",
-                            filters.status && "Status",
-                            searchQuery && "Search",
-                          ].filter(Boolean).length
-                        }{" "}
-                        Active
-                      </span>
-                    )}
+                        <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
+                          {
+                            [
+                              filters.type && "Type",
+                              filters.standard && "Standard",
+                              filters.status && "Status",
+                              searchQuery && "Search",
+                            ].filter(Boolean).length
+                          }{" "}
+                          Active
+                        </span>
+                      )}
                   </button>
 
                   {/* Filter Dropdown Content */}
@@ -1125,10 +1183,10 @@ const NewQuestionnaire = () => {
                           filters.standard ||
                           filters.status ||
                           searchQuery) && (
-                          <span className="text-xs text-indigo-600">
-                            {/* Display count if needed */}
-                          </span>
-                        )}
+                            <span className="text-xs text-indigo-600">
+                              {/* Display count if needed */}
+                            </span>
+                          )}
                       </div>
 
                       {/* Scrollable Filters */}
@@ -1154,11 +1212,10 @@ const NewQuestionnaire = () => {
                               <button
                                 key={type}
                                 onClick={() => handleFilterChange("type", type)}
-                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                  filters.type === type
-                                    ? "bg-indigo-50 text-indigo-700 font-medium"
-                                    : "text-slate-600 hover:bg-slate-50"
-                                }`}
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.type === type
+                                  ? "bg-indigo-50 text-indigo-700 font-medium"
+                                  : "text-slate-600 hover:bg-slate-50"
+                                  }`}
                               >
                                 {type}
                               </button>
@@ -1186,11 +1243,10 @@ const NewQuestionnaire = () => {
                                 onClick={() =>
                                   handleFilterChange("status", status)
                                 }
-                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                  filters.status === status
-                                    ? "bg-indigo-50 text-indigo-700 font-medium"
-                                    : "text-slate-600 hover:bg-slate-50"
-                                }`}
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.status === status
+                                  ? "bg-indigo-50 text-indigo-700 font-medium"
+                                  : "text-slate-600 hover:bg-slate-50"
+                                  }`}
                               >
                                 {status}
                               </button>
@@ -1218,11 +1274,10 @@ const NewQuestionnaire = () => {
                               onClick={() =>
                                 handleFilterChange("standard", "ISO27001")
                               }
-                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                filters.standard === "ISO27001"
-                                  ? "bg-indigo-50 text-indigo-700 font-medium"
-                                  : "text-slate-600 hover:bg-slate-50"
-                              }`}
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.standard === "ISO27001"
+                                ? "bg-indigo-50 text-indigo-700 font-medium"
+                                : "text-slate-600 hover:bg-slate-50"
+                                }`}
                             >
                               ISO27001
                             </button>
@@ -1234,67 +1289,67 @@ const NewQuestionnaire = () => {
                           filters.standard ||
                           filters.status ||
                           searchQuery) && (
-                          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
-                            <h4 className="text-xs font-medium text-slate-600 mb-1">
-                              Active Filters:
-                            </h4>
-                            <div className="flex flex-wrap gap-1">
-                              {filters.type && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                  {activeTab === "clause"
-                                    ? "Clause"
-                                    : "Control"}
-                                  : {filters.type}
-                                  <button
-                                    onClick={() =>
-                                      handleFilterChange("type", "")
-                                    }
-                                    className="ml-1 hover:text-indigo-900"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </span>
-                              )}
-                              {filters.standard && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                  Standard: {filters.standard}
-                                  <button
-                                    onClick={() =>
-                                      handleFilterChange("standard", "")
-                                    }
-                                    className="ml-1 hover:text-indigo-900"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </span>
-                              )}
-                              {filters.status && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                  Status: {filters.status}
-                                  <button
-                                    onClick={() =>
-                                      handleFilterChange("status", "")
-                                    }
-                                    className="ml-1 hover:text-indigo-900"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </span>
-                              )}
-                              {searchQuery && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                  Search: {searchQuery}
-                                  <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="ml-1 hover:text-indigo-900"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </span>
-                              )}
+                            <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                              <h4 className="text-xs font-medium text-slate-600 mb-1">
+                                Active Filters:
+                              </h4>
+                              <div className="flex flex-wrap gap-1">
+                                {filters.type && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                    {activeTab === "clause"
+                                      ? "Clause"
+                                      : "Control"}
+                                    : {filters.type}
+                                    <button
+                                      onClick={() =>
+                                        handleFilterChange("type", "")
+                                      }
+                                      className="ml-1 hover:text-indigo-900"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </span>
+                                )}
+                                {filters.standard && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                    Standard: {filters.standard}
+                                    <button
+                                      onClick={() =>
+                                        handleFilterChange("standard", "")
+                                      }
+                                      className="ml-1 hover:text-indigo-900"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </span>
+                                )}
+                                {filters.status && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                    Status: {filters.status}
+                                    <button
+                                      onClick={() =>
+                                        handleFilterChange("status", "")
+                                      }
+                                      className="ml-1 hover:text-indigo-900"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </span>
+                                )}
+                                {searchQuery && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                    Search: {searchQuery}
+                                    <button
+                                      onClick={() => setSearchQuery("")}
+                                      className="ml-1 hover:text-indigo-900"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
 
                       {/* Footer Actions */}
@@ -1319,35 +1374,33 @@ const NewQuestionnaire = () => {
                 {/* Assignment Button (for company role) */}
                 {(projectRole === "company" ||
                   projectRole === "consultant admin") && (
-                  <button
-                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
-                    onClick={openAssignmentModal}
-                  >
-                    <UserPlus size={16} className="mr-1.5" />
-                    <span>Assign Questions</span>
-                  </button>
-                )}
+                    <button
+                      className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
+                      onClick={openAssignmentModal}
+                    >
+                      <UserPlus size={16} className="mr-1.5" />
+                      <span>Assign Questions</span>
+                    </button>
+                  )}
               </div>
             </div>
 
             {/* Tabs */}
             <div className="flex px-4 border-t border-slate-200">
               <button
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "clause"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "clause"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
                 onClick={() => setActiveTab("clause")}
               >
                 Clause Questions
               </button>
               <button
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "control"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "control"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
                 onClick={() => setActiveTab("control")}
               >
                 Control Questions
@@ -1413,11 +1466,10 @@ const NewQuestionnaire = () => {
                     questions.map((question) => (
                       <tr
                         key={question.id}
-                        className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${
-                          activeQuestion?.id === question.id
-                            ? "bg-indigo-50/70"
-                            : ""
-                        }`}
+                        className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${activeQuestion?.id === question.id
+                          ? "bg-indigo-50/70"
+                          : ""
+                          }`}
                         onClick={() => selectQuestion(question)}
                       >
                         <td className="p-4">
@@ -1444,19 +1496,18 @@ const NewQuestionnaire = () => {
                         {activeTab === "clause" && (
                           <td className="p-4 text-center">
                             <span
-                              className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                question.pdca_cycle === "Plan"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : question.pdca_cycle === "Do"
+                              className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${question.pdca_cycle === "Plan"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : question.pdca_cycle === "Do"
                                   ? "bg-pink-100 text-pink-700"
                                   : question.pdca_cycle === "Check"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : question.pdca_cycle === "Act"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-slate-100 text-slate-700"
-                              }`}
+                                    ? "bg-orange-100 text-orange-700"
+                                    : question.pdca_cycle === "Act"
+                                      ? "bg-purple-100 text-purple-700"
+                                      : "bg-slate-100 text-slate-700"
+                                }`}
                             >
-                            {question.pdca_cycle}
+                              {question.pdca_cycle}
                             </span>
                           </td>
                         )}
@@ -1465,17 +1516,16 @@ const NewQuestionnaire = () => {
                         </td>
                         <td className="p-4 text-center">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              question.status === "Accepted"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : question.status === "Needs More Information"
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${question.status === "Accepted"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : question.status === "Needs More Information"
                                 ? "bg-yellow-100 text-yellow-700"
                                 : question.status === "Needs Review"
-                                ? "bg-blue-100 text-blue-700"
-                                : question.status === "Answered"
-                                ? "bg-indigo-100 text-indigo-700"
-                                : "bg-slate-100 text-slate-700" // Not Answered
-                            }`}
+                                  ? "bg-blue-100 text-blue-700"
+                                  : question.status === "Answered"
+                                    ? "bg-indigo-100 text-indigo-700"
+                                    : "bg-slate-100 text-slate-700" // Not Answered
+                              }`}
                           >
                             {question.status}
                           </span>
@@ -1615,24 +1665,31 @@ const NewQuestionnaire = () => {
             <div className="border-b border-slate-200 bg-white sticky top-[60px] z-20">
               <div className="flex px-2 pt-2">
                 <button
-                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${
-                    activeSidebarTab === "question"
-                      ? "border-indigo-600 text-indigo-600 font-semibold"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                  }`}
+                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${activeSidebarTab === "question"
+                    ? "border-indigo-600 text-indigo-600 font-semibold"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                    }`}
                   onClick={() => setActiveSidebarTab("question")}
                 >
                   Question Details
                 </button>
                 <button
-                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${
-                    activeSidebarTab === "answer"
-                      ? "border-indigo-600 text-indigo-600 font-semibold"
-                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                  }`}
+                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${activeSidebarTab === "answer"
+                    ? "border-indigo-600 text-indigo-600 font-semibold"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                    }`}
                   onClick={() => setActiveSidebarTab("answer")}
                 >
                   Answer & Review
+                </button>
+                <button
+                  className={`flex-1 py-2 px-1 text-center text-sm border-b-2 transition-colors ${activeSidebarTab === "all-answers"
+                    ? "border-indigo-600 text-indigo-600 font-semibold"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                    }`}
+                  onClick={() => setActiveSidebarTab("all-answers")}
+                >
+                  Answer History
                 </button>
               </div>
             </div>
@@ -1670,18 +1727,17 @@ const NewQuestionnaire = () => {
                       <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between">
                         <div className="flex items-center">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              activeQuestion.status === "Accepted"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : activeQuestion.status ===
-                                  "Needs More Information"
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${activeQuestion.status === "Accepted"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : activeQuestion.status ===
+                                "Needs More Information"
                                 ? "bg-yellow-100 text-yellow-700"
                                 : activeQuestion.status === "Needs Review"
-                                ? "bg-blue-100 text-blue-700"
-                                : activeQuestion.status === "Answered"
-                                ? "bg-indigo-100 text-indigo-700"
-                                : "bg-slate-100 text-slate-700" // Not Answered
-                            }`}
+                                  ? "bg-blue-100 text-blue-700"
+                                  : activeQuestion.status === "Answered"
+                                    ? "bg-indigo-100 text-indigo-700"
+                                    : "bg-slate-100 text-slate-700" // Not Answered
+                              }`}
                           >
                             {activeQuestion.status}
                           </span>
@@ -1741,11 +1797,10 @@ const NewQuestionnaire = () => {
                                     {companyRepresentatives.map((rep) => (
                                       <button
                                         key={rep.id}
-                                        className={`w-full text-left px-3 py-1 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${
-                                          selectedRepresentative?.id === rep.id
-                                            ? "bg-indigo-50 text-indigo-700"
-                                            : "text-slate-700"
-                                        }`}
+                                        className={`w-full text-left px-3 py-1 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${selectedRepresentative?.id === rep.id
+                                          ? "bg-indigo-50 text-indigo-700"
+                                          : "text-slate-700"
+                                          }`}
                                         onClick={() =>
                                           setSelectedRepresentative(rep)
                                         }
@@ -1760,11 +1815,11 @@ const NewQuestionnaire = () => {
                                         </div>
                                         {selectedRepresentative?.id ===
                                           rep.id && (
-                                          <CheckCircle
-                                            size={16}
-                                            className="text-indigo-600"
-                                          />
-                                        )}
+                                            <CheckCircle
+                                              size={16}
+                                              className="text-indigo-600"
+                                            />
+                                          )}
                                       </button>
                                     ))}
 
@@ -1860,174 +1915,173 @@ const NewQuestionnaire = () => {
                   {/* Reviewer Information (if status requires review) */}
                   {(activeQuestion.status === "Needs Review" ||
                     activeQuestion.assigned_for_answer_review_details) && (
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
-                        <h5 className="text-sm font-medium text-slate-700 flex items-center">
-                          <CheckCircle
-                            size={15}
-                            className="mr-2 text-indigo-500"
-                          />{" "}
-                          Assigned Reviewer
-                        </h5>
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
+                          <h5 className="text-sm font-medium text-slate-700 flex items-center">
+                            <CheckCircle
+                              size={15}
+                              className="mr-2 text-indigo-500"
+                            />{" "}
+                            Assigned Reviewer
+                          </h5>
 
-                        {/* Assign Reviewer Button (For admin only) */}
-                        {projectRole === "consultant admin" &&
-                          activeQuestion.status !== "Accepted" &&
-                          !activeQuestion.assigned_for_answer_review && (
-                            <div
-                              className="relative"
-                              ref={assignReviewerDropdownRef}
-                            >
-                              <button
-                                className="p-1.5 text-slate-500 hover:text-indigo-600 transition-colors hover:bg-slate-100 rounded-full"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleAssignReviewerDropdown();
-                                }}
-                                title="Assign Reviewer"
+                          {/* Assign Reviewer Button (For admin only) */}
+                          {projectRole === "consultant admin" &&
+                            activeQuestion.status !== "Accepted" &&
+                            !activeQuestion.assigned_for_answer_review && (
+                              <div
+                                className="relative"
+                                ref={assignReviewerDropdownRef}
                               >
-                                <UserPlus size={16} />
-                              </button>
-
-                              {/* Assign Reviewer Dropdown */}
-                              {isAssignReviewerDropdownOpen && (
-                                <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-30 h-36 overflow-y-scroll">
-                                  <div className="p-2 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 text-sm">
-                                    Assign Reviewer
-                                  </div>
-                                  {members.length === 0 ? (
-                                    <div className="p-3 text-center text-slate-500 text-sm">
-                                      {isAssigning
-                                        ? "Loading..."
-                                        : "No members found"}
-                                    </div>
-                                  ) : (
-                                    <div className="p-1">
-                                      {members.map((member) => (
-                                        <button
-                                          key={member.id}
-                                          className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${
-                                            selectedReviewer?.id === member.id
-                                              ? "bg-indigo-50 text-indigo-700"
-                                              : "text-slate-700"
-                                          }`}
-                                          onClick={() =>
-                                            setSelectedReviewer(member)
-                                          }
-                                        >
-                                          <div>
-                                            <div className="font-medium">
-                                              {member.name}
-                                            </div>
-                                            <div className="text-xs text-slate-500">
-                                              {member.email}
-                                            </div>
-                                          </div>
-                                          {selectedReviewer?.id ===
-                                            member.id && (
-                                            <CheckCircle
-                                              size={16}
-                                              className="text-indigo-600"
-                                            />
-                                          )}
-                                        </button>
-                                      ))}
-
-                                      {/* Assign Actions */}
-                                      <div className="p-2 border-t border-slate-200 mt-1 flex justify-end gap-2">
-                                        <button
-                                          className="px-3 py-1.5 text-xs bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50"
-                                          onClick={() =>
-                                            setIsAssignReviewerDropdownOpen(
-                                              false
-                                            )
-                                          }
-                                        >
-                                          Cancel
-                                        </button>
-                                        <button
-                                          className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                          disabled={
-                                            !selectedReviewer || isAssigning
-                                          }
-                                          onClick={() =>
-                                            assignReviewerToQuestion(
-                                              activeQuestion.id,
-                                              selectedReviewer.id
-                                            )
-                                          }
-                                        >
-                                          {isAssigning
-                                            ? "Assigning..."
-                                            : "Assign"}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                      </div>
-
-                      <div className="p-4">
-                        {activeQuestion.assigned_for_answer_review_details ? (
-                          <div className="bg-purple-50 rounded-lg p-3 relative group hover:shadow-md transition-shadow">
-                            {/* Delete button - show for consultant admin only */}
-                            {projectRole === "consultant admin" &&
-                              activeQuestion.status !== "Accepted" && (
                                 <button
-                                  className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 shadow-sm"
+                                  className="p-1.5 text-slate-500 hover:text-indigo-600 transition-colors hover:bg-slate-100 rounded-full"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    confirmDeleteReviewerAssignment(
-                                      activeQuestion
-                                    );
+                                    toggleAssignReviewerDropdown();
                                   }}
-                                  title="Remove reviewer"
+                                  title="Assign Reviewer"
                                 >
-                                  <Trash2 size={14} />
+                                  <UserPlus size={16} />
                                 </button>
-                              )}
 
-                            <div className="flex items-start">
-                              <div className="h-9 w-9 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <User size={18} />
+                                {/* Assign Reviewer Dropdown */}
+                                {isAssignReviewerDropdownOpen && (
+                                  <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-30 h-36 overflow-y-scroll">
+                                    <div className="p-2 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 text-sm">
+                                      Assign Reviewer
+                                    </div>
+                                    {members.length === 0 ? (
+                                      <div className="p-3 text-center text-slate-500 text-sm">
+                                        {isAssigning
+                                          ? "Loading..."
+                                          : "No members found"}
+                                      </div>
+                                    ) : (
+                                      <div className="p-1">
+                                        {members.map((member) => (
+                                          <button
+                                            key={member.id}
+                                            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded-md hover:bg-slate-50 ${selectedReviewer?.id === member.id
+                                              ? "bg-indigo-50 text-indigo-700"
+                                              : "text-slate-700"
+                                              }`}
+                                            onClick={() =>
+                                              setSelectedReviewer(member)
+                                            }
+                                          >
+                                            <div>
+                                              <div className="font-medium">
+                                                {member.name}
+                                              </div>
+                                              <div className="text-xs text-slate-500">
+                                                {member.email}
+                                              </div>
+                                            </div>
+                                            {selectedReviewer?.id ===
+                                              member.id && (
+                                                <CheckCircle
+                                                  size={16}
+                                                  className="text-indigo-600"
+                                                />
+                                              )}
+                                          </button>
+                                        ))}
+
+                                        {/* Assign Actions */}
+                                        <div className="p-2 border-t border-slate-200 mt-1 flex justify-end gap-2">
+                                          <button
+                                            className="px-3 py-1.5 text-xs bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50"
+                                            onClick={() =>
+                                              setIsAssignReviewerDropdownOpen(
+                                                false
+                                              )
+                                            }
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={
+                                              !selectedReviewer || isAssigning
+                                            }
+                                            onClick={() =>
+                                              assignReviewerToQuestion(
+                                                activeQuestion.id,
+                                                selectedReviewer.id
+                                              )
+                                            }
+                                          >
+                                            {isAssigning
+                                              ? "Assigning..."
+                                              : "Assign"}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              <div className="ml-3 flex-1 min-w-0">
-                                <div className="text-sm font-medium text-purple-800">
-                                  {
-                                    activeQuestion
-                                      .assigned_for_answer_review_details.name
-                                  }
+                            )}
+                        </div>
+
+                        <div className="p-4">
+                          {activeQuestion.assigned_for_answer_review_details ? (
+                            <div className="bg-purple-50 rounded-lg p-3 relative group hover:shadow-md transition-shadow">
+                              {/* Delete button - show for consultant admin only */}
+                              {projectRole === "consultant admin" &&
+                                activeQuestion.status !== "Accepted" && (
+                                  <button
+                                    className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 shadow-sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmDeleteReviewerAssignment(
+                                        activeQuestion
+                                      );
+                                    }}
+                                    title="Remove reviewer"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+
+                              <div className="flex items-start">
+                                <div className="h-9 w-9 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User size={18} />
                                 </div>
-                                <div className="text-xs text-purple-600 truncate">
-                                  {
-                                    activeQuestion
-                                      .assigned_for_answer_review_details.email
-                                  }
+                                <div className="ml-3 flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-purple-800">
+                                    {
+                                      activeQuestion
+                                        .assigned_for_answer_review_details.name
+                                    }
+                                  </div>
+                                  <div className="text-xs text-purple-600 truncate">
+                                    {
+                                      activeQuestion
+                                        .assigned_for_answer_review_details.email
+                                    }
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="py-8 flex flex-col items-center justify-center text-center">
-                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-400">
-                              <CheckCircle size={20} />
+                          ) : (
+                            <div className="py-8 flex flex-col items-center justify-center text-center">
+                              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-400">
+                                <CheckCircle size={20} />
+                              </div>
+                              <p className="text-slate-600 mb-1 font-medium">
+                                No reviewer assigned
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {projectRole === "consultant admin"
+                                  ? "Use the assign button to add a reviewer"
+                                  : "Waiting for reviewer assignment"}
+                              </p>
                             </div>
-                            <p className="text-slate-600 mb-1 font-medium">
-                              No reviewer assigned
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {projectRole === "consultant admin"
-                                ? "Use the assign button to add a reviewer"
-                                : "Waiting for reviewer assignment"}
-                            </p>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </>
               )}
 
@@ -2072,20 +2126,20 @@ const NewQuestionnaire = () => {
                             </p>
                             {activeQuestion.needs_more_info
                               .created_by_details && (
-                              <div className="text-xs text-yellow-600 flex items-center justify-end">
-                                <span>
-                                  by{" "}
-                                  {
-                                    activeQuestion.needs_more_info
-                                      .created_by_details.name
-                                  }{" "}
-                                  on{" "}
-                                  {formatDate(
-                                    activeQuestion.needs_more_info.created_at
-                                  )}
-                                </span>
-                              </div>
-                            )}
+                                <div className="text-xs text-yellow-600 flex items-center justify-end">
+                                  <span>
+                                    by{" "}
+                                    {
+                                      activeQuestion.needs_more_info
+                                        .created_by_details.name
+                                    }{" "}
+                                    on{" "}
+                                    {formatDate(
+                                      activeQuestion.needs_more_info.created_at
+                                    )}
+                                  </span>
+                                </div>
+                              )}
                           </div>
                         )}
 
@@ -2093,33 +2147,32 @@ const NewQuestionnaire = () => {
                       <p className="text-sm font-medium text-slate-600 mb-4 pb-3 border-b border-slate-100">
                         Status:{" "}
                         <span
-                          className={`inline-flex items-center ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                            activeQuestion.status === "Accepted"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : activeQuestion.status ===
-                                "Needs More Information"
+                          className={`inline-flex items-center ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${activeQuestion.status === "Accepted"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : activeQuestion.status ===
+                              "Needs More Information"
                               ? "bg-yellow-100 text-yellow-700"
                               : activeQuestion.status === "Needs Review"
-                              ? "bg-blue-100 text-blue-700"
-                              : activeQuestion.status === "Answered"
-                              ? "bg-indigo-100 text-indigo-700"
-                              : "bg-slate-100 text-slate-700" // Not Answered
-                          }`}
+                                ? "bg-blue-100 text-blue-700"
+                                : activeQuestion.status === "Answered"
+                                  ? "bg-indigo-100 text-indigo-700"
+                                  : "bg-slate-100 text-slate-700" // Not Answered
+                            }`}
                         >
                           {activeQuestion.status === "Accepted" && (
                             <CheckCircle size={12} className="mr-1" />
                           )}
                           {activeQuestion.status ===
                             "Needs More Information" && (
-                            <AlertCircle size={12} className="mr-1" />
-                          )}
+                              <AlertCircle size={12} className="mr-1" />
+                            )}
                           {activeQuestion.status}
                         </span>
                       </p>
 
                       {/* Display Existing Answer (Read Only Mode) */}
                       {(activeQuestion.response || activeQuestion.comments) &&
-                      !isAddingAnswer ? (
+                        !isAddingAnswer ? (
                         <>
                           {/* Response Choice */}
                           <div className="mb-4">
@@ -2233,11 +2286,11 @@ const NewQuestionnaire = () => {
                           {/* Add "Send for Review" button here */}
                           {(activeQuestion.status === "Answered" ||
                             activeQuestion.status ===
-                              "Needs More Information") &&
+                            "Needs More Information") &&
                             (projectRole === "company" ||
                               (projectRole === "company_representative" &&
                                 activeQuestion.assigned_to_answer ===
-                                  user?.id)) && (
+                                user?.id)) && (
                               <button
                                 type="button"
                                 onClick={handleSendForReview}
@@ -2372,11 +2425,10 @@ const NewQuestionnaire = () => {
                                       return (
                                         <div
                                           key={doc.id}
-                                          className={`flex items-center justify-between p-2 rounded-lg ${
-                                            markedForDeletion
-                                              ? "bg-red-50 line-through text-red-700"
-                                              : "bg-slate-50"
-                                          }`}
+                                          className={`flex items-center justify-between p-2 rounded-lg ${markedForDeletion
+                                            ? "bg-red-50 line-through text-red-700"
+                                            : "bg-slate-50"
+                                            }`}
                                         >
                                           <span className="text-sm truncate max-w-[80%]">
                                             {getFileNameFromUrl(doc.file)}
@@ -2553,6 +2605,147 @@ const NewQuestionnaire = () => {
                   </div>
                 </>
               )}
+
+              {/* All Answers Tab - MODIFIED to show local answer history */}
+              {activeSidebarTab === "all-answers" && (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-slate-800">
+                      Answer History
+                    </h4>
+                    <div className="text-sm text-slate-500">
+                      {activeQuestion?.reference || 'No question selected'}
+                    </div>
+                  </div>
+
+                  {/* Answer History List */}
+                  {localAnswerHistory.length > 0 ? (
+                    <div className="space-y-4">
+                      {localAnswerHistory.map((answer, index) => (
+                        <div
+                          key={answer.id}
+                          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                        >
+                          {/* Answer Header */}
+                          <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-indigo-600 font-semibold text-sm">
+                                  Version {localAnswerHistory.length - index}
+                                </span>
+                                <span className="text-slate-400">•</span>
+                                <span className="text-slate-600 text-sm">
+                                  {formatDate(answer.timestamp)}
+                                </span>
+                                {index === localAnswerHistory.length - 1 && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                    Latest
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-500 flex items-center">
+                              <User size={12} className="mr-1" />
+                              <span>Submitted by {answer.user}</span>
+                            </div>
+                          </div>
+
+                          {/* Answer Content */}
+                          <div className="p-4 space-y-3">
+                            {/* Response */}
+                            {answer.response && (
+                              <div>
+                                <h6 className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">
+                                  Response
+                                </h6>
+                                <div className="text-sm text-slate-800 bg-slate-50 p-2.5 rounded-lg">
+                                  {answer.response}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Policy */}
+                            {answer.policy && (
+                              <div>
+                                <h6 className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">
+                                  Policy
+                                </h6>
+                                <div className="text-sm text-slate-800 bg-slate-50 p-2.5 rounded-lg">
+                                  {answer.policy}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Document Reference */}
+                            {answer.document_reference && (
+                              <div>
+                                <h6 className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">
+                                  Document Reference
+                                </h6>
+                                <div className="text-sm text-slate-800 bg-slate-50 p-2.5 rounded-lg">
+                                  {answer.document_reference}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Files */}
+                            {answer.files && answer.files.length > 0 && (
+                              <div>
+                                <h6 className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-2">
+                                  Files ({answer.files.length})
+                                </h6>
+                                <div className="space-y-1.5">
+                                  {answer.files.map((fileName, fileIndex) => (
+                                    <div
+                                      key={fileIndex}
+                                      className="flex items-center bg-slate-50 p-2 rounded-lg border border-slate-200"
+                                    >
+                                      <div className="bg-indigo-100 p-1 rounded flex-shrink-0 mr-2">
+                                        <FileText className="text-indigo-500 h-3 w-3" />
+                                      </div>
+                                      <div className="overflow-hidden">
+                                        <p className="text-xs font-medium text-slate-700 truncate">
+                                          {fileName}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Comments */}
+                            {answer.comments && (
+                              <div>
+                                <h6 className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">
+                                  Comments
+                                </h6>
+                                <div className="text-sm text-slate-700 italic bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
+                                  {answer.comments}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* No Answer History State */
+                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                      <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                        <FileText className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-slate-700 mb-2">
+                        No Answer History
+                      </h3>
+                      <p className="text-slate-500 text-sm max-w-sm">
+                        No answer history found for this question. History will appear here once you submit answers.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -2664,31 +2857,28 @@ const NewQuestionnaire = () => {
                 </label>
                 <div className="flex gap-3">
                   <button
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      bulkAssignmentMethod === "specific"
-                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                    }`}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${bulkAssignmentMethod === "specific"
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                      : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                      }`}
                     onClick={() => setBulkAssignmentMethod("specific")}
                   >
                     <span>Specific Assignment</span>
                   </button>
                   <button
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      bulkAssignmentMethod === "random"
-                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                    }`}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${bulkAssignmentMethod === "random"
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                      : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                      }`}
                     onClick={() => setBulkAssignmentMethod("random")}
                   >
                     <span>Random Assignment</span>
                   </button>
                   <button
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      bulkAssignmentMethod === "sequential"
-                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                    }`}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${bulkAssignmentMethod === "sequential"
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                      : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                      }`}
                     onClick={() => setBulkAssignmentMethod("sequential")}
                   >
                     <span>Sequential Assignment</span>
@@ -2710,11 +2900,10 @@ const NewQuestionnaire = () => {
                           bulkAssignmentReps.map((rep) => (
                             <div
                               key={rep.id}
-                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                selectedRepresentative?.id === rep.id
-                                  ? "bg-indigo-50 border-indigo-300"
-                                  : "bg-white border-slate-200 hover:bg-slate-50"
-                              }`}
+                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedRepresentative?.id === rep.id
+                                ? "bg-indigo-50 border-indigo-300"
+                                : "bg-white border-slate-200 hover:bg-slate-50"
+                                }`}
                               onClick={() => setSelectedRepresentative(rep)}
                             >
                               <div className="flex items-center">
@@ -2814,11 +3003,10 @@ const NewQuestionnaire = () => {
                               {unassignedQuestions.map((question) => (
                                 <tr
                                   key={question.id}
-                                  className={`hover:bg-slate-50 cursor-pointer ${
-                                    selectedQuestions.includes(question.id)
-                                      ? "bg-indigo-50/30"
-                                      : ""
-                                  }`}
+                                  className={`hover:bg-slate-50 cursor-pointer ${selectedQuestions.includes(question.id)
+                                    ? "bg-indigo-50/30"
+                                    : ""
+                                    }`}
                                   onClick={() => {
                                     if (
                                       selectedQuestions.includes(question.id)
@@ -2966,13 +3154,11 @@ const NewQuestionnaire = () => {
                   )}
                   {isBulkAssigning
                     ? "Assigning..."
-                    : `Assign ${
-                        bulkAssignmentMethod === "specific"
-                          ? `${selectedQuestions.length} Question${
-                              selectedQuestions.length !== 1 ? "s" : ""
-                            }`
-                          : "Questions"
-                      }`}
+                    : `Assign ${bulkAssignmentMethod === "specific"
+                      ? `${selectedQuestions.length} Question${selectedQuestions.length !== 1 ? "s" : ""
+                      }`
+                      : "Questions"
+                    }`}
                 </button>
               </div>
             </div>
@@ -3034,20 +3220,19 @@ const NewQuestionnaire = () => {
                     <div className="text-gray-500 text-sm">Status</div>
                     <div className="text-gray-900 font-medium">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          questionDetailsModal.question.status === "Accepted"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : questionDetailsModal.question.status ===
-                              "Needs More Information"
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${questionDetailsModal.question.status === "Accepted"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : questionDetailsModal.question.status ===
+                            "Needs More Information"
                             ? "bg-yellow-100 text-yellow-700"
                             : questionDetailsModal.question.status ===
                               "Needs Review"
-                            ? "bg-blue-100 text-blue-700"
-                            : questionDetailsModal.question.status ===
-                              "Answered"
-                            ? "bg-indigo-100 text-indigo-700"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
+                              ? "bg-blue-100 text-blue-700"
+                              : questionDetailsModal.question.status ===
+                                "Answered"
+                                ? "bg-indigo-100 text-indigo-700"
+                                : "bg-slate-100 text-slate-700"
+                          }`}
                       >
                         {questionDetailsModal.question.status}
                       </span>
@@ -3115,18 +3300,18 @@ const NewQuestionnaire = () => {
                     )}
                     {questionDetailsModal.question.answer
                       .document_reference && (
-                      <div>
-                        <div className="text-gray-500 text-sm">
-                          Document Reference
+                        <div>
+                          <div className="text-gray-500 text-sm">
+                            Document Reference
+                          </div>
+                          <div className="text-gray-900 font-medium">
+                            {
+                              questionDetailsModal.question.answer
+                                .document_reference
+                            }
+                          </div>
                         </div>
-                        <div className="text-gray-900 font-medium">
-                          {
-                            questionDetailsModal.question.answer
-                              .document_reference
-                          }
-                        </div>
-                      </div>
-                    )}
+                      )}
                     {questionDetailsModal.question.answer.comments && (
                       <div>
                         <div className="text-gray-500 text-sm">Comments</div>

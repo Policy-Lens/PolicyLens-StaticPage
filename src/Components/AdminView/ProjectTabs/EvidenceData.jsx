@@ -17,7 +17,7 @@ const EvidenceData = () => {
   const [selectedControls, setSelectedControls] = useState([]);
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [sortOption, setSortOption] = useState("recent");
-  const [activeTab, setActiveTab] = useState("evidence"); // 'evidence' or 'plc'
+  const [activeTab, setActiveTab] = useState("evidence"); // 'evidence', 'plc', or 'policies'
   const [selectedPLCItems, setSelectedPLCItems] = useState([]);
   const { projectid } = useParams();
 
@@ -258,24 +258,31 @@ const EvidenceData = () => {
           {/* Tabs */}
           <div className="flex border-b border-slate-200 px-4 bg-white">
             <button
-              className={`py-4 px-6 font-medium transition-colors ${
-                activeTab === "evidence"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-slate-600 hover:text-slate-800"
-              }`}
+              className={`py-4 px-6 font-medium transition-colors ${activeTab === "evidence"
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-slate-600 hover:text-slate-800"
+                }`}
               onClick={() => setActiveTab("evidence")}
             >
               Evidence Files
             </button>
             <button
-              className={`py-4 px-6 font-medium transition-colors ${
-                activeTab === "plc"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-slate-600 hover:text-slate-800"
-              }`}
+              className={`py-4 px-6 font-medium transition-colors ${activeTab === "plc"
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-slate-600 hover:text-slate-800"
+                }`}
               onClick={() => setActiveTab("plc")}
             >
               PLC Files
+            </button>
+            <button
+              className={`py-4 px-6 font-medium transition-colors ${activeTab === "policies"
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-slate-600 hover:text-slate-800"
+                }`}
+              onClick={() => setActiveTab("policies")}
+            >
+              Policies
             </button>
           </div>
 
@@ -285,13 +292,17 @@ const EvidenceData = () => {
               <h2 className="text-lg font-semibold text-slate-800">
                 {activeTab === "evidence"
                   ? "Evidence Repository"
-                  : "PLC Documents Repository"}
+                  : activeTab === "plc"
+                    ? "PLC Documents Repository"
+                    : "Policies Repository"}
               </h2>
               <div className="ml-3 text-slate-600 font-medium">
                 (
                 {activeTab === "evidence"
                   ? totalEvidenceFiles
-                  : plcDocumentsCount}{" "}
+                  : activeTab === "plc"
+                    ? plcDocumentsCount
+                    : "0"}
                 files)
               </div>
             </div>
@@ -300,9 +311,8 @@ const EvidenceData = () => {
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder={`Search ${
-                    activeTab === "evidence" ? "evidences" : "documents"
-                  }...`}
+                  placeholder={`Search ${activeTab === "evidence" ? "evidences" : "documents"
+                    }...`}
                   className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
                 />
               </div>
@@ -395,11 +405,10 @@ const EvidenceData = () => {
                     control.files.map((file, fileIndex) => (
                       <tr
                         key={file.id}
-                        className={`hover:bg-slate-50 border-b border-slate-100 transition-colors ${
-                          fileIndex > 0 && fileIndex < control.files.length
-                            ? "bg-slate-50/30"
-                            : ""
-                        }`}
+                        className={`hover:bg-slate-50 border-b border-slate-100 transition-colors ${fileIndex > 0 && fileIndex < control.files.length
+                          ? "bg-slate-50/30"
+                          : ""
+                          }`}
                       >
                         {fileIndex === 0 ? (
                           <td className="p-4" rowSpan={control.files.length}>
@@ -533,9 +542,8 @@ const EvidenceData = () => {
                           />
                         </td>
                         <td className="p-4">
-                          <span className="text-indigo-600 font-semibold">{`Step ${
-                            index + 1
-                          }`}</span>
+                          <span className="text-indigo-600 font-semibold">{`Step ${index + 1
+                            }`}</span>
                         </td>
                         <td className="p-4 text-slate-700 font-medium">
                           {item.filed_name}
@@ -585,6 +593,36 @@ const EvidenceData = () => {
             </div>
           )}
 
+          {/* Policies Data Table */}
+          {activeTab === "policies" && (
+            <div className="flex-1 overflow-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">CATEGORY</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">SUB-CATEGORY</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">FILE NAME</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">FILE TYPE</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">REGULATION STANDARD</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">REGULATION CONTROL NO.</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">REGULATION CONTROL NAME</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">PARENT CONTROL</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">ASSIGNED BY</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">ASSIGNED TO</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">CREATED AT</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">UPDATED AT</th>
+                    <th className="p-4 text-left text-xs font-medium text-slate-600">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Empty table body for now */}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+
+
           {/* Footer with Pagination */}
           <div className="border-t border-slate-200 p-4 bg-white flex items-center justify-between">
             <div className="text-sm text-slate-600">
@@ -592,15 +630,19 @@ const EvidenceData = () => {
               <span className="font-medium">
                 {activeTab === "evidence"
                   ? totalEvidenceFiles
-                  : plcDocumentsCount}
+                  : activeTab === "plc"
+                    ? plcDocumentsCount
+                    : "0"}
               </span>{" "}
               of{" "}
               <span className="font-medium">
                 {activeTab === "evidence"
                   ? totalEvidenceFiles
-                  : plcDocumentsCount}
+                  : activeTab === "plc"
+                    ? plcDocumentsCount
+                    : "0"}
               </span>{" "}
-              {activeTab === "evidence" ? "evidences" : "documents"}
+              {activeTab === "evidence" ? "evidences" : activeTab === "plc" ? "documents" : "policies"}
             </div>
             <div className="flex items-center space-x-2">
               <button
