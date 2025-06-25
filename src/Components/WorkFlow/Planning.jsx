@@ -455,10 +455,10 @@ const Planning = () => {
             type="primary"
             onClick={handleReviewSubmit}
             className={`${localAction === "accept"
-                ? "bg-green-600 hover:bg-green-700"
-                : localAction === "reject"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-orange-600 hover:bg-orange-700"
+              ? "bg-green-600 hover:bg-green-700"
+              : localAction === "reject"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-orange-600 hover:bg-orange-700"
               }`}
             loading={isSubmitting}
             disabled={isSubmitting}
@@ -626,16 +626,16 @@ const Planning = () => {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${stepStatus === "completed" ? "bg-green-100 text-green-800" :
-                stepStatus === "in_progress" ? "bg-blue-100 text-blue-800" :
-                  "bg-yellow-100 text-yellow-800"
+              stepStatus === "in_progress" ? "bg-blue-100 text-blue-800" :
+                "bg-yellow-100 text-yellow-800"
               }`}>
               {stepStatus.charAt(0).toUpperCase() + stepStatus.slice(1).replace("_", " ")}
             </span>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${reviewStatus === "accepted" ? "bg-green-100 text-green-800" :
-                reviewStatus === "rejected" ? "bg-red-100 text-red-800" :
-                  reviewStatus === "needs_info" ? "bg-orange-100 text-orange-800" :
-                    reviewStatus === "under_review" ? "bg-blue-100 text-blue-800" :
-                      "bg-yellow-100 text-yellow-800"
+              reviewStatus === "rejected" ? "bg-red-100 text-red-800" :
+                reviewStatus === "needs_info" ? "bg-orange-100 text-orange-800" :
+                  reviewStatus === "under_review" ? "bg-blue-100 text-blue-800" :
+                    "bg-yellow-100 text-yellow-800"
               }`}>
               {reviewStatus === "accepted" ? "Accepted" :
                 reviewStatus === "rejected" ? "Rejected" :
@@ -647,7 +647,7 @@ const Planning = () => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              ISO: <InteractiveIsoClause isoClause={associatedIsoClause} />
+              ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
             </span>
           </div>
           <div className="flex gap-2">

@@ -542,10 +542,10 @@ const GapAnalysis = () => {
             type="primary"
             onClick={handleReviewSubmit}
             className={`${localAction === "accept"
-                ? "bg-green-600 hover:bg-green-700"
-                : localAction === "reject"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-orange-600 hover:bg-orange-700"
+              ? "bg-green-600 hover:bg-green-700"
+              : localAction === "reject"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-orange-600 hover:bg-orange-700"
               }`}
             loading={isSubmitting}
             disabled={isSubmitting}
@@ -817,7 +817,7 @@ const GapAnalysis = () => {
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
-              ISO: <InteractiveIsoClause isoClause={associatedIsoClause} />
+              ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
             </span>
           </div>
           <div className="flex space-x-3">
