@@ -50,7 +50,7 @@ const Sidebar = ({ onToggle }) => {
       icon: <Users size={20} />,
       label: "Consultant Team",
       path: "/home/consultant-team",
-      roles: ["Super Consultant", "consultant"],
+      roles: ["Super Consultant", "Consultant"],
     },
     /* {
       key: "auditors",
@@ -94,7 +94,7 @@ const Sidebar = ({ onToggle }) => {
   ];
 
   // Conditionally filter the menu items based on the user's role
-  if (user?.role !== 'Super Consultant' && user?.role !== 'consultant') {
+  if (!["Super Consultant", "consultant", "Consultant"].includes(user?.role)) {
     menuItems = menuItems.filter(item => item.key !== 'consultant-team');
   }
 

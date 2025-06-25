@@ -18,6 +18,7 @@ const ConsultantTeamPage = () => {
   });
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const canEdit = ["consultant admin", "admin", "Super Consultant"].includes(user?.role);
 
   useEffect(() => {
     const fetchConsultants = async () => {
@@ -106,37 +107,39 @@ const ConsultantTeamPage = () => {
         </div>
 
         {/* Edit/Delete Buttons */}
-        <div className="flex justify-end gap-4">
-          {isEditMode ? (
-            <>
-              <button
-                onClick={handleDelete}
-                className={`px-4 py-2 rounded-lg font-medium shadow-md transition \
-                  ${
-                    selectedConsultants.length === 0
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-red-500 text-white hover:bg-red-600"
-                  }`}
-                disabled={selectedConsultants.length === 0}
-              >
-                Delete
-              </button>
+        {canEdit && (
+          <div className="flex justify-end gap-4">
+            {isEditMode ? (
+              <>
+                <button
+                  onClick={handleDelete}
+                  className={`px-4 py-2 rounded-lg font-medium shadow-md transition \
+                    ${
+                      selectedConsultants.length === 0
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-red-500 text-white hover:bg-red-600"
+                    }`}
+                  disabled={selectedConsultants.length === 0}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={handleEditToggle}
+                  className="px-4 py-2 rounded-lg font-medium shadow-md bg-gray-500 text-white hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
               <button
                 onClick={handleEditToggle}
-                className="px-4 py-2 rounded-lg font-medium shadow-md bg-gray-500 text-white hover:bg-gray-600"
+                className="px-4 py-2 rounded-lg font-medium shadow-md bg-blue-500 text-white hover:bg-blue-600"
               >
-                Cancel
+                Edit
               </button>
-            </>
-          ) : (
-            <button
-              onClick={handleEditToggle}
-              className="px-4 py-2 rounded-lg font-medium shadow-md bg-blue-500 text-white hover:bg-blue-600"
-            >
-              Edit
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Create Consultant Modal */}

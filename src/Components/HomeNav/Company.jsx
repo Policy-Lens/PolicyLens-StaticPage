@@ -1,6 +1,8 @@
 import { useContext, useEffect, useState } from "react";
 import { apiRequest } from "../../utils/api";
 import { AuthContext } from "../../AuthContext";
+import { Eye, Trash2 } from "lucide-react";
+import { Modal, Spin } from "antd";
 
 const CompaniesPage = () => {
   const [companies, setCompanies] = useState([]);
@@ -17,6 +19,20 @@ const CompaniesPage = () => {
   });
   const [createLoading, setCreateLoading] = useState(false);
   const { user } = useContext(AuthContext);
+
+  // Track which company row is expanded
+  const [expandedCompany, setExpandedCompany] = useState(null);
+  const [representatives, setRepresentatives] = useState([]);
+  const [repsLoading, setRepsLoading] = useState(false);
+
+  // Only show for company and consultant admin roles
+  const canManageReps = user?.role === "Company" || user?.role === "Super Consultant";
+
+  const [showRepModal, setShowRepModal] = useState(false);
+  const [repForm, setRepForm] = useState({ name: "", email: "", contact: "", password: "" });
+  const [repCompanyId, setRepCompanyId] = useState(null);
+  const [repLoading, setRepLoading] = useState(false);
+  const [showRepPassword, setShowRepPassword] = useState(false);
 
   const getCompanies = async () => {
     setLoading(true);
@@ -117,6 +133,84 @@ const CompaniesPage = () => {
 
   const canCreateCompany = user?.role === "admin" || user?.role === "Super Consultant";
 
+  const fetchRepresentatives = async (companyId) => {
+    setRepsLoading(true);
+    try {
+      // Use the new GET endpoint for representatives
+      const res = await apiRequest("GET", `/api/auth/companies/${companyId}/representatives/`, null, true);
+      if (res.status === 200) {
+        setRepresentatives(res.data || []);
+      } else {
+        setRepresentatives([]);
+      }
+    } catch (error) {
+      setRepresentatives([]);
+    } finally {
+      setRepsLoading(false);
+    }
+  };
+
+  const handleExpandCompany = (companyId) => {
+    if (expandedCompany === companyId) {
+      setExpandedCompany(null);
+      setRepresentatives([]);
+    } else {
+      setExpandedCompany(companyId);
+      fetchRepresentatives(companyId);
+    }
+  };
+
+  const handleAddRepClick = (companyId) => {
+    setRepCompanyId(companyId);
+    setShowRepModal(true);
+    setRepForm({ name: "", email: "", contact: "", password: "" });
+  };
+
+  const handleRepFormChange = (e) => {
+    setRepForm({ ...repForm, [e.target.name]: e.target.value });
+  };
+
+  const handleCreateRep = async () => {
+    if (!repForm.name || !repForm.email || !repForm.password) {
+      alert("Please fill in all required fields");
+      return;
+    }
+    setRepLoading(true);
+    try {
+      const payload = {
+        company_id: repCompanyId,
+        users: [
+          {
+            email: repForm.email,
+            name: repForm.name,
+            contact: repForm.contact,
+            role_input: "company_representative",
+            password: repForm.password,
+          },
+        ],
+      };
+      await apiRequest("POST", "/api/auth/company/add-users/", payload, true);
+      setShowRepModal(false);
+      setRepForm({ name: "", email: "", contact: "", password: "" });
+      setRepCompanyId(null);
+      fetchRepresentatives(expandedCompany); // Refresh list
+    } catch (error) {
+      alert("Failed to create representative");
+    } finally {
+      setRepLoading(false);
+    }
+  };
+
+  const handleDeleteRep = async (companyId, userId) => {
+    if (!window.confirm("Are you sure you want to delete this representative?")) return;
+    try {
+      await apiRequest("DELETE", `/api/auth/companies/${companyId}/representatives/${userId}/`, null, true);
+      fetchRepresentatives(companyId);
+    } catch (error) {
+      alert("Failed to delete representative");
+    }
+  };
+
   return (
     <div className="p-8 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Companies</h1>
@@ -207,45 +301,120 @@ const CompaniesPage = () => {
               <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide">
                 Created By
               </th>
+              <th className="py-4 px-6 text-left font-semibold text-blue-800 uppercase tracking-wide text-center">
+                Representatives
+              </th>
             </tr>
           </thead>
           <tbody>
             {companies.map((company, index) => (
-              <tr
-                key={index}
-                className={`border-b border-gray-200 transition ${
-                  index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                } hover:bg-blue-100`}
-              >
-                <td className="py-4 px-6 text-left">
-                  {isEditMode && (
-                    <input
-                      type="checkbox"
-                      checked={selectedCompanies.includes(company.name)}
-                      onChange={() => handleSelectCompany(company.name)}
-                      className="accent-blue-600"
-                    />
-                  )}
-                </td>
-                <td className="py-4 px-6 font-medium text-gray-900">
-                  {company.name}
-                </td>
-                <td className="py-4 px-6 text-gray-700">{company.industry}</td>
-                <td className="py-4 px-6 text-gray-700">
-                  {company.company_admin.name}
-                </td>
-                <td className="py-4 px-6 text-gray-700">
-                  <a
-                    href={`mailto:${company.company_admin.email}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {company.company_admin.email}
-                  </a>
-                </td>
-                <td className="py-4 px-6 text-gray-700">
-                  {company.created_by?.name || "N/A"}
-                </td>
-              </tr>
+              <>
+                <tr
+                  key={company.id || index}
+                  className={`border-b border-gray-200 transition ${
+                    index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                  } hover:bg-blue-100`}
+                >
+                  <td className="py-4 px-6 text-left">
+                    {isEditMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedCompanies.includes(company.name)}
+                        onChange={() => handleSelectCompany(company.name)}
+                        className="accent-blue-600"
+                      />
+                    )}
+                  </td>
+                  <td className="py-4 px-6 font-medium text-gray-900">
+                    {company.name}
+                  </td>
+                  <td className="py-4 px-6 text-gray-700">{company.industry}</td>
+                  <td className="py-4 px-6 text-gray-700">
+                    {company.company_admin.name}
+                  </td>
+                  <td className="py-4 px-6 text-gray-700">
+                    <a
+                      href={`mailto:${company.company_admin.email}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {company.company_admin.email}
+                    </a>
+                  </td>
+                  <td className="py-4 px-6 text-gray-700">
+                    {company.created_by?.name || "N/A"}
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <button
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700"
+                      title="View Representatives"
+                      onClick={() => handleExpandCompany(company.id)}
+                    >
+                      <Eye size={18} />
+                    </button>
+                  </td>
+                </tr>
+                {expandedCompany === company.id && (
+                  <tr>
+                    <td colSpan={8} className="bg-blue-50 p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-blue-800">Company Representatives</h3>
+                        {canManageReps && (
+                          <button
+                            className="px-4 py-2 rounded-lg font-medium shadow-md bg-blue-600 text-white hover:bg-blue-700"
+                            onClick={() => handleAddRepClick(company.id)}
+                          >
+                            + Add New Representative
+                          </button>
+                        )}
+                      </div>
+                      {repsLoading ? (
+                        <div className="flex items-center justify-center py-6"><Spin /> Loading representatives...</div>
+                      ) : representatives.length > 0 ? (
+                        <table className="min-w-full border-collapse border border-gray-200 text-sm mb-2">
+                          <thead className="bg-gradient-to-r from-blue-100 to-blue-200 border-b border-gray-300">
+                            <tr>
+                              <th className="py-3 px-4 text-left font-semibold text-blue-800 uppercase tracking-wide">Name</th>
+                              <th className="py-3 px-4 text-left font-semibold text-blue-800 uppercase tracking-wide">Email</th>
+                              <th className="py-3 px-4 text-left font-semibold text-blue-800 uppercase tracking-wide">Role</th>
+                              <th className="py-3 px-4 text-left font-semibold text-blue-800 uppercase tracking-wide">Contact</th>
+                              {canManageReps && <th className="py-3 px-4 text-left font-semibold text-blue-800 uppercase tracking-wide">Actions</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {representatives.map((rep) => (
+                              <tr key={rep.id || rep.email} className="border-b border-gray-200">
+                                <td className="py-3 px-4 font-medium text-gray-900">
+                                  {rep.name || rep.email}
+                                </td>
+                                <td className="py-3 px-4 text-gray-700">
+                                  <a href={`mailto:${rep.email}`} className="text-blue-600 hover:underline">{rep.email}</a>
+                                </td>
+                                <td className="py-3 px-4 text-left text-gray-700">
+                                  {rep.role || rep.role_input}
+                                </td>
+                                <td className="py-3 px-4 text-gray-700">{rep.contact}</td>
+                                {canManageReps && (
+                                  <td className="py-3 px-4 text-left">
+                                    <button
+                                      className="text-red-600 hover:text-red-800 p-1 rounded"
+                                      title="Delete Representative"
+                                      onClick={() => handleDeleteRep(expandedCompany, rep.id)}
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="text-gray-500 text-sm">No representatives found for this company.</div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
@@ -348,6 +517,72 @@ const CompaniesPage = () => {
           </div>
         </div>
       )}
+
+      {/* Add Representative Modal */}
+      <Modal
+        title="Add Company Representative"
+        open={showRepModal}
+        onCancel={() => setShowRepModal(false)}
+        onOk={handleCreateRep}
+        okText={repLoading ? "Creating..." : "Create"}
+        okButtonProps={{ disabled: repLoading }}
+        cancelButtonProps={{ disabled: repLoading }}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Name</label>
+            <input
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              name="name"
+              value={repForm.name}
+              onChange={handleRepFormChange}
+              disabled={repLoading}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              name="email"
+              value={repForm.email}
+              onChange={handleRepFormChange}
+              disabled={repLoading}
+              type="email"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <div className="relative">
+              <input
+                className="w-full border border-gray-300 rounded px-3 py-2 pr-10"
+                name="password"
+                value={repForm.password}
+                onChange={handleRepFormChange}
+                disabled={repLoading}
+                type={showRepPassword ? "text" : "password"}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowRepPassword((v) => !v)}
+                tabIndex={-1}
+              >
+                {showRepPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Contact</label>
+            <input
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              name="contact"
+              value={repForm.contact}
+              onChange={handleRepFormChange}
+              disabled={repLoading}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

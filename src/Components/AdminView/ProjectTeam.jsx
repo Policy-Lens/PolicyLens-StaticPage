@@ -5,6 +5,8 @@ import { useParams } from "react-router-dom";
 import { Pointer } from "lucide-react";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
+import { Trash2 } from "lucide-react";
+import { AuthContext } from "../../AuthContext";
 
 const ProjectTeamPage = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -18,43 +20,16 @@ const ProjectTeamPage = () => {
   const [addedMembers, setAddedMembers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const { projectid } = useParams();
-  const roles = ["Consultant", "Auditor", "Manager"]; // Example roles
-  const [users, setUsers] = useState([
-    {
-      id: 3,
-      email: "mailto:a1@example.com",
-      name: "a1",
-      role: "auditor",
-      contact: null,
-    },
-    {
-      id: 4,
-      email: "mailto:a2@example.com",
-      name: "a2",
-      role: "auditor",
-      contact: null,
-    },
-  ]);
+  const roles = ["Consultant", "Auditor", "Company Representative", "Manager"];
+  const [users, setUsers] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [consultants, setConsultants] = useState([]);
   const [auditors, setAuditors] = useState([]);
-
-  const memberOptions = [
-    {
-      id: 3,
-      email: "a1@example.com",
-      name: "a1",
-      role: "auditor",
-      contact: null,
-    },
-    {
-      id: 4,
-      email: "a2@example.com",
-      name: "a2",
-      role: "auditor",
-      contact: null,
-    },
-  ];
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [companyId, setCompanyId] = useState(null);
+  const { user } = useContext(AuthContext);
+  const canManageTeam = ["consultant admin", "admin", "Super Consultant"].includes(user?.role);
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
@@ -70,8 +45,8 @@ const ProjectTeamPage = () => {
         true
       );
       if (res.status === 200) {
-        setMembers(res.data);
-        console.log(res.data);
+        setMembers(res.data.members || []);
+        setCompanyId(res.data.company_id || null);
       }
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -101,7 +76,7 @@ const ProjectTeamPage = () => {
           alert("already added this member");
         }
         break;
-      case "consultant":
+      case "consultant": 
         if (
           !consultants.some((consultant) => consultant.id === user.id) &&
           !admins.some((admin) => admin.id === user.id)
@@ -153,13 +128,17 @@ const ProjectTeamPage = () => {
   const getUsers = async (e) => {
     const role = e.target.value;
     if (role === "") return;
-
     setUsersLoading(true);
     try {
-      const companyId = project?.consultant_company?.id || project?.consultant_company_id;
       let endpoint = `/api/auth/users/?role=${role === "consultant admin" ? "consultant" : role}`;
-      if (companyId) {
-        endpoint += `&company_id=${companyId}`;
+      let fetchCompanyId = null;
+      if (role === "consultant" || role === "auditor") {
+        fetchCompanyId = project?.consultant_company?.id || project?.consultant_company_id;
+      } else if (role === "company_representative") {
+        fetchCompanyId = companyId;
+      }
+      if (fetchCompanyId) {
+        endpoint += `&company_id=${fetchCompanyId}`;
       }
       const res = await apiRequest(
         "GET",
@@ -177,6 +156,42 @@ const ProjectTeamPage = () => {
       setUsersLoading(false);
     }
   };
+
+  // Delete member handler
+  const handleDeleteMember = async (userId) => {
+    if (!window.confirm("Are you sure you want to remove this member from the project?")) return;
+    try {
+      await apiRequest("DELETE", `/api/project/${projectid}/members/${userId}/`, null, true);
+      getMembers();
+    } catch (error) {
+      alert("Failed to remove member");
+    }
+  };
+
+  // Batch add handler
+  const handleBatchAddMembers = async () => {
+    if (!selectedRole || selectedUsers.length === 0) return;
+    const usersToAdd = users.filter((u) => selectedUsers.includes(u.id));
+    let payload = {};
+    if (selectedRole === "consultant") payload = { consultants: usersToAdd.map((u) => u.id) };
+    else if (selectedRole === "auditor") payload = { auditors: usersToAdd.map((u) => u.id) };
+    else if (selectedRole === "company_representative") payload = { company_representatives: usersToAdd.map((u) => u.id) };
+    else payload = { admins: usersToAdd.map((u) => u.id) };
+    await apiRequest("POST", `/api/project/${projectid}/add-members/`, payload, true);
+    setIsModalOpen(false);
+    setSelectedUsers([]);
+    setSelectedRole("");
+    setUserSearch("");
+    setUsers([]);
+    getMembers();
+  };
+
+  // Filter users by search
+  const filteredUsers = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   useEffect(() => {
     getMembers();
@@ -212,7 +227,7 @@ const ProjectTeamPage = () => {
             </div>
           </div>
 
-          {!loading && members.length > 0 && !isEditing && (
+          {canManageTeam && !loading && members.length > 0 && !isEditing && (
             <button
               onClick={toggleEdit}
               className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md"
@@ -269,16 +284,7 @@ const ProjectTeamPage = () => {
           <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md w-full">
             {/* Table Header */}
             <div className="bg-white border-b border-gray-200 p-4">
-              <div className="flex items-center mb-1">
-                <h2 className="text-xl font-semibold text-gray-800 mr-2">
-                  Team Members
-                </h2>
-                <span className="text-sm bg-indigo-100 text-indigo-800 py-1 px-3 rounded-full">
-                  {members.length}
-                </span>
-              </div>
-
-              {isEditing && (
+              {canManageTeam && isEditing && (
                 <div className="flex gap-3 flex-wrap mt-4">
                   <button
                     onClick={() => setIsModalOpen(true)}
@@ -299,23 +305,6 @@ const ProjectTeamPage = () => {
                       />
                     </svg>
                     Add Member
-                  </button>
-                  <button className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition flex items-center shadow-md">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                    Delete Member
                   </button>
                   <button
                     onClick={toggleEdit}
@@ -359,7 +348,7 @@ const ProjectTeamPage = () => {
               {members.map((member, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-3 hover:bg-gray-50 transition-colors"
+                  className="grid grid-cols-3 hover:bg-gray-50 transition-colors relative"
                 >
                   <div className="py-4 px-6 text-sm font-medium text-gray-900 truncate">
                     {member.name}
@@ -367,7 +356,7 @@ const ProjectTeamPage = () => {
                   <div className="py-4 px-6 text-sm text-gray-500 truncate">
                     {member.email}
                   </div>
-                  <div className="py-4 px-6">
+                  <div className="py-4 px-6 flex items-center justify-between gap-2">
                     <span
                       className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
                       ${
@@ -382,6 +371,15 @@ const ProjectTeamPage = () => {
                     >
                       {member.project_role}
                     </span>
+                    {canManageTeam && isEditing && (
+                      <button
+                        className="ml-auto text-red-600 hover:text-red-800 p-1 rounded"
+                        title="Remove Member"
+                        onClick={() => handleDeleteMember(member.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -413,32 +411,34 @@ const ProjectTeamPage = () => {
                 Your project doesn't have any team members. Add team members to
                 collaborate on this project.
               </p>
-              <button
-                onClick={toggleEdit}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium rounded-lg transition-all shadow-md flex items-center justify-center gap-2 hover:shadow-lg transform hover:scale-105 duration-200"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              {canManageTeam && !loading && (
+                <button
+                  onClick={toggleEdit}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium rounded-lg transition-all shadow-md flex items-center justify-center gap-2 hover:shadow-lg transform hover:scale-105 duration-200"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                Add Team Members
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                  Add Team Members
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {isModalOpen && (
+      {canManageTeam && isModalOpen && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4">
             <div className="flex justify-between items-center mb-6">
@@ -483,14 +483,14 @@ const ProjectTeamPage = () => {
                     value={selectedRole}
                     onChange={(e) => {
                       setSelectedRole(e.target.value);
-                      setSelectedUser("");
+                      setSelectedUsers([]);
                       getUsers(e);
                     }}
                   >
                     <option value="">Select Role</option>
-                    {/* <option value="consultant admin">Admin</option> */}
                     <option value="consultant">Consultant</option>
                     <option value="auditor">Auditor</option>
+                    <option value="company_representative">Company Representative</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
                     <svg
@@ -510,52 +510,49 @@ const ProjectTeamPage = () => {
                 </div>
               </div>
 
-              {/* User Selection */}
+              {/* User Search */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Member
-                </label>
-                <div className="relative">
-                  <select
-                    className={`w-full bg-gray-50 border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none ${
-                      !selectedRole || usersLoading
-                        ? "opacity-60 cursor-not-allowed"
-                        : ""
-                    }`}
-                    value={selectedUser}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                    disabled={!selectedRole || usersLoading}
-                  >
-                    <option value="">Select Name</option>
-                    {users.map((user) => (
-                      <option value={JSON.stringify(user)} key={user.id}>
-                        {user.name} - {user.email}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
-                    {usersLoading ? (
-                      <Spin
-                        indicator={
-                          <LoadingOutlined style={{ fontSize: 20 }} spin />
-                        }
-                      />
-                    ) : (
-                      <svg
-                        className="h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                          clipRule="evenodd"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Search Members</label>
+                <input
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="Search by name or email"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  disabled={!selectedRole || usersLoading}
+                />
+              </div>
+
+              {/* User Multi-Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Members</label>
+                <div className="max-h-48 overflow-y-auto border rounded-lg bg-gray-50">
+                  {usersLoading ? (
+                    <div className="flex items-center justify-center py-6"><Spin /></div>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className="text-gray-500 text-sm p-4">No users found.</div>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <label key={user.id} className="flex items-center px-4 py-2 cursor-pointer hover:bg-blue-50">
+                        <input
+                          type="checkbox"
+                          className="mr-3 accent-blue-600"
+                          checked={selectedUsers.includes(user.id)}
+                          onChange={() => {
+                            setSelectedUsers((prev) =>
+                              prev.includes(user.id)
+                                ? prev.filter((id) => id !== user.id)
+                                : [...prev, user.id]
+                            );
+                          }}
+                          disabled={members.some((m) => m.id === user.id)}
                         />
-                      </svg>
-                    )}
-                  </div>
+                        <span className="flex-1">{user.name} - {user.email}</span>
+                        {members.some((m) => m.id === user.id) && (
+                          <span className="text-xs text-gray-400 ml-2">Already in project</span>
+                        )}
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -564,12 +561,12 @@ const ProjectTeamPage = () => {
                 <button
                   className={`w-full py-3 rounded-lg font-semibold flex justify-center items-center transition shadow-md 
                     ${
-                      !selectedUser || !selectedRole
+                      selectedUsers.length === 0 || !selectedRole
                         ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                         : "bg-green-600 text-white hover:bg-green-700 hover:shadow-lg"
                     }`}
-                  onClick={handleAddMember}
-                  disabled={!selectedUser || !selectedRole}
+                  onClick={handleBatchAddMembers}
+                  disabled={selectedUsers.length === 0 || !selectedRole}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -585,31 +582,13 @@ const ProjectTeamPage = () => {
                       d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                     />
                   </svg>
-                  Add Member
+                  Add Selected Members
                 </button>
-
                 <button
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md hover:shadow-lg flex justify-center items-center"
-                  onClick={() => {
-                    console.log("Final List of Added Members:", members);
-                    handleFinishAdding();
-                  }}
+                  className="w-full bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition shadow-md hover:shadow-lg flex justify-center items-center"
+                  onClick={() => setIsModalOpen(false)}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Done Adding Members
+                  Cancel
                 </button>
               </div>
             </div>
