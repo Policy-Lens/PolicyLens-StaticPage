@@ -176,7 +176,7 @@ const Sidebar = ({ onToggle }) => {
               menuItem
             );
           })}
-          {user?.role === "admin" && (
+          {user?.role === "Admin" && (
             <li
               key={policyLib.key}
               className={`flex items-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${

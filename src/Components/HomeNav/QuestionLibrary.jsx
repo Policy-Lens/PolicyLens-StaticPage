@@ -16,12 +16,14 @@ import { apiRequest } from "../../utils/api";
 import { message, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import Sidebar from "./Sidebar";
+import { useLocation } from "react-router-dom";
+
 const QuestionLibrary = () => {
   const { user } = useContext(AuthContext);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState("clause"); // "clause" or "control"
+  const [activeTab, setActiveTab] = useState("clause"); // "clause", "control", "vapt", or "vapt_form"
 
   // Question list state
   const [questions, setQuestions] = useState([]);
@@ -44,7 +46,7 @@ const QuestionLibrary = () => {
   const [newQuestion, setNewQuestion] = useState({
     reference: "",
     question: "",
-    type: activeTab, // Defaults to activeTab value ("clause" or "control")
+    type: activeTab, // Defaults to activeTab value ("clause", "control", or "vapt")
     pdca_cycle: "", // Only for clause questions
     type_description: "",
     standard: "ISO27001",
@@ -79,14 +81,32 @@ const QuestionLibrary = () => {
     "8 - Technological Controls",
   ];
 
+  const vaptTypeChoices = [
+    "Web Application Security Testing Questionnaire",
+    "Android / iOS Application  Security Testing Questionnaire",
+    "APIs Security Testing Questionnaire"
+  ];
+
+  const vaptFormTypeChoices = [
+    "IT Infrastructure Details",
+    "Cloud Infrastructure Details"
+  ];
+
   // Get type choices based on active tab
   const typeChoices =
-    activeTab === "clause" ? clauseTypeChoices : controlTypeChoices;
+    activeTab === "clause"
+      ? clauseTypeChoices
+      : activeTab === "control"
+      ? controlTypeChoices
+      : activeTab === "vapt"
+      ? vaptTypeChoices
+      : vaptFormTypeChoices;
 
   // Check if user is admin
   const [isAdmin, setIsAdmin] = useState(false);
+  const location = useLocation();
   useEffect(() => {
-    setIsAdmin(user?.role == "admin");
+    setIsAdmin(user?.role == "Admin");
   }, [user]);
 
   // Update question form when active tab changes
@@ -417,7 +437,7 @@ const QuestionLibrary = () => {
   // Effect to refetch questions when dependencies change
   useEffect(() => {
     handleGetQuestions();
-  }, [searchQuery, filters, user, activeTab]);
+  }, [searchQuery, filters, user, activeTab, location.pathname, isAdmin]);
 
   // If not admin, show access denied message
   if (!isAdmin) {
@@ -521,7 +541,7 @@ const QuestionLibrary = () => {
                       <div className="p-3 border-b border-slate-200">
                         <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
                           <span>
-                            {activeTab === "clause" ? "Clause" : "Control"} Type
+                            {activeTab === "clause" ? "Clause" : activeTab === "control" ? "Control" : activeTab === "vapt" ? "VAPT Type" : "VAPT Form Type"} Type
                           </span>
                           {filters.type && (
                             <button
@@ -558,7 +578,7 @@ const QuestionLibrary = () => {
                           <div className="flex flex-wrap gap-1">
                             {filters.type && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                {activeTab === "clause" ? "Clause" : "Control"}:{" "}
+                                {activeTab === "clause" ? "Clause" : activeTab === "control" ? "Control" : activeTab === "vapt" ? "VAPT Type" : "VAPT Form Type"}:{" "}
                                 {filters.type}
                                 <button
                                   onClick={() => handleFilterChange("type", "")}
@@ -645,6 +665,26 @@ const QuestionLibrary = () => {
             >
               Control Questions
             </button>
+            <button
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "vapt"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => setActiveTab("vapt")}
+            >
+              VAPT Questions
+            </button>
+            <button
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "vapt_form"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => setActiveTab("vapt_form")}
+            >
+              VAPT Form
+            </button>
           </div>
         </div>
 
@@ -669,11 +709,19 @@ const QuestionLibrary = () => {
                     Question
                   </th>
                   <th className="w-36 p-4 text-center font-semibold text-slate-600">
-                    {activeTab === "clause" ? "Clause no." : "Control no."}
+                    {activeTab === "clause"
+                      ? "Clause no."
+                      : activeTab === "control"
+                      ? "Control no."
+                      : activeTab === "vapt"
+                      ? "VAPT Category"
+                      : "VAPT Form Category"}
                   </th>
-                  <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                    {activeTab === "clause" ? "Clause name" : "Control name"}
-                  </th>
+                  {activeTab !== "vapt" && activeTab !== "vapt_form" && (
+                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                      {activeTab === "clause" ? "Clause name" : "Control name"}
+                    </th>
+                  )}
                   <th className="w-44 p-4 text-center font-semibold text-slate-600">
                     Standard
                   </th>
@@ -707,11 +755,13 @@ const QuestionLibrary = () => {
                       <td className="p-4 text-slate-600 text-center">
                         {question.type_description.split(" - ")[0]}
                       </td>
-                      <td className="p-4 text-slate-600 text-center">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                          {question.type_description.split(" - ")[1]}
-                        </span>
-                      </td>
+                      {activeTab !== "vapt" && activeTab !== "vapt_form" && (
+                        <td className="p-4 text-slate-600 text-center">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                            {question.type_description.split(" - ")[1]}
+                          </span>
+                        </td>
+                      )}
                       <td className="p-4 text-center">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
                           {question.standard}
@@ -840,13 +890,21 @@ const QuestionLibrary = () => {
                   >
                     <option value="clause">Clause</option>
                     <option value="control">Control</option>
+                    <option value="vapt">VAPT</option>
+                    <option value="vapt_form">VAPT Form</option>
                   </select>
                 </div>
 
                 {/* Type Description */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    {newQuestion.type === "clause" ? "Clause" : "Control"} *
+                    {activeTab === "clause"
+                      ? "Clause"
+                      : activeTab === "control"
+                      ? "Control"
+                      : activeTab === "vapt"
+                      ? "VAPT Type"
+                      : "VAPT Form Type"} *
                   </label>
                   <select
                     name="type_description"
@@ -857,15 +915,33 @@ const QuestionLibrary = () => {
                   >
                     <option value="">
                       Select a{" "}
-                      {newQuestion.type === "clause" ? "clause" : "control"}
+                      {activeTab === "clause"
+                        ? "clause"
+                        : activeTab === "control"
+                        ? "control"
+                        : activeTab === "vapt"
+                        ? "VAPT type"
+                        : "VAPT form type"}
                     </option>
-                    {newQuestion.type === "clause"
+                    {activeTab === "clause"
                       ? clauseTypeChoices.map((type) => (
                           <option key={type} value={type}>
                             {type}
                           </option>
                         ))
-                      : controlTypeChoices.map((type) => (
+                      : activeTab === "control"
+                      ? controlTypeChoices.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))
+                      : activeTab === "vapt"
+                      ? vaptTypeChoices.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))
+                      : vaptFormTypeChoices.map((type) => (
                           <option key={type} value={type}>
                             {type}
                           </option>
@@ -874,25 +950,27 @@ const QuestionLibrary = () => {
                 </div>
 
                 {/* PDCA Cycle (only for clause questions) */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    PDCA Cycle
-                  </label>
-                  <select
-                    name="pdca_cycle"
-                    disabled={newQuestion.type !== "clause"}
-                    value={newQuestion.pdca_cycle}
-                    onChange={handleQuestionInputChange}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
-                    required={newQuestion.type === "clause"}
-                  >
-                    <option value="">Select a PDCA Cycle</option>
-                    <option value="Plan">Plan</option>
-                    <option value="Do">Do</option>
-                    <option value="Check">Check</option>
-                    <option value="Act">Act</option>
-                  </select>
-                </div>
+                {activeTab === "clause" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      PDCA Cycle
+                    </label>
+                    <select
+                      name="pdca_cycle"
+                      disabled={newQuestion.type !== "clause"}
+                      value={newQuestion.pdca_cycle}
+                      onChange={handleQuestionInputChange}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
+                      required={newQuestion.type === "clause"}
+                    >
+                      <option value="">Select a PDCA Cycle</option>
+                      <option value="Plan">Plan</option>
+                      <option value="Do">Do</option>
+                      <option value="Check">Check</option>
+                      <option value="Act">Act</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* Standard (fixed to ISO27001) */}
                 <div>

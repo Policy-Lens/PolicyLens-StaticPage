@@ -40,6 +40,8 @@ import HomeLayout from "./Components/HomeNav/HomeLayout";
 import { NotificationProvider } from "./Context/NotificationContext";
 import NotificationToast from "./Components/Common/NotificationToast";
 import ConsultantTeamPage from "./Components/HomeNav/ConsultantTeamPage";
+import VaptQuestions from "./Components/AdminView/ProjectTabs/VaptQuestions";
+import VaptForm from "./Components/AdminView/ProjectTabs/VaptForm";
 
 const router = createBrowserRouter([
   {
@@ -169,6 +171,14 @@ const router = createBrowserRouter([
       {
         path: "questionbank",
         element: <NewQuestionnaire />,
+      },
+      {
+        path: "questionbank/vaptquestions",
+        element: <VaptQuestions />,
+      },
+      {
+        path: "questionbank/vaptform",
+        element: <VaptForm />,
       },
       {
         path: "myevidences",

@@ -31,12 +31,14 @@ import {
 import { ProjectContext } from "../../../Context/ProjectContext";
 import { AuthContext } from "../../../AuthContext";
 import { apiRequest, BASE_URL } from "../../../utils/api";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { message, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 
-const NewQuestionnaire = () => {
+const NewQuestionnaire = (props) => {
   const { projectid } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { projectRole, project, getMembers } = useContext(ProjectContext);
   const { user } = useContext(AuthContext);
 
@@ -46,7 +48,17 @@ const NewQuestionnaire = () => {
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [activeSidebarTab, setActiveSidebarTab] = useState("question");
   const [activeQuestionTab, setActiveQuestionTab] = useState("all");
-  const [activeTab, setActiveTab] = useState("clause"); // "clause" or "control"
+  const [activeTab, setActiveTab] = useState(() => {
+    // Support defaultTab prop for direct navigation
+    if (typeof props?.defaultTab === 'string') {
+      return props.defaultTab;
+    }
+    // Support ?tab=control in URL
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'control') return 'control';
+    return "clause";
+  }); // "clause", "control", or "vapt"
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -382,12 +394,9 @@ const NewQuestionnaire = () => {
   // Define if the current user can review the active question
   const canUserReview = useMemo(() => {
     if (!activeQuestion || !activeQuestion.status) return false;
-
-    if (activeQuestion.status !== "Needs Review") return false;
-
+    if (activeQuestion.status !== "Needs Review" && activeQuestion.status !== "Answered") return false;
     // Admins can always review
     if (projectRole === "consultant admin") return true;
-
     // Check if user is assigned as reviewer
     return activeQuestion.assigned_for_answer_review === user?.id;
   }, [activeQuestion, projectRole, user]);
@@ -1392,7 +1401,13 @@ const NewQuestionnaire = () => {
                   ? "border-indigo-600 text-indigo-600"
                   : "border-transparent text-slate-500 hover:text-slate-700"
                   }`}
-                onClick={() => setActiveTab("clause")}
+                onClick={() => {
+                  if (location.pathname.endsWith('/vaptform') || location.pathname.endsWith('/vaptquestions')) {
+                    navigate(`/project/${projectid}/questionbank`);
+                  } else {
+                    setActiveTab("clause");
+                  }
+                }}
               >
                 Clause Questions
               </button>
@@ -1401,9 +1416,45 @@ const NewQuestionnaire = () => {
                   ? "border-indigo-600 text-indigo-600"
                   : "border-transparent text-slate-500 hover:text-slate-700"
                   }`}
-                onClick={() => setActiveTab("control")}
+                onClick={() => {
+                  if (location.pathname.endsWith('/vaptform') || location.pathname.endsWith('/vaptquestions')) {
+                    navigate(`/project/${projectid}/questionbank?tab=control`);
+                  } else {
+                    setActiveTab("control");
+                  }
+                }}
               >
                 Control Questions
+              </button>
+              <button
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "vapt_form"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
+                onClick={() => {
+                  if (!location.pathname.endsWith('/vaptform')) {
+                    navigate(`/project/${projectid}/questionbank/vaptform`);
+                  } else {
+                    setActiveTab("vapt_form");
+                  }
+                }}
+              >
+                VAPT Form
+              </button>
+              <button
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "vapt"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
+                onClick={() => {
+                  if (!location.pathname.endsWith('/vaptquestions')) {
+                    navigate(`/project/${projectid}/questionbank/vaptquestions`);
+                  } else {
+                    setActiveTab("vapt");
+                  }
+                }}
+              >
+                VAPT Questions
               </button>
             </div>
           </div>
@@ -1429,20 +1480,28 @@ const NewQuestionnaire = () => {
                       Question
                     </th>
                     <th className="w-36 p-4 text-left font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause no." : "Control no."}
+                      {activeTab === "clause"
+                        ? "Clause no."
+                        : activeTab === "control"
+                        ? "Control no."
+                        : (activeTab === "vapt" || activeTab === "vapt_form")
+                        ? "Type"
+                        : ""}
                     </th>
-                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause name" : "Control name"}
-                    </th>
+                    {activeTab !== "vapt" && activeTab !== "vapt_form" && (
+                      <th className="w-44 p-4 text-left font-semibold text-slate-600">
+                        {activeTab === "clause" ? "Clause name" : "Control name"}
+                      </th>
+                    )}
                     {activeTab === "clause" && (
-                      <th className="w-36 p-4 text-center font-semibold text-slate-600">
+                      <th className="w-36 p-4 text-left font-semibold text-slate-600">
                         PDCA Cycle
                       </th>
                     )}
                     <th className="p-4 text-left font-semibold text-slate-600">
                       Standard
                     </th>
-                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                    <th className="w-44 p-4 text-left font-semibold text-slate-600">
                       Status
                     </th>
                     <th className="w-44 p-4 text-left font-semibold text-slate-600">
@@ -1485,14 +1544,16 @@ const NewQuestionnaire = () => {
                             {question.question}
                           </div>
                         </td>
-                        <td className="p-4 text-slate-600 text-center">
+                        <td className="p-4 text-slate-600 text-left">
                           {question.type_description.split(" - ")[0]}
                         </td>
-                        <td className="p-4 text-slate-600 text-center">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                            {question.type_description.split(" - ")[1]}
-                          </span>
-                        </td>
+                        {activeTab !== "vapt" && activeTab !== "vapt_form" && (
+                          <td className="p-4 text-slate-600 text-left">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                              {question.type_description.split(" - ")[1]}
+                            </span>
+                          </td>
+                        )}
                         {activeTab === "clause" && (
                           <td className="p-4 text-center">
                             <span
@@ -2522,7 +2583,7 @@ const NewQuestionnaire = () => {
                       )}
 
                       {/* Review Actions Section */}
-                      {activeQuestion.status === "Needs Review" &&
+                      {(activeQuestion.status === "Needs Review" || activeQuestion.status === "Answered") &&
                         canUserReview &&
                         !isAddingAnswer && (
                           <div className="mt-6 pt-4 border-t border-dashed border-slate-200">
@@ -2547,29 +2608,20 @@ const NewQuestionnaire = () => {
                                   disabled={isReviewSubmitting}
                                   className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-yellow-300 rounded-md shadow-sm text-sm font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
                                 >
-                                  <MessageCircle size={16} className="mr-1.5" />{" "}
-                                  Needs More Info
+                                  <AlertCircle size={16} className="mr-1.5" />{" "}
+                                  Request More Info
                                 </button>
                               </div>
                             ) : (
-                              // Feedback Input Form
-                              <div className="space-y-3">
-                                <label
-                                  htmlFor="feedbackComment"
-                                  className="block text-sm font-medium text-slate-700"
-                                >
-                                  Provide Feedback:
-                                </label>
+                              <div className="mt-4">
                                 <textarea
-                                  id="feedbackComment"
-                                  rows="3"
-                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
-                                  placeholder="Explain what needs to be changed or added..."
+                                  className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all mb-2"
+                                  rows={3}
+                                  placeholder="Enter feedback/comments..."
                                   value={feedbackComment}
-                                  onChange={(e) =>
-                                    setFeedbackComment(e.target.value)
-                                  }
-                                ></textarea>
+                                  onChange={(e) => setFeedbackComment(e.target.value)}
+                                  disabled={isReviewSubmitting}
+                                />
                                 <div className="flex justify-end gap-2">
                                   <button
                                     type="button"
