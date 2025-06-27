@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Collapse, Button, Input, Upload, DatePicker, Modal, Select, message } from "antd";
-import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
+import { PaperClipOutlined, FileTextOutlined, LoadingOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { LoadingContext } from "./VertStepper"; // Assuming VertStepper provides LoadingContext
 import { useParams } from "react-router-dom";
@@ -35,6 +35,7 @@ const StakeholderInterviews = () => {
   const [reviewFileList, setReviewFileList] = useState([]);
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
+  const [downloadingFiles, setDownloadingFiles] = useState([]);
 
   const { projectid } = useParams();
   const {
@@ -71,6 +72,27 @@ const StakeholderInterviews = () => {
   const handleReviewRestoreFile = (fileUrl) => {
     setReviewRemovedOldFiles(prev => prev.filter(file => file !== fileUrl));
     setReviewOldFilesNeeded(prev => [...prev, fileUrl]);
+  };
+
+  const handleFileDownload = async (fileUrl, fileName) => {
+    setDownloadingFiles((prev) => [...prev, fileUrl]);
+    try {
+      const response = await fetch(fileUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Failed to download file');
+    } finally {
+      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
+    }
   };
 
   const get_step_id = async () => {
@@ -504,12 +526,22 @@ const StakeholderInterviews = () => {
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
                         </div>
-                        <span className="text-sm text-gray-700 truncate">{getFileName(fileUrl)}</span>
+                        <div className="overflow-hidden flex-grow">
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center">
-                        <a href={getViewerUrl(fileUrl)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">
-                          View
-                        </a>
                         <Button type="text" danger onClick={() => handleReviewRemoveFile(fileUrl)} className="flex items-center">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -531,7 +563,20 @@ const StakeholderInterviews = () => {
                         <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-red-500" />
                         </div>
-                        <span className="text-sm text-gray-500 truncate">{getFileName(fileUrl)}</span>
+                        <div className="overflow-hidden flex-grow">
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <Button type="text" onClick={() => handleReviewRestoreFile(fileUrl)} className="text-blue-600 hover:text-blue-800 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -676,10 +721,18 @@ const StakeholderInterviews = () => {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
-                                <a href={getViewerUrl(doc.file)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800">
-                                  View
-                                </a>
+                                <button
+                                  onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                  className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                  title={getFileName(doc.file)}
+                                  disabled={downloadingFiles.includes(doc.file)}
+                                  style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                >
+                                  {getFileName(doc.file)}
+                                  {downloadingFiles.includes(doc.file) && (
+                                    <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                  )}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -708,11 +761,21 @@ const StakeholderInterviews = () => {
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
                         </div>
-                        <span className="text-sm text-gray-700 truncate">{getFileName(fileUrl)}</span>
+                        <div className="overflow-hidden flex-grow">
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <a href={getViewerUrl(fileUrl)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        View
-                      </a>
                     </div>
                   ))}
                 </div>
@@ -864,7 +927,18 @@ const StakeholderInterviews = () => {
               {oldFilesNeeded.map((fileUrl, index) => (
                 <div key={index} className="border rounded p-2 flex items-center bg-gray-50 group">
                   <FileTextOutlined className="mr-2 text-blue-500" />
-                  <span className="text-sm">{getFileName(fileUrl)}</span>
+                  <button
+                    onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                    title={getFileName(fileUrl)}
+                    disabled={downloadingFiles.includes(fileUrl)}
+                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                  >
+                    {getFileName(fileUrl)}
+                    {downloadingFiles.includes(fileUrl) && (
+                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                    )}
+                  </button>
                   <Button type="text" size="small" danger className="ml-2 opacity-0 group-hover:opacity-100" onClick={() => handleRemoveFile(fileUrl)}>
                     Remove
                   </Button>
@@ -880,7 +954,18 @@ const StakeholderInterviews = () => {
               {removedOldFiles.map((fileUrl, index) => (
                 <div key={index} className="border rounded p-2 flex items-center bg-gray-100 text-gray-500 group">
                   <FileTextOutlined className="mr-2" />
-                  <span className="text-sm line-through">{getFileName(fileUrl)}</span>
+                  <button
+                    onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                    title={getFileName(fileUrl)}
+                    disabled={downloadingFiles.includes(fileUrl)}
+                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                  >
+                    {getFileName(fileUrl)}
+                    {downloadingFiles.includes(fileUrl) && (
+                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                    )}
+                  </button>
                   <Button type="text" size="small" className="ml-2 opacity-0 group-hover:opacity-100" onClick={() => handleRestoreFile(fileUrl)}>
                     Restore
                   </Button>

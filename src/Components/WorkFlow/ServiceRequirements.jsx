@@ -70,6 +70,8 @@ function ServiceRequirements() {
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
 
+  const [downloadingFiles, setDownloadingFiles] = useState([]);
+
   const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
 
   const handleUploadChange = ({ fileList: newFileList }) => {
@@ -435,6 +437,28 @@ function ServiceRequirements() {
     }
   };
 
+  // Download handler for a single file
+  const handleFileDownload = async (fileUrl, fileName) => {
+    setDownloadingFiles((prev) => [...prev, fileUrl]);
+    try {
+      const response = await fetch(fileUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Failed to download file');
+    } finally {
+      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
+    }
+  };
+
   useEffect(() => {
     get_step_id();
   }, []);
@@ -554,25 +578,19 @@ function ServiceRequirements() {
               {latestData.documents && latestData.documents.length > 0 ? (
                 <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
                   {latestData.documents.map((doc, index) => (
-                    <a
+                    <button
                       key={index}
-                      href={getViewerUrl(doc.file)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center p-2 rounded-md hover:bg-white transition-colors group border border-transparent hover:border-blue-100 hover:shadow-sm"
+                      onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                      className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                      title={getFileName(doc.file)}
+                      disabled={downloadingFiles.includes(doc.file)}
+                      style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                     >
-                      <div className="w-8 h-8 flex-shrink-0 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center mr-3">
-                        <FileTextOutlined />
-                      </div>
-                      <div className="overflow-hidden flex-1">
-                        <p className="font-medium text-sm text-gray-800 truncate group-hover:text-blue-600">
-                          {doc.file.split('/').pop()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Added: {new Date(doc.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </a>
+                      {getFileName(doc.file)}
+                      {downloadingFiles.includes(doc.file) && (
+                        <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                      )}
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -897,17 +915,28 @@ function ServiceRequirements() {
                           <FileTextOutlined className="text-blue-600" />
                         </div>
                         <span className="text-sm text-gray-700 truncate">
-                          {getFileName(fileUrl)}
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
                         </span>
                       </div>
                       <div className="flex items-center">
                         <a
-                          href={getViewerUrl(fileUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`${BASE_URL}${fileUrl}`}
+                          download
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
+                          title={getFileName(fileUrl)}
                         >
-                          View
+                          {getFileName(fileUrl)}
                         </a>
                       </div>
                     </div>
@@ -931,7 +960,18 @@ function ServiceRequirements() {
                           <FileTextOutlined className="text-red-500" />
                         </div>
                         <span className="text-sm text-gray-500 truncate">
-                          {getFileName(fileUrl)}
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
                         </span>
                       </div>
                     </div>
@@ -1202,17 +1242,28 @@ function ServiceRequirements() {
                           <FileTextOutlined className="text-blue-600" />
                         </div>
                         <span className="text-sm text-gray-700 truncate">
-                          {getFileName(fileUrl)}
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
                         </span>
                       </div>
                       <div className="flex items-center">
                         <a
-                          href={getViewerUrl(fileUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`${BASE_URL}${fileUrl}`}
+                          download
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
+                          title={getFileName(fileUrl)}
                         >
-                          View
+                          {getFileName(fileUrl)}
                         </a>
                         <Button
                           type="text"
@@ -1256,7 +1307,18 @@ function ServiceRequirements() {
                           <FileTextOutlined className="text-red-500" />
                         </div>
                         <span className="text-sm text-gray-500 truncate">
-                          {getFileName(fileUrl)}
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
                         </span>
                       </div>
                       <Button

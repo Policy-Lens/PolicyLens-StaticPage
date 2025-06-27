@@ -41,6 +41,7 @@ function InquirySection({ isVisible, onClose }) {
   const [inquiryData, setInquiryData] = useState([]);
   const [oldFilesNeeded, setOldFilesNeeded] = useState({});
   const [removedOldFiles, setRemovedOldFiles] = useState({});
+  const [downloadingFiles, setDownloadingFiles] = useState([]);
   const { projectid } = useParams();
   const { addStepData, getStepData, getStepId, checkStepAuth, projectRole } =
     useContext(ProjectContext);
@@ -199,6 +200,27 @@ function InquirySection({ isVisible, onClose }) {
     }
   };
 
+  const handleFileDownload = async (fileUrl, fileName) => {
+    setDownloadingFiles((prev) => [...prev, fileUrl]);
+    try {
+      const response = await fetch(fileUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Failed to download file');
+    } finally {
+      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
+    }
+  };
+
   useEffect(() => {
     get_step_id();
   }, []);
@@ -308,7 +330,18 @@ function InquirySection({ isVisible, onClose }) {
                   <div className="flex items-center">
                     <FileTextOutlined className="text-blue-500 mr-2" />
                     <span className="text-sm text-gray-600">
-                      {getFileName(fileUrl)}
+                      <button
+                        onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                        className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                        title={getFileName(fileUrl)}
+                        disabled={downloadingFiles.includes(fileUrl)}
+                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                      >
+                        {getFileName(fileUrl)}
+                        {downloadingFiles.includes(fileUrl) && (
+                          <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                        )}
+                      </button>
                     </span>
                   </div>
                   <div className="flex items-center">
@@ -348,7 +381,18 @@ function InquirySection({ isVisible, onClose }) {
                   <div className="flex items-center">
                     <FileTextOutlined className="text-red-500 mr-2" />
                     <span className="text-sm text-gray-600">
-                      {getFileName(fileUrl)}
+                      <button
+                        onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                        className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                        title={getFileName(fileUrl)}
+                        disabled={downloadingFiles.includes(fileUrl)}
+                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                      >
+                        {getFileName(fileUrl)}
+                        {downloadingFiles.includes(fileUrl) && (
+                          <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                        )}
+                      </button>
                     </span>
                   </div>
                   <Button
@@ -472,6 +516,7 @@ function InquiryPage() {
   const [reviewFileList, setReviewFileList] = useState([]);
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
+  const [downloadingFiles, setDownloadingFiles] = useState([]);
 
   const { projectid } = useParams();
   const {
@@ -881,7 +926,18 @@ function InquiryPage() {
                           <FileTextOutlined className="text-blue-600" />
                         </div>
                         <span className="text-sm text-gray-700 truncate">
-                          {getFileName(fileUrl)}
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
                         </span>
                       </div>
                       <div className="flex items-center">
@@ -915,7 +971,18 @@ function InquiryPage() {
                           <FileTextOutlined className="text-red-500" />
                         </div>
                         <span className="text-sm text-gray-500 truncate">
-                          {getFileName(fileUrl)}
+                          <button
+                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                            title={getFileName(fileUrl)}
+                            disabled={downloadingFiles.includes(fileUrl)}
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                          >
+                            {getFileName(fileUrl)}
+                            {downloadingFiles.includes(fileUrl) && (
+                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                            )}
+                          </button>
                         </span>
                       </div>
                     </div>
@@ -1182,7 +1249,18 @@ function InquiryPage() {
                               </div>
                               <div className="overflow-hidden flex-grow">
                                 <p className="text-xs font-medium text-gray-700 truncate">
-                                  {getFileName(doc.file)}
+                                  <button
+                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                    title={getFileName(doc.file)}
+                                    disabled={downloadingFiles.includes(doc.file)}
+                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                  >
+                                    {getFileName(doc.file)}
+                                    {downloadingFiles.includes(doc.file) && (
+                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                    )}
+                                  </button>
                                 </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
@@ -1227,7 +1305,18 @@ function InquiryPage() {
                               </div>
                               <div className="overflow-hidden flex-grow">
                                 <p className="text-xs font-medium text-gray-700 truncate">
-                                  {getFileName(doc.file)}
+                                  <button
+                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                    title={getFileName(doc.file)}
+                                    disabled={downloadingFiles.includes(doc.file)}
+                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                  >
+                                    {getFileName(doc.file)}
+                                    {downloadingFiles.includes(doc.file) && (
+                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                    )}
+                                  </button>
                                 </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
@@ -1272,7 +1361,18 @@ function InquiryPage() {
                               </div>
                               <div className="overflow-hidden flex-grow">
                                 <p className="text-xs font-medium text-gray-700 truncate">
-                                  {getFileName(doc.file)}
+                                  <button
+                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                    title={getFileName(doc.file)}
+                                    disabled={downloadingFiles.includes(doc.file)}
+                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                  >
+                                    {getFileName(doc.file)}
+                                    {downloadingFiles.includes(doc.file) && (
+                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                    )}
+                                  </button>
                                 </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
@@ -1317,7 +1417,18 @@ function InquiryPage() {
                               </div>
                               <div className="overflow-hidden flex-grow">
                                 <p className="text-xs font-medium text-gray-700 truncate">
-                                  {getFileName(doc.file)}
+                                  <button
+                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                    title={getFileName(doc.file)}
+                                    disabled={downloadingFiles.includes(doc.file)}
+                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                  >
+                                    {getFileName(doc.file)}
+                                    {downloadingFiles.includes(doc.file) && (
+                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                    )}
+                                  </button>
                                 </p>
                                 <a
                                   href={getViewerUrl(doc.file)}
@@ -1362,7 +1473,18 @@ function InquiryPage() {
                               </div>
                               <div className="overflow-hidden flex-grow">
                                 <p className="text-xs font-medium text-gray-700 truncate">
-                                  {getFileName(doc.file)}
+                                  <button
+                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                    title={getFileName(doc.file)}
+                                    disabled={downloadingFiles.includes(doc.file)}
+                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                  >
+                                    {getFileName(doc.file)}
+                                    {downloadingFiles.includes(doc.file) && (
+                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                    )}
+                                  </button>
                                 </p>
                                 <a
                                   href={getViewerUrl(doc.file)}

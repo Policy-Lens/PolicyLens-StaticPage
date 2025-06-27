@@ -9,7 +9,7 @@ import {
   Select,
   message,
 } from "antd";
-import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
+import { PaperClipOutlined, FileTextOutlined, LoadingOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoadingContext } from "./VertStepper";
@@ -51,6 +51,7 @@ const GapAnalysis = () => {
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
   const [members, setMembers] = useState([]);
+  const [downloadingFiles, setDownloadingFiles] = useState([]);
 
   const { projectid } = useParams();
   const navigate = useNavigate();
@@ -454,6 +455,27 @@ const GapAnalysis = () => {
     )}&embedded=true`;
   };
 
+  const handleFileDownload = async (fileUrl, fileName) => {
+    setDownloadingFiles((prev) => [...prev, fileUrl]);
+    try {
+      const response = await fetch(fileUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Failed to download file');
+    } finally {
+      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
+    }
+  };
+
   const ReviewModal = () => {
     const [localComment, setLocalComment] = useState(reviewModalComment);
     const [localAction, setLocalAction] = useState(reviewAction);
@@ -644,17 +666,20 @@ const GapAnalysis = () => {
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
                         </div>
-                        <span className="text-sm text-gray-700 truncate">{getFileName(fileUrl)}</span>
+                        <button
+                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                          className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                          title={getFileName(fileUrl)}
+                          disabled={downloadingFiles.includes(fileUrl)}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                        >
+                          {getFileName(fileUrl)}
+                          {downloadingFiles.includes(fileUrl) && (
+                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                          )}
+                        </button>
                       </div>
                       <div className="flex items-center">
-                        <a
-                          href={getViewerUrl(fileUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
-                        >
-                          View
-                        </a>
                         <Button
                           type="text"
                           danger
@@ -693,7 +718,18 @@ const GapAnalysis = () => {
                         <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-red-500" />
                         </div>
-                        <span className="text-sm text-gray-500 truncate">{getFileName(fileUrl)}</span>
+                        <button
+                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                          className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                          title={getFileName(fileUrl)}
+                          disabled={downloadingFiles.includes(fileUrl)}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                        >
+                          {getFileName(fileUrl)}
+                          {downloadingFiles.includes(fileUrl) && (
+                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                          )}
+                        </button>
                       </div>
                       <Button
                         type="text"
@@ -928,15 +964,18 @@ const GapAnalysis = () => {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">{getFileName(doc.file)}</p>
-                                <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
+                                <button
+                                  onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                  className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                                  title={getFileName(doc.file)}
+                                  disabled={downloadingFiles.includes(doc.file)}
+                                  style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                                 >
-                                  View
-                                </a>
+                                  {getFileName(doc.file)}
+                                  {downloadingFiles.includes(doc.file) && (
+                                    <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                  )}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -972,16 +1011,19 @@ const GapAnalysis = () => {
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
                         </div>
-                        <span className="text-sm text-gray-700 truncate">{getFileName(fileUrl)}</span>
+                        <button
+                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                          className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                          title={getFileName(fileUrl)}
+                          disabled={downloadingFiles.includes(fileUrl)}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                        >
+                          {getFileName(fileUrl)}
+                          {downloadingFiles.includes(fileUrl) && (
+                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                          )}
+                        </button>
                       </div>
-                      <a
-                        href={getViewerUrl(fileUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        View
-                      </a>
                     </div>
                   ))}
                 </div>
@@ -1264,25 +1306,39 @@ const GapAnalysis = () => {
           </Upload>
         </div>
         {oldFilesNeeded.length > 0 && (
-          <div className="mb-4">
-            <label className="block mb-2 font-medium text-gray-700">Existing Attachments</label>
-            <div className="flex flex-wrap gap-2">
-              {oldFilesNeeded.map((fileUrl, index) => (
-                <div
-                  key={index}
-                  className="border rounded p-2 flex items-center bg-gray-50 group"
-                >
-                  <FileTextOutlined className="mr-2 text-blue-500" />
-                  <span className="text-sm">{getFileName(fileUrl)}</span>
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    className="ml-2 opacity-0 group-hover:opacity-100"
-                    onClick={() => handleRemoveFile(fileUrl)}
-                  >
-                    Remove
-                  </Button>
+          <div className="mt-4 mb-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Files</h4>
+            <div className="space-y-2">
+              {oldFilesNeeded.map((fileUrl) => (
+                <div key={fileUrl} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                  <div className="flex items-center overflow-hidden">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+                      <FileTextOutlined className="text-blue-600" />
+                    </div>
+                    <button
+                      onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                      className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                      title={getFileName(fileUrl)}
+                      disabled={downloadingFiles.includes(fileUrl)}
+                      style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                    >
+                      {getFileName(fileUrl)}
+                      {downloadingFiles.includes(fileUrl) && (
+                        <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex items-center">
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      className="ml-2 opacity-0 group-hover:opacity-100"
+                      onClick={() => handleRemoveFile(fileUrl)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1290,15 +1346,30 @@ const GapAnalysis = () => {
         )}
         {removedOldFiles.length > 0 && (
           <div className="mb-4">
-            <label className="block mb-2 font-medium text-gray-700">Removed Attachments</label>
+            <label className="block mb-2 font-medium text-gray-700">Removed Files</label>
             <div className="flex flex-wrap gap-2">
               {removedOldFiles.map((fileUrl, index) => (
                 <div
                   key={index}
                   className="border rounded p-2 flex items-center bg-gray-100 text-gray-500 group"
                 >
-                  <FileTextOutlined className="mr-2" />
-                  <span className="text-sm line-through">{getFileName(fileUrl)}</span>
+                  <div className="flex items-center overflow-hidden">
+                    <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
+                      <FileTextOutlined className="text-red-500" />
+                    </div>
+                    <button
+                      onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                      className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                      title={getFileName(fileUrl)}
+                      disabled={downloadingFiles.includes(fileUrl)}
+                      style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                    >
+                      {getFileName(fileUrl)}
+                      {downloadingFiles.includes(fileUrl) && (
+                        <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                      )}
+                    </button>
+                  </div>
                   <Button
                     type="text"
                     size="small"

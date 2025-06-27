@@ -9,7 +9,7 @@ import {
   Select,
   DatePicker,
 } from "antd";
-import { PaperClipOutlined, FileTextOutlined } from "@ant-design/icons";
+import { PaperClipOutlined, FileTextOutlined, LoadingOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { BASE_URL, apiRequest } from "../../utils/api";
@@ -43,6 +43,7 @@ function FinalizeContract() {
   const [moreInfoFileList, setMoreInfoFileList] = useState([]);
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
+  const [downloadingFiles, setDownloadingFiles] = useState([]);
 
   const { projectid } = useParams();
   const {
@@ -336,6 +337,27 @@ function FinalizeContract() {
     setMoreInfoFileList([]);
   };
 
+  const handleFileDownload = async (fileUrl, fileName) => {
+    setDownloadingFiles((prev) => [...prev, fileUrl]);
+    try {
+      const response = await fetch(fileUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Failed to download file');
+    } finally {
+      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
+    }
+  };
+
   useEffect(() => {
     get_step_id();
   }, []);
@@ -590,16 +612,13 @@ function FinalizeContract() {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">
-                                  {getFileName(doc.file)}
-                                </p>
                                 <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
+                                  href={`${BASE_URL}${doc.file}`}
+                                  download
+                                  className="text-sm text-blue-700 truncate hover:underline"
+                                  title={getFileName(doc.file)}
                                 >
-                                  View
+                                  {getFileName(doc.file)}
                                 </a>
                               </div>
                             </div>
@@ -641,12 +660,12 @@ function FinalizeContract() {
                         </span>
                       </div>
                       <a
-                        href={getViewerUrl(fileUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={`${BASE_URL}${fileUrl}`}
+                        download
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        title={getFileName(fileUrl)}
                       >
-                        View
+                        {getFileName(fileUrl)}
                       </a>
                     </div>
                   ))}
@@ -858,32 +877,36 @@ function FinalizeContract() {
               />
             </div>
             {oldFilesNeeded.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Existing Files
-                </h4>
-                <div className="space-y-3">
+              <div className="mt-4 mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Files</h4>
+                <div className="space-y-2">
                   {oldFilesNeeded.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
-                    >
+                    <div key={fileUrl} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
                       <div className="flex items-center overflow-hidden">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
                         </div>
-                        <span className="text-sm text-gray-700 truncate">
+                        <button
+                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                          className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                          title={getFileName(fileUrl)}
+                          disabled={downloadingFiles.includes(fileUrl)}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                        >
                           {getFileName(fileUrl)}
-                        </span>
+                          {downloadingFiles.includes(fileUrl) && (
+                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                          )}
+                        </button>
                       </div>
                       <div className="flex items-center">
                         <a
-                          href={getViewerUrl(fileUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`${BASE_URL}${fileUrl}`}
+                          download
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
+                          title={getFileName(fileUrl)}
                         >
-                          View
+                          {getFileName(fileUrl)}
                         </a>
                         <Button
                           type="text"
@@ -1148,12 +1171,12 @@ function FinalizeContract() {
                       </span>
                     </div>
                     <a
-                      href={getViewerUrl(fileUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`${BASE_URL}${fileUrl}`}
+                      download
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      title={getFileName(fileUrl)}
                     >
-                      View
+                      {getFileName(fileUrl)}
                     </a>
                   </div>
                 ))}
