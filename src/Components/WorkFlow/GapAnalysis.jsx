@@ -136,9 +136,14 @@ const GapAnalysis = () => {
   const getTaskAssignment = async (step_id) => {
     try {
       console.log("GapAnalysis: Fetching task assignment for step ID:", step_id);
+      if (!step_id) {
+        console.log("GapAnalysis: No step ID provided");
+        setTaskAssignment(null);
+        return;
+      }
       const assignmentData = await getStepAssignment(step_id);
       console.log("GapAnalysis: Task assignment data received:", assignmentData);
-      if (assignmentData.status === 200 && assignmentData.data.length > 0) {
+      if (assignmentData?.status === 200 && assignmentData?.data?.length > 0) {
         console.log("GapAnalysis: Setting task assignment:", assignmentData.data[0]);
         setTaskAssignment(assignmentData.data[0]);
       } else {

@@ -584,11 +584,17 @@ function ServiceRequirements() {
                       className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                       title={getFileName(doc.file)}
                       disabled={downloadingFiles.includes(doc.file)}
-                      style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '0',
+                        margin: '0',
+                        cursor: 'pointer'
+                      }}
                     >
                       {getFileName(doc.file)}
                       {downloadingFiles.includes(doc.file) && (
-                        <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                        <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
                       )}
                     </button>
                   ))}
@@ -652,23 +658,6 @@ function ServiceRequirements() {
             )}
           </div>
         </div>
-        <style jsx>{`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `}</style>
       </div>
     );
   };
@@ -920,11 +909,17 @@ function ServiceRequirements() {
                             className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
                             disabled={downloadingFiles.includes(fileUrl)}
-                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '0',
+                              margin: '0',
+                              cursor: 'pointer'
+                            }}
                           >
                             {getFileName(fileUrl)}
                             {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
                             )}
                           </button>
                         </span>
@@ -965,11 +960,17 @@ function ServiceRequirements() {
                             className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
                             disabled={downloadingFiles.includes(fileUrl)}
-                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '0',
+                              margin: '0',
+                              cursor: 'pointer'
+                            }}
                           >
                             {getFileName(fileUrl)}
                             {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
                             )}
                           </button>
                         </span>
@@ -1247,11 +1248,17 @@ function ServiceRequirements() {
                             className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
                             disabled={downloadingFiles.includes(fileUrl)}
-                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '0',
+                              margin: '0',
+                              cursor: 'pointer'
+                            }}
                           >
                             {getFileName(fileUrl)}
                             {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
                             )}
                           </button>
                         </span>
@@ -1312,11 +1319,17 @@ function ServiceRequirements() {
                             className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
                             disabled={downloadingFiles.includes(fileUrl)}
-                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '0',
+                              margin: '0',
+                              cursor: 'pointer'
+                            }}
                           >
                             {getFileName(fileUrl)}
                             {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
                             )}
                           </button>
                         </span>

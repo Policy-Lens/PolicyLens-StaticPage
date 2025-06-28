@@ -340,7 +340,8 @@ function FinalizeContract() {
   const handleFileDownload = async (fileUrl, fileName) => {
     setDownloadingFiles((prev) => [...prev, fileUrl]);
     try {
-      const response = await fetch(fileUrl, { credentials: 'include' });
+      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}${fileUrl}`;
+      const response = await fetch(fullUrl, { credentials: 'include' });
       if (!response.ok) throw new Error('Network response was not ok');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -612,14 +613,18 @@ function FinalizeContract() {
                                 <FileTextOutlined className="text-blue-600 text-xs" />
                               </div>
                               <div className="overflow-hidden flex-grow">
-                                <a
-                                  href={`${BASE_URL}${doc.file}`}
-                                  download
-                                  className="text-sm text-blue-700 truncate hover:underline"
+                                <button
+                                  onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                  className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                                   title={getFileName(doc.file)}
+                                  disabled={downloadingFiles.includes(doc.file)}
+                                  style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                                 >
                                   {getFileName(doc.file)}
-                                </a>
+                                  {downloadingFiles.includes(doc.file) && (
+                                    <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                                  )}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -655,18 +660,19 @@ function FinalizeContract() {
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
                         </div>
-                        <span className="text-sm text-gray-700 truncate">
+                        <button
+                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                          className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                          title={getFileName(fileUrl)}
+                          disabled={downloadingFiles.includes(fileUrl)}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                        >
                           {getFileName(fileUrl)}
-                        </span>
+                          {downloadingFiles.includes(fileUrl) && (
+                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                          )}
+                        </button>
                       </div>
-                      <a
-                        href={`${BASE_URL}${fileUrl}`}
-                        download
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        title={getFileName(fileUrl)}
-                      >
-                        {getFileName(fileUrl)}
-                      </a>
                     </div>
                   ))}
                 </div>
@@ -899,36 +905,26 @@ function FinalizeContract() {
                           )}
                         </button>
                       </div>
-                      <div className="flex items-center">
-                        <a
-                          href={`${BASE_URL}${fileUrl}`}
-                          download
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
-                          title={getFileName(fileUrl)}
-                        >
-                          {getFileName(fileUrl)}
-                        </a>
-                        <Button
-                          type="text"
-                          danger
-                          onClick={() => handleRemoveFile(fileUrl)}
-                          className="flex items-center"
-                          icon={
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          }
-                        />
-                      </div>
+                      <Button
+                        type="text"
+                        danger
+                        onClick={() => handleRemoveFile(fileUrl)}
+                        className="flex items-center"
+                        icon={
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        }
+                      />
                     </div>
                   ))}
                 </div>
@@ -949,9 +945,18 @@ function FinalizeContract() {
                         <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-red-500" />
                         </div>
-                        <span className="text-sm text-gray-500 truncate">
+                        <button
+                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                          className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                          title={getFileName(fileUrl)}
+                          disabled={downloadingFiles.includes(fileUrl)}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                        >
                           {getFileName(fileUrl)}
-                        </span>
+                          {downloadingFiles.includes(fileUrl) && (
+                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                          )}
+                        </button>
                       </div>
                       <Button
                         type="text"
@@ -1166,18 +1171,19 @@ function FinalizeContract() {
                       <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                         <FileTextOutlined className="text-blue-600" />
                       </div>
-                      <span className="text-sm text-gray-700 truncate">
+                      <button
+                        onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                        className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                        title={getFileName(fileUrl)}
+                        disabled={downloadingFiles.includes(fileUrl)}
+                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                      >
                         {getFileName(fileUrl)}
-                      </span>
+                        {downloadingFiles.includes(fileUrl) && (
+                          <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                        )}
+                      </button>
                     </div>
-                    <a
-                      href={`${BASE_URL}${fileUrl}`}
-                      download
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      title={getFileName(fileUrl)}
-                    >
-                      {getFileName(fileUrl)}
-                    </a>
                   </div>
                 ))}
               </div>
