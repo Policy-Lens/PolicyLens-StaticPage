@@ -36,6 +36,11 @@ const QuestionLibrary = () => {
     type: "",
     standard: "ISO27001", // Default standard
   });
+  // Add pendingFilters state for dropdown
+  const [pendingFilters, setPendingFilters] = useState({
+    type: "",
+    standard: "ISO27001",
+  });
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -153,22 +158,33 @@ const QuestionLibrary = () => {
 
   // Toggle filter dropdown
   const toggleFilterDropdown = () => {
+    setPendingFilters(filters);
     setFilterDropdownOpen(!filterDropdownOpen);
   };
 
-  // Handle filter changes
-  const handleFilterChange = (filterType, value) => {
-    setFilters((prev) => ({
+  // Update pendingFilters in the dropdown
+  const handlePendingFilterChange = (filterType, value) => {
+    setPendingFilters((prev) => ({
       ...prev,
       [filterType]: value === prev[filterType] ? "" : value, // Toggle
     }));
   };
 
-  // Clear all filters
+  // Apply filters only when Apply Filters is clicked
+  const applyFilters = () => {
+    setFilters(pendingFilters);
+    setFilterDropdownOpen(false);
+  };
+
+  // Clear all filters in both states
   const clearFilters = () => {
     setFilters({
       type: "",
-      standard: "ISO27001", // Keep default standard
+      standard: "ISO27001",
+    });
+    setPendingFilters({
+      type: "",
+      standard: "ISO27001",
     });
     setSearchQuery("");
   };
@@ -439,6 +455,56 @@ const QuestionLibrary = () => {
     handleGetQuestions();
   }, [searchQuery, filters, user, activeTab, location.pathname, isAdmin]);
 
+  // Add sorting state
+  const [sortColumn, setSortColumn] = useState('');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  // Sorting handler
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort questions before rendering
+  const sortedQuestions = [...questions].sort((a, b) => {
+    let aValue = '';
+    let bValue = '';
+    switch (sortColumn) {
+      case 'reference': {
+        aValue = a.reference || '';
+        bValue = b.reference || '';
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' })
+          : bValue.localeCompare(aValue, undefined, { numeric: true, sensitivity: 'base' });
+      }
+      case 'type':
+        aValue = a.type_description?.split(' - ')[0] || '';
+        bValue = b.type_description?.split(' - ')[0] || '';
+        break;
+      case 'control_no':
+        aValue = a.type_description?.split(' - ')[0] || '';
+        bValue = b.type_description?.split(' - ')[0] || '';
+        break;
+      case 'control_name':
+        aValue = a.type_description?.split(' - ')[1] || '';
+        bValue = b.type_description?.split(' - ')[1] || '';
+        break;
+      case 'pdca_cycle':
+        aValue = a.pdca_cycle || '';
+        bValue = b.pdca_cycle || '';
+        break;
+      default:
+        return 0;
+    }
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   // If not admin, show access denied message
   if (!isAdmin) {
     return (
@@ -507,18 +573,18 @@ const QuestionLibrary = () => {
                   <Filter
                     size={16}
                     className={`mr-2 ${
-                      Object.values(filters).some((f) => f !== "") ||
+                      Object.values(pendingFilters).some((f) => f !== "") ||
                       searchQuery
                         ? "text-indigo-500"
                         : "text-slate-400"
                     }`}
                   />
                   <span>Filter</span>
-                  {(filters.type || searchQuery) && (
+                  {(pendingFilters.type || searchQuery) && (
                     <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
                       {
                         [
-                          filters.type && "Type",
+                          pendingFilters.type && "Type",
                           searchQuery && "Search",
                         ].filter(Boolean).length
                       }{" "}
@@ -541,6 +607,13 @@ const QuestionLibrary = () => {
                       <div className="p-3 border-b border-slate-200">
                         <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
                           <span>
+                            {activeTab === "clause"
+                              ? "Clause Type"
+                              : activeTab === "control"
+                              ? "Control Type"
+                              : activeTab === "vapt"
+                              ? "VAPT Type"
+                              : "VAPT Form Type"}
                             {activeTab === "clause" ? "Clause" : activeTab === "control" ? "Control" : activeTab === "vapt" ? "VAPT Type" : "VAPT Form Type"} Type
                           </span>
                           {filters.type && (
@@ -702,32 +775,33 @@ const QuestionLibrary = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="w-32 p-4 text-left font-semibold text-slate-600">
-                    Reference
+                  <th className="w-40 min-w-[10rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('reference')}>
+                    Reference {sortColumn === 'reference' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                   </th>
-                  <th className="p-4 text-left font-semibold text-slate-600">
+                  <th className="w-80 p-4 text-left font-semibold text-slate-600">
                     Question
                   </th>
-                  <th className="w-36 p-4 text-center font-semibold text-slate-600">
-                    {activeTab === "clause"
-                      ? "Clause no."
-                      : activeTab === "control"
-                      ? "Control no."
-                      : activeTab === "vapt"
-                      ? "VAPT Category"
-                      : "VAPT Form Category"}
-                  </th>
-                  {activeTab !== "vapt" && activeTab !== "vapt_form" && (
-                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                      {activeTab === "clause" ? "Clause name" : "Control name"}
+                  {['vapt', 'vapt_form'].includes(activeTab) && (
+                    <th className="w-40 min-w-[8rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('type')}>
+                      Type {sortColumn === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
+                    </th>
+                  )}
+                  {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
+                    <th className="w-48 min-w-[10rem] p-4 text-center font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('control_no')}>
+                      {activeTab === 'clause' ? 'Clause No.' : 'Control No.'} {sortColumn === 'control_no' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
+                    </th>
+                  )}
+                  {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
+                    <th className="w-48 min-w-[11rem] p-4 text-center font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('control_name')}>
+                      {activeTab === 'clause' ? 'Clause Name' : 'Control Name'} {sortColumn === 'control_name' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                   )}
                   <th className="w-44 p-4 text-center font-semibold text-slate-600">
                     Standard
                   </th>
                   {activeTab === "clause" && (
-                    <th className="w-44 p-4 text-center font-semibold text-slate-600">
-                      PDCA Cycle
+                    <th className="w-40 min-w-[10rem] p-4 text-center font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('pdca_cycle')}>
+                      PDCA Cycle {sortColumn === 'pdca_cycle' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                   )}
                   <th className="w-28 p-4 text-left font-semibold text-slate-600">
@@ -736,8 +810,8 @@ const QuestionLibrary = () => {
                 </tr>
               </thead>
               <tbody>
-                {questions.length > 0 ? (
-                  questions.map((question) => (
+                {sortedQuestions.length > 0 ? (
+                  sortedQuestions.map((question) => (
                     <tr
                       key={question.id}
                       className="hover:bg-indigo-50/50 transition-colors"
@@ -752,13 +826,20 @@ const QuestionLibrary = () => {
                           {question.question}
                         </div>
                       </td>
-                      <td className="p-4 text-slate-600 text-center">
-                        {question.type_description.split(" - ")[0]}
-                      </td>
-                      {activeTab !== "vapt" && activeTab !== "vapt_form" && (
+                      {['vapt', 'vapt_form'].includes(activeTab) && (
+                        <td className="p-4 text-slate-600 text-left">
+                          {question.type_description}
+                        </td>
+                      )}
+                      {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
+                        <td className="p-4 text-slate-600 text-center">
+                          {question.type_description?.split(' - ')[0]}
+                        </td>
+                      )}
+                      {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
                         <td className="p-4 text-slate-600 text-center">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                            {question.type_description.split(" - ")[1]}
+                            {question.type_description?.split(' - ')[1]}
                           </span>
                         </td>
                       )}
@@ -769,19 +850,16 @@ const QuestionLibrary = () => {
                       </td>
                       {activeTab === "clause" && (
                         <td className="p-4 text-center">
-                          <span
-                            className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              question.pdca_cycle === "Plan"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : question.pdca_cycle === "Do"
-                                ? "bg-pink-100 text-pink-700"
-                                : question.pdca_cycle === "Check"
-                                ? "bg-orange-100 text-orange-700"
-                                : question.pdca_cycle === "Act"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-slate-100 text-slate-700"
-                            }`}
-                          >
+                          <span className={`inline-flex text-center items-center px-2.5 py-1 rounded-full text-xs font-medium ${question.pdca_cycle === "Plan"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : question.pdca_cycle === "Do"
+                            ? "bg-pink-100 text-pink-700"
+                            : question.pdca_cycle === "Check"
+                            ? "bg-orange-100 text-orange-700"
+                            : question.pdca_cycle === "Act"
+                            ? "bg-purple-100 text-purple-700"
+                            : "bg-slate-100 text-slate-700"
+                          }`}>
                             {question.pdca_cycle}
                           </span>
                         </td>
@@ -808,8 +886,8 @@ const QuestionLibrary = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="text-center p-10 text-slate-500">
-                      No questions found matching your criteria.
+                    <td colSpan={activeTab === 'clause' ? 8 : activeTab === 'vapt' || activeTab === 'vapt_form' ? 5 : 7} className="p-4 text-center text-slate-500">
+                      No questions found.
                     </td>
                   </tr>
                 )}

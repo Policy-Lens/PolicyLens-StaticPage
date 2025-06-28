@@ -68,6 +68,12 @@ const NewQuestionnaire = (props) => {
     standard: "",
     status: "",
   });
+  // Add pendingFilters state for dropdown
+  const [pendingFilters, setPendingFilters] = useState({
+    type: "",
+    standard: "",
+    status: "",
+  });
 
   // Assignment state
   const [isAssignDropdownOpen, setIsAssignDropdownOpen] = useState(false);
@@ -139,9 +145,28 @@ const NewQuestionnaire = (props) => {
     "8 - Technological Controls",
   ];
 
+  const vaptTypeChoices = [
+    "Web Application Security Testing Questionnaire",
+    "Android / iOS Application  Security Testing Questionnaire",
+    "APIs Security Testing Questionnaire"
+  ];
+
+  const vaptFormTypeChoices = [
+    "IT Infrastructure Details",
+    "Cloud Infrastructure Details"
+  ];
+
   // Get type choices based on active tab
   const typeChoices =
-    activeTab === "clause" ? clauseTypeChoices : controlTypeChoices;
+    activeTab === "clause"
+      ? clauseTypeChoices
+      : activeTab === "control"
+      ? controlTypeChoices
+      : activeTab === "vapt"
+      ? vaptTypeChoices
+      : activeTab === "vapt_form"
+      ? vaptFormTypeChoices
+      : [];
 
   // Response choices for answers
   const responseChoices = [
@@ -255,20 +280,32 @@ const NewQuestionnaire = (props) => {
 
   // Toggle filter dropdown
   const toggleFilterDropdown = () => {
+    setPendingFilters(filters);
     setFilterDropdownOpen(!filterDropdownOpen);
   };
 
-  // Handle filter changes
-  const handleFilterChange = (filterType, value) => {
-    setFilters((prev) => ({
+  // Update pendingFilters in the dropdown
+  const handlePendingFilterChange = (filterType, value) => {
+    setPendingFilters((prev) => ({
       ...prev,
       [filterType]: value === prev[filterType] ? "" : value, // Toggle
     }));
   };
 
-  // Clear all filters
+  // Apply filters only when Apply Filters is clicked
+  const applyFilters = () => {
+    setFilters(pendingFilters);
+    setFilterDropdownOpen(false);
+  };
+
+  // Clear all filters in both states
   const clearFilters = () => {
     setFilters({
+      type: "",
+      standard: "",
+      status: "",
+    });
+    setPendingFilters({
       type: "",
       standard: "",
       status: "",
@@ -1114,6 +1151,56 @@ const NewQuestionnaire = (props) => {
     }
   };
 
+  // Add sorting state
+  const [sortColumn, setSortColumn] = useState('');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  // Sorting handler
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort questions before rendering
+  const sortedQuestions = [...questions].sort((a, b) => {
+    let aValue = '';
+    let bValue = '';
+    switch (sortColumn) {
+      case 'reference': {
+        aValue = a.reference || '';
+        bValue = b.reference || '';
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' })
+          : bValue.localeCompare(aValue, undefined, { numeric: true, sensitivity: 'base' });
+      }
+      case 'type':
+        aValue = a.type_description?.split(' - ')[0] || '';
+        bValue = b.type_description?.split(' - ')[0] || '';
+        break;
+      case 'control_no':
+        aValue = a.type_description?.split(' - ')[0] || '';
+        bValue = b.type_description?.split(' - ')[0] || '';
+        break;
+      case 'control_name':
+        aValue = a.type_description?.split(' - ')[1] || '';
+        bValue = b.type_description?.split(' - ')[1] || '';
+        break;
+      case 'pdca_cycle':
+        aValue = a.pdca_cycle || '';
+        bValue = b.pdca_cycle || '';
+        break;
+      default:
+        return 0;
+    }
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <div className="flex flex-col h-screen bg-slate-50">
       {/* Main Content Area */}
@@ -1157,23 +1244,23 @@ const NewQuestionnaire = (props) => {
                   >
                     <Filter
                       size={16}
-                      className={`mr-2 ${Object.values(filters).some((f) => f !== "") ||
+                      className={`mr-2 ${Object.values(pendingFilters).some((f) => f !== "") ||
                         searchQuery
                         ? "text-indigo-500"
                         : "text-slate-400"
                         }`}
                     />
                     <span>Filter</span>
-                    {(filters.type ||
-                      filters.standard ||
-                      filters.status ||
+                    {(pendingFilters.type ||
+                      pendingFilters.standard ||
+                      pendingFilters.status ||
                       searchQuery) && (
                         <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
                           {
                             [
-                              filters.type && "Type",
-                              filters.standard && "Standard",
-                              filters.status && "Status",
+                              pendingFilters.type && "Type",
+                              pendingFilters.standard && "Standard",
+                              pendingFilters.status && "Status",
                               searchQuery && "Search",
                             ].filter(Boolean).length
                           }{" "}
@@ -1188,9 +1275,9 @@ const NewQuestionnaire = (props) => {
                       {/* Header */}
                       <div className="p-3 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 flex justify-between items-center sticky top-0 z-10">
                         <span>Filter Options</span>
-                        {(filters.type ||
-                          filters.standard ||
-                          filters.status ||
+                        {(pendingFilters.type ||
+                          pendingFilters.standard ||
+                          pendingFilters.status ||
                           searchQuery) && (
                             <span className="text-xs text-indigo-600">
                               {/* Display count if needed */}
@@ -1204,12 +1291,19 @@ const NewQuestionnaire = (props) => {
                         <div className="p-3 border-b border-slate-200">
                           <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
                             <span>
-                              {activeTab === "clause" ? "Clause" : "Control"}{" "}
-                              Type
+                              {activeTab === "clause"
+                                ? "Clause Type"
+                                : activeTab === "control"
+                                ? "Control Type"
+                                : activeTab === "vapt"
+                                ? "VAPT Type"
+                                : activeTab === "vapt_form"
+                                ? "VAPT Form Type"
+                                : "Type"}
                             </span>
-                            {filters.type && (
+                            {pendingFilters.type && (
                               <button
-                                onClick={() => handleFilterChange("type", "")}
+                                onClick={() => handlePendingFilterChange("type", "")}
                                 className="text-xs text-slate-500 hover:text-slate-700"
                               >
                                 Clear
@@ -1220,8 +1314,8 @@ const NewQuestionnaire = (props) => {
                             {typeChoices.map((type) => (
                               <button
                                 key={type}
-                                onClick={() => handleFilterChange("type", type)}
-                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.type === type
+                                onClick={() => handlePendingFilterChange("type", type)}
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${pendingFilters.type === type
                                   ? "bg-indigo-50 text-indigo-700 font-medium"
                                   : "text-slate-600 hover:bg-slate-50"
                                   }`}
@@ -1236,9 +1330,9 @@ const NewQuestionnaire = (props) => {
                         <div className="p-3 border-b border-slate-200">
                           <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
                             <span>Status</span>
-                            {filters.status && (
+                            {pendingFilters.status && (
                               <button
-                                onClick={() => handleFilterChange("status", "")}
+                                onClick={() => handlePendingFilterChange("status", "")}
                                 className="text-xs text-slate-500 hover:text-slate-700"
                               >
                                 Clear
@@ -1250,9 +1344,9 @@ const NewQuestionnaire = (props) => {
                               <button
                                 key={status}
                                 onClick={() =>
-                                  handleFilterChange("status", status)
+                                  handlePendingFilterChange("status", status)
                                 }
-                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.status === status
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${pendingFilters.status === status
                                   ? "bg-indigo-50 text-indigo-700 font-medium"
                                   : "text-slate-600 hover:bg-slate-50"
                                   }`}
@@ -1267,10 +1361,10 @@ const NewQuestionnaire = (props) => {
                         <div className="p-3 border-b border-slate-200">
                           <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
                             <span>Standard</span>
-                            {filters.standard && (
+                            {pendingFilters.standard && (
                               <button
                                 onClick={() =>
-                                  handleFilterChange("standard", "")
+                                  handlePendingFilterChange("standard", "")
                                 }
                                 className="text-xs text-slate-500 hover:text-slate-700"
                               >
@@ -1281,9 +1375,9 @@ const NewQuestionnaire = (props) => {
                           <div className="space-y-1">
                             <button
                               onClick={() =>
-                                handleFilterChange("standard", "ISO27001")
+                                handlePendingFilterChange("standard", "ISO27001")
                               }
-                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${filters.standard === "ISO27001"
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm ${pendingFilters.standard === "ISO27001"
                                 ? "bg-indigo-50 text-indigo-700 font-medium"
                                 : "text-slate-600 hover:bg-slate-50"
                                 }`}
@@ -1294,24 +1388,24 @@ const NewQuestionnaire = (props) => {
                         </div>
 
                         {/* Active Filters Summary */}
-                        {(filters.type ||
-                          filters.standard ||
-                          filters.status ||
+                        {(pendingFilters.type ||
+                          pendingFilters.standard ||
+                          pendingFilters.status ||
                           searchQuery) && (
                             <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
                               <h4 className="text-xs font-medium text-slate-600 mb-1">
                                 Active Filters:
                               </h4>
                               <div className="flex flex-wrap gap-1">
-                                {filters.type && (
+                                {pendingFilters.type && (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
                                     {activeTab === "clause"
                                       ? "Clause"
                                       : "Control"}
-                                    : {filters.type}
+                                    : {pendingFilters.type}
                                     <button
                                       onClick={() =>
-                                        handleFilterChange("type", "")
+                                        handlePendingFilterChange("type", "")
                                       }
                                       className="ml-1 hover:text-indigo-900"
                                     >
@@ -1319,12 +1413,12 @@ const NewQuestionnaire = (props) => {
                                     </button>
                                   </span>
                                 )}
-                                {filters.standard && (
+                                {pendingFilters.standard && (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                    Standard: {filters.standard}
+                                    Standard: {pendingFilters.standard}
                                     <button
                                       onClick={() =>
-                                        handleFilterChange("standard", "")
+                                        handlePendingFilterChange("standard", "")
                                       }
                                       className="ml-1 hover:text-indigo-900"
                                     >
@@ -1332,12 +1426,12 @@ const NewQuestionnaire = (props) => {
                                     </button>
                                   </span>
                                 )}
-                                {filters.status && (
+                                {pendingFilters.status && (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                                    Status: {filters.status}
+                                    Status: {pendingFilters.status}
                                     <button
                                       onClick={() =>
-                                        handleFilterChange("status", "")
+                                        handlePendingFilterChange("status", "")
                                       }
                                       className="ml-1 hover:text-indigo-900"
                                     >
@@ -1370,7 +1464,7 @@ const NewQuestionnaire = (props) => {
                           Clear All
                         </button>
                         <button
-                          onClick={() => setFilterDropdownOpen(false)}
+                          onClick={applyFilters}
                           className="flex-1 py-2 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
                         >
                           Apply Filters
@@ -1473,29 +1567,30 @@ const NewQuestionnaire = (props) => {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="w-32 p-4 text-left font-semibold text-slate-600">
-                      Reference
+                    <th className="w-40 min-w-[10rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('reference')}>
+                      Reference {sortColumn === 'reference' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                     <th className="w-80 p-4 text-left font-semibold text-slate-600">
                       Question
                     </th>
-                    <th className="w-36 p-4 text-left font-semibold text-slate-600">
-                      {activeTab === "clause"
-                        ? "Clause no."
-                        : activeTab === "control"
-                        ? "Control no."
-                        : (activeTab === "vapt" || activeTab === "vapt_form")
-                        ? "Type"
-                        : ""}
-                    </th>
-                    {activeTab !== "vapt" && activeTab !== "vapt_form" && (
-                      <th className="w-44 p-4 text-left font-semibold text-slate-600">
-                        {activeTab === "clause" ? "Clause name" : "Control name"}
+                    {['vapt', 'vapt_form'].includes(activeTab) && (
+                      <th className="w-40 min-w-[8rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('type')}>
+                        Type {sortColumn === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
+                      </th>
+                    )}
+                    {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
+                      <th className="w-48 min-w-[10rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('control_no')}>
+                        {activeTab === 'clause' ? 'Clause No.' : 'Control No.'} {sortColumn === 'control_no' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
+                      </th>
+                    )}
+                    {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
+                      <th className="w-48 min-w-[11rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('control_name')}>
+                        {activeTab === 'clause' ? 'Clause Name' : 'Control Name'} {sortColumn === 'control_name' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                       </th>
                     )}
                     {activeTab === "clause" && (
-                      <th className="w-36 p-4 text-left font-semibold text-slate-600">
-                        PDCA Cycle
+                      <th className="w-48 min-w-[10rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('pdca_cycle')}>
+                        PDCA Cycle {sortColumn === 'pdca_cycle' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                       </th>
                     )}
                     <th className="p-4 text-left font-semibold text-slate-600">
@@ -1521,8 +1616,8 @@ const NewQuestionnaire = (props) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {questions.length > 0 ? (
-                    questions.map((question) => (
+                  {sortedQuestions.length > 0 ? (
+                    sortedQuestions.map((question) => (
                       <tr
                         key={question.id}
                         className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${activeQuestion?.id === question.id
@@ -1544,9 +1639,16 @@ const NewQuestionnaire = (props) => {
                             {question.question}
                           </div>
                         </td>
-                        <td className="p-4 text-slate-600 text-left">
-                          {question.type_description.split(" - ")[0]}
-                        </td>
+                        {['vapt', 'vapt_form'].includes(activeTab) && (
+                          <td className="p-4 text-slate-600 text-left">
+                            {question.type_description.split(" - ")[0]}
+                          </td>
+                        )}
+                        {activeTab !== "vapt" && activeTab !== "vapt_form" && (
+                          <td className="p-4 text-slate-600 text-left">
+                            {question.type_description.split(" - ")[0]}
+                          </td>
+                        )}
                         {activeTab !== "vapt" && activeTab !== "vapt_form" && (
                           <td className="p-4 text-slate-600 text-left">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
