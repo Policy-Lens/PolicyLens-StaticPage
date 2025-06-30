@@ -111,7 +111,8 @@ export const ProjectProvider = ({ children }) => {
       true
     );
     if (res.status === 200) {
-      return res.data;
+      // Handle new API response structure with nested members array
+      return res.data.members || res.data;
     }
   };
 

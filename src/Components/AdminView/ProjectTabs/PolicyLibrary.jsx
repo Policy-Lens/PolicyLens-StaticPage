@@ -76,14 +76,25 @@ const ConsultantSelectionModal = ({
       const members = await getMembers(projectId);
 
       if (members && Array.isArray(members)) {
-        // Filter to include only consultants and admins, excluding the current user
+        // Filter to include only consultants and consultant admins, including the current user
         const filteredConsultants = members.filter(
           (member) =>
-            (member.project_role === "consultant" ||
-              member.project_role === "consultant admin") &&
-            member.id !== user?.id
+            member.project_role === "consultant" ||
+            member.project_role === "consultant admin"
         );
-        setConsultants(filteredConsultants);
+        
+        // Sort to show consultant admins first, then regular consultants
+        const sortedConsultants = filteredConsultants.sort((a, b) => {
+          if (a.project_role === "consultant admin" && b.project_role !== "consultant admin") {
+            return -1; // a comes first
+          }
+          if (a.project_role !== "consultant admin" && b.project_role === "consultant admin") {
+            return 1; // b comes first
+          }
+          return 0; // maintain original order for same roles
+        });
+        
+        setConsultants(sortedConsultants);
       }
     } catch (error) {
       console.error("Error fetching consultants:", error);
@@ -93,13 +104,8 @@ const ConsultantSelectionModal = ({
   };
 
   const toggleConsultant = (consultantId) => {
-    setSelectedConsultants((prevSelected) => {
-      if (prevSelected.includes(consultantId)) {
-        return prevSelected.filter((id) => id !== consultantId);
-      } else {
-        return [...prevSelected, consultantId];
-      }
-    });
+    // Change to single selection - replace the array with just the selected ID
+    setSelectedConsultants([consultantId]);
   };
 
   const handleSubmit = () => {
@@ -143,7 +149,8 @@ const ConsultantSelectionModal = ({
                         <label className="flex items-center justify-between space-x-3 cursor-pointer">
                           <div className="flex items-center space-x-3">
                             <input
-                              type="checkbox"
+                              type="radio"
+                              name="consultant-selection"
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               checked={selectedConsultants.includes(
                                 consultant.id
@@ -1038,7 +1045,7 @@ const PolicyLibrary = () => {
     if (!uploadModal.fileId) return;
 
     const formData = new FormData();
-    formData.append("file", fileToUpload);
+    formData.append("file_path", fileToUpload);
 
     try {
       await apiRequest(
@@ -1148,6 +1155,14 @@ const PolicyLibrary = () => {
     }
 
     return assignedToDetails.map((user) => user.name).join(", ");
+  };
+
+  // Helper function to check if current user is assigned to a file
+  const isCurrentUserAssigned = (assignedToDetails) => {
+    if (!assignedToDetails || !Array.isArray(assignedToDetails) || !user) {
+      return false;
+    }
+    return assignedToDetails.some((assignedUser) => assignedUser.id === user.id);
   };
 
   // Open upload template modal
@@ -1714,9 +1729,10 @@ const PolicyLibrary = () => {
                         >
                           <Download size={16} className="text-green-600" />
                         </button>
-                        {/* Show Upload for Consultants, Delete for Admins in My Files tab */}
+                        {/* Show Upload for Consultants and Consultant Admins (if assigned), Delete for Admins in My Files tab */}
                         {activeTab === "myFiles" &&
-                          projectRole === "consultant" && (
+                          ((projectRole === "consultant") || 
+                           (projectRole === "consultant admin" && isCurrentUserAssigned(item.assigned_to_details))) && (
                             <button
                               className="p-1 bg-orange-100 rounded-md hover:bg-orange-200 transition-colors"
                               title="Upload New Version"
@@ -1791,11 +1807,13 @@ const PolicyLibrary = () => {
 
       {/* Modals */}
       <FileViewerModal
-        isOpen={viewerModal.isOpen}
+        visible={viewerModal.isOpen}
         onClose={closeFileViewer}
-        fileUrl={viewerModal.fileUrl}
-        fileType={viewerModal.fileType}
-        fileName={viewerModal.fileName}
+        file={{
+          url: viewerModal.fileUrl,
+          extension: viewerModal.fileType,
+          name: viewerModal.fileName,
+        }}
       />
       <ConsultantSelectionModal
         isOpen={consultantModal.isOpen}
