@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Spin, Alert, message } from 'antd';
 import { DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../../utils/api';
+import PDFTronViewer from './PDFTronViewer';
 
 const FileViewerModal = ({ visible, file, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -11,13 +12,20 @@ const FileViewerModal = ({ visible, file, onClose }) => {
     if (visible && file) {
       setLoading(true);
       setError(null);
-      
-      // Simulate loading time for file preparation
-      const timer = setTimeout(() => {
-        setLoading(false);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
+
+      // For PDFTron-supported files, let PDFTronViewer handle loading
+      const extension = file.extension ? file.extension.toLowerCase() : '';
+      const isPDFTronSupported = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension);
+
+      if (!isPDFTronSupported) {
+        // For simple file types, simulate loading time
+        const timer = setTimeout(() => {
+          setLoading(false);
+        }, 500);
+
+        return () => clearTimeout(timer);
+      }
+      // For PDFTron files, loading state will be handled by PDFTronViewer
     }
   }, [visible, file]);
 
@@ -42,33 +50,33 @@ const FileViewerModal = ({ visible, file, onClose }) => {
     try {
       console.log('Downloading file from modal:', fileName);
       console.log('Original URL received by modal:', fileUrl);
-      
+
       const fullUrl = getSafeUrl(fileUrl);
       console.log('Full URL for download (after getSafeUrl):', fullUrl);
-      
+
       // Use fetch API to get the file as a blob
       const response = await fetch(fullUrl, { credentials: 'include' });
-      
+
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
       }
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      
+
       // Create and trigger download link
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-      
+
       // Clean up
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       }, 100);
-      
+
       message.success(`Downloading ${fileName}`);
     } catch (error) {
       console.error("Download error:", error);
@@ -76,7 +84,36 @@ const FileViewerModal = ({ visible, file, onClose }) => {
     }
   };
 
+  // Callback for PDFTronViewer loading state
+  const handlePDFTronLoadingChange = (isLoading) => {
+    setLoading(isLoading);
+  };
+
   const renderFileContent = () => {
+    if (!file) return null;
+
+    // Safely get URL
+    console.log('File URL before getSafeUrl:', file.url);
+    const url = getSafeUrl(file.url);
+    console.log('File URL after getSafeUrl:', url);
+
+    // Get extension and convert to lowercase for case-insensitive comparison
+    const extension = file.extension ? file.extension.toLowerCase() : '';
+
+    // Use PDFTronViewer for supported document types
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) {
+      return (
+        <div className="h-[70vh]">
+          <PDFTronViewer
+            fileUrl={url}
+            fileType={extension}
+            onLoadingChange={handlePDFTronLoadingChange}
+          />
+        </div>
+      );
+    }
+
+    // Loading state for simple file types
     if (loading) {
       return (
         <div className="flex justify-center items-center h-96">
@@ -96,30 +133,8 @@ const FileViewerModal = ({ visible, file, onClose }) => {
       );
     }
 
-    if (!file) return null;
-
-    // Safely get URL
-    console.log('File URL before getSafeUrl:', file.url);
-    const url = getSafeUrl(file.url);
-    console.log('File URL after getSafeUrl:', url);
-    
-    // Get extension and convert to lowercase for case-insensitive comparison
-    const extension = file.extension ? file.extension.toLowerCase() : '';
-    
-    // Handle different file types
+    // Handle other file types with basic HTML elements
     switch (extension) {
-      case 'pdf':
-        return (
-          <div className="h-[70vh]">
-            <iframe
-              src={url}
-              className="w-full h-full"
-              title={file.name}
-              frameBorder="0"
-            />
-          </div>
-        );
-      
       case 'jpg':
       case 'jpeg':
       case 'png':
@@ -136,7 +151,7 @@ const FileViewerModal = ({ visible, file, onClose }) => {
             />
           </div>
         );
-      
+
       case 'mp4':
       case 'webm':
       case 'ogg':
@@ -151,7 +166,7 @@ const FileViewerModal = ({ visible, file, onClose }) => {
             Your browser does not support the video tag.
           </video>
         );
-      
+
       case 'mp3':
       case 'wav':
         return (
@@ -165,74 +180,7 @@ const FileViewerModal = ({ visible, file, onClose }) => {
             Your browser does not support the audio tag.
           </audio>
         );
-      
-      case 'xls':
-      case 'xlsx':
-      case 'csv':
-        // For Excel files, direct download is more reliable than viewing
-        return (
-          <div className="text-center p-10">
-            <div className="mb-8">
-              <img 
-                src="https://img.icons8.com/color/96/000000/microsoft-excel-2019--v1.png" 
-                alt="Excel file" 
-                className="mx-auto w-24 h-24"
-              />
-              <p className="text-xl mt-4 font-medium text-gray-700">
-                {file.name}
-              </p>
-            </div>
-            <p className="text-lg mb-6">
-              Excel files cannot be previewed directly in the browser.
-            </p>
-            <Button
-              type="primary"
-              size="large"
-              icon={<DownloadOutlined />}
-              onClick={() => handleDownload(file.url, file.name)}
-            >
-              Download to view
-            </Button>
-          </div>
-        );
-      
-      case 'doc':
-      case 'docx':
-      case 'ppt':
-      case 'pptx':
-        // For Office documents, direct download is more reliable
-        const iconSrc = extension.includes('doc') 
-          ? "https://img.icons8.com/color/96/000000/microsoft-word-2019--v1.png"
-          : "https://img.icons8.com/color/96/000000/microsoft-powerpoint-2019--v1.png";
-        
-        const fileType = extension.includes('doc') ? "Word" : "PowerPoint";
-        
-        return (
-          <div className="text-center p-10">
-            <div className="mb-8">
-              <img 
-                src={iconSrc}
-                alt={`${fileType} file`} 
-                className="mx-auto w-24 h-24"
-              />
-              <p className="text-xl mt-4 font-medium text-gray-700">
-                {file.name}
-              </p>
-            </div>
-            <p className="text-lg mb-6">
-              {fileType} files cannot be previewed directly in the browser.
-            </p>
-            <Button
-              type="primary"
-              size="large"
-              icon={<DownloadOutlined />}
-              onClick={() => handleDownload(file.url, file.name)}
-            >
-              Download to view
-            </Button>
-          </div>
-        );
-      
+
       case 'txt':
       case 'json':
       case 'xml':
@@ -248,7 +196,35 @@ const FileViewerModal = ({ visible, file, onClose }) => {
             </pre>
           </div>
         );
-      
+
+      case 'csv':
+        // For CSV files, show download option
+        return (
+          <div className="text-center p-10">
+            <div className="mb-8">
+              <img
+                src="https://img.icons8.com/color/96/000000/csv.png"
+                alt="CSV file"
+                className="mx-auto w-24 h-24"
+              />
+              <p className="text-xl mt-4 font-medium text-gray-700">
+                {file.name}
+              </p>
+            </div>
+            <p className="text-lg mb-6">
+              CSV files cannot be previewed directly in the browser.
+            </p>
+            <Button
+              type="primary"
+              size="large"
+              icon={<DownloadOutlined />}
+              onClick={() => handleDownload(file.url, file.name)}
+            >
+              Download to view
+            </Button>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center p-10">
@@ -276,17 +252,18 @@ const FileViewerModal = ({ visible, file, onClose }) => {
       title={file?.name || 'File Viewer'}
       open={visible}
       onCancel={onClose}
-      width="80%"
+      width="75%"
       centered
       footer={[
-        <Button key="download" type="primary" icon={<DownloadOutlined />} onClick={() => handleDownload(file.url, file.name)}>
+        <Button key="download" type="primary" icon={<DownloadOutlined />} onClick={() => handleDownload(file?.url, file?.name)}>
           Download
         </Button>,
         <Button key="close" icon={<CloseOutlined />} onClick={onClose}>
           Close
         </Button>
       ]}
-      bodyStyle={{ padding: '16px', maxHeight: '80vh', overflow: 'auto' }}
+      bodyStyle={{ padding: '16px', maxHeight: '85vh', overflow: 'auto' }}
+      style={{ top: 20 }}
     >
       {renderFileContent()}
     </Modal>

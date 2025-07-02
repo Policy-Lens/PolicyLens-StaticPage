@@ -82,7 +82,7 @@ const ConsultantSelectionModal = ({
             member.project_role === "consultant" ||
             member.project_role === "consultant admin"
         );
-        
+
         // Sort to show consultant admins first, then regular consultants
         const sortedConsultants = filteredConsultants.sort((a, b) => {
           if (a.project_role === "consultant admin" && b.project_role !== "consultant admin") {
@@ -93,7 +93,7 @@ const ConsultantSelectionModal = ({
           }
           return 0; // maintain original order for same roles
         });
-        
+
         setConsultants(sortedConsultants);
       }
     } catch (error) {
@@ -185,11 +185,10 @@ const ConsultantSelectionModal = ({
               <button
                 onClick={handleSubmit}
                 disabled={selectedConsultants.length === 0}
-                className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${
-                  selectedConsultants.length === 0
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
+                className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${selectedConsultants.length === 0
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+                  }`}
               >
                 Assign
               </button>
@@ -291,11 +290,10 @@ const FileUploadModal = ({ isOpen, onClose, onSubmit, fileName, fileId }) => {
           <button
             onClick={handleSubmit}
             disabled={!selectedFile || isUploading}
-            className={`flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${
-              !selectedFile || isUploading
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className={`flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${!selectedFile || isUploading
+              ? "bg-blue-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+              }`}
           >
             {isUploading ? (
               <>
@@ -401,9 +399,8 @@ const FilterDropdown = ({ options, value, onChange, label }) => {
             {options.map((option) => (
               <li
                 key={option.value}
-                className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${
-                  value === option.value ? "bg-blue-50 text-blue-700" : ""
-                }`}
+                className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${value === option.value ? "bg-blue-50 text-blue-700" : ""
+                  }`}
                 onClick={() => handleSelect(option)}
               >
                 {option.label}
@@ -671,14 +668,13 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
               !formData.sub_category ||
               isUploading
             }
-            className={`flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${
-              !selectedFile ||
+            className={`flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${!selectedFile ||
               !formData.category ||
               !formData.sub_category ||
               isUploading
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
+              ? "bg-blue-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+              }`}
           >
             {isUploading ? (
               <>
@@ -699,9 +695,7 @@ const PolicyLibrary = () => {
   const [activeTab, setActiveTab] = useState("templates");
   const [viewerModal, setViewerModal] = useState({
     isOpen: false,
-    fileUrl: "",
-    fileType: "",
-    fileName: "",
+    file: null,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [templatesData, setTemplatesData] = useState([]);
@@ -860,8 +854,8 @@ const PolicyLibrary = () => {
         activeTab === "myFiles" && projectRole === "consultant"
           ? { assigned_to_me: true }
           : activeTab === "myFiles" && projectRole === "consultant admin"
-          ? { assigned_by_me: true }
-          : {},
+            ? { assigned_by_me: true }
+            : {},
         newSearchTerm,
         controlNameFilter
       );
@@ -879,8 +873,8 @@ const PolicyLibrary = () => {
         activeTab === "myFiles" && projectRole === "consultant"
           ? { assigned_to_me: true }
           : activeTab === "myFiles" && projectRole === "consultant admin"
-          ? { assigned_by_me: true }
-          : {},
+            ? { assigned_by_me: true }
+            : {},
         searchTerm,
         value
       );
@@ -900,8 +894,8 @@ const PolicyLibrary = () => {
         activeTab === "myFiles" && projectRole === "consultant"
           ? { assigned_to_me: true }
           : activeTab === "myFiles" && projectRole === "consultant admin"
-          ? { assigned_by_me: true }
-          : {},
+            ? { assigned_by_me: true }
+            : {},
         "",
         ""
       );
@@ -917,8 +911,8 @@ const PolicyLibrary = () => {
         activeTab === "myFiles" && projectRole === "consultant"
           ? { assigned_to_me: true }
           : activeTab === "myFiles" && projectRole === "consultant admin"
-          ? { assigned_by_me: true }
-          : {}
+            ? { assigned_by_me: true }
+            : {}
       );
     }
   };
@@ -1112,17 +1106,19 @@ const PolicyLibrary = () => {
   const openFileViewer = (file) => {
     setViewerModal({
       isOpen: true,
-      fileUrl: file.file_path || "",
-      fileType: file.file_type?.toLowerCase() || "",
-      fileName: file.file_name || "",
+      file: {
+        url: file.file_path || "",
+        extension: file.file_type?.toLowerCase() || "",
+        name: file.file_name || "",
+      },
     });
   };
 
   // Close file viewer modal
   const closeFileViewer = () => {
     setViewerModal({
-      ...viewerModal,
       isOpen: false,
+      file: null,
     });
   };
 
@@ -1389,11 +1385,10 @@ const PolicyLibrary = () => {
 
         {/* My Files tab - visible to all roles, fetches different data based on role */}
         <button
-          className={`py-3 px-6 font-medium relative transition-all ${
-            activeTab === "myFiles"
-              ? "text-blue-600 font-semibold"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
+          className={`py-3 px-6 font-medium relative transition-all ${activeTab === "myFiles"
+            ? "text-blue-600 font-semibold"
+            : "text-gray-600 hover:text-gray-800"
+            }`}
           onClick={() => setActiveTab("myFiles")}
         >
           My Files
@@ -1420,11 +1415,10 @@ const PolicyLibrary = () => {
         )} */}
 
         <button
-          className={`py-3 px-6 font-medium relative transition-all ${
-            activeTab === "templates"
-              ? "text-blue-600 font-semibold"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
+          className={`py-3 px-6 font-medium relative transition-all ${activeTab === "templates"
+            ? "text-blue-600 font-semibold"
+            : "text-gray-600 hover:text-gray-800"
+            }`}
           onClick={() => setActiveTab("templates")}
         >
           Templates
@@ -1454,9 +1448,8 @@ const PolicyLibrary = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder={`Search ${
-                    activeTab === "templates" ? "templates" : "files"
-                  }...`}
+                  placeholder={`Search ${activeTab === "templates" ? "templates" : "files"
+                    }...`}
                   className="pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-72"
                   value={searchTerm}
                   onChange={handleSearchChange}
@@ -1532,7 +1525,7 @@ const PolicyLibrary = () => {
                     >
                       <div className="flex items-center">
                         {column.key === "select" &&
-                        projectRole === "consultant admin" ? (
+                          projectRole === "consultant admin" ? (
                           <input
                             type="checkbox"
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -1731,8 +1724,8 @@ const PolicyLibrary = () => {
                         </button>
                         {/* Show Upload for Consultants and Consultant Admins (if assigned), Delete for Admins in My Files tab */}
                         {activeTab === "myFiles" &&
-                          ((projectRole === "consultant") || 
-                           (projectRole === "consultant admin" && isCurrentUserAssigned(item.assigned_to_details))) && (
+                          ((projectRole === "consultant") ||
+                            (projectRole === "consultant admin" && isCurrentUserAssigned(item.assigned_to_details))) && (
                             <button
                               className="p-1 bg-orange-100 rounded-md hover:bg-orange-200 transition-colors"
                               title="Upload New Version"
@@ -1786,12 +1779,12 @@ const PolicyLibrary = () => {
                 {activeTab === "templates"
                   ? "No templates are available at the moment."
                   : activeTab === "myFiles"
-                  ? projectRole === "consultant admin"
-                    ? "You have not assigned any files yet."
-                    : projectRole === "consultant"
-                    ? "You have no files assigned to you yet."
-                    : "No files are available for you in this project."
-                  : "No files have been added to this project yet."}
+                    ? projectRole === "consultant admin"
+                      ? "You have not assigned any files yet."
+                      : projectRole === "consultant"
+                        ? "You have no files assigned to you yet."
+                        : "No files are available for you in this project."
+                    : "No files have been added to this project yet."}
               </p>
               {(searchTerm || controlNameFilter) && (
                 <button
@@ -1808,12 +1801,8 @@ const PolicyLibrary = () => {
       {/* Modals */}
       <FileViewerModal
         visible={viewerModal.isOpen}
+        file={viewerModal.file}
         onClose={closeFileViewer}
-        file={{
-          url: viewerModal.fileUrl,
-          extension: viewerModal.fileType,
-          name: viewerModal.fileName,
-        }}
       />
       <ConsultantSelectionModal
         isOpen={consultantModal.isOpen}
