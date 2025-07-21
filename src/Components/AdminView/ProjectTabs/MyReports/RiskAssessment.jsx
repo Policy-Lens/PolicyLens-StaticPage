@@ -1788,7 +1788,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Impact Assessment column group */}
                   <th
                     className="border border-slate-200 bg-blue-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-blue-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("impactAssessment")}
+                    onClick={() => handleToggleGroup("impactAssessment")}
                     colSpan={expandedGroups.impactAssessment ? 7 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -1800,7 +1800,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Impact Ratings column group */}
                   <th
                     className="border border-slate-200 bg-purple-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-purple-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("impactRatings")}
+                    onClick={() => handleToggleGroup("impactRatings")}
                     colSpan={expandedGroups.impactRatings ? 2 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -1812,7 +1812,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Severity column group */}
                   <th
                     className="border border-slate-200 bg-orange-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-orange-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("severity")}
+                    onClick={() => handleToggleGroup("severity")}
                     colSpan={expandedGroups.severity ? 2 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -1824,7 +1824,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Control Assessment column group */}
                   <th
                     className="border border-slate-200 bg-yellow-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-yellow-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("controlAssessment")}
+                    onClick={() => handleToggleGroup("controlAssessment")}
                     colSpan={expandedGroups.controlAssessment ? 2 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -1836,7 +1836,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Risk Assessment column group */}
                   <th
                     className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
-                    onClick={() => toggleGroup("riskAssessment")}
+                    onClick={() => handleToggleGroup("riskAssessment")}
                     colSpan={expandedGroups.riskAssessment ? 4 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -1848,7 +1848,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Risk Revision column group */}
                   <th
                     className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("riskRevision")}
+                    onClick={() => handleToggleGroup("riskRevision")}
                     colSpan={expandedGroups.riskRevision ? 6 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -1860,7 +1860,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Risk Mitigation Plan column group */}
                   <th
                     className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("mitigationPlan")}
+                    onClick={() => handleToggleGroup("mitigationPlan")}
                     colSpan={expandedGroups.mitigationPlan ? 8 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2082,7 +2082,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Impact Assessment column group */}
                   <th
                     className="border border-slate-200 bg-blue-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-blue-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("impactAssessment")}
+                    onClick={() => handleToggleGroup("impactAssessment")}
                     colSpan={expandedGroups.impactAssessment ? 7 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2094,7 +2094,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Impact Ratings column group */}
                   <th
                     className="border border-slate-200 bg-purple-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-purple-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("impactRatings")}
+                    onClick={() => handleToggleGroup("impactRatings")}
                     colSpan={expandedGroups.impactRatings ? 2 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2106,7 +2106,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Severity column group */}
                   <th
                     className="border border-slate-200 bg-orange-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-orange-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("severity")}
+                    onClick={() => handleToggleGroup("severity")}
                     colSpan={expandedGroups.severity ? 2 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2118,7 +2118,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Control Assessment column group */}
                   <th
                     className="border border-slate-200 bg-yellow-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-yellow-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("controlAssessment")}
+                    onClick={() => handleToggleGroup("controlAssessment")}
                     colSpan={expandedGroups.controlAssessment ? 2 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2130,7 +2130,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Risk Assessment column group */}
                   <th
                     className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
-                    onClick={() => toggleGroup("riskAssessment")}
+                    onClick={() => handleToggleGroup("riskAssessment")}
                     colSpan={expandedGroups.riskAssessment ? 4 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2142,7 +2142,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Risk Revision column group */}
                   <th
                     className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("riskRevision")}
+                    onClick={() => handleToggleGroup("riskRevision")}
                     colSpan={expandedGroups.riskRevision ? 6 : 1}
                   >
                     <div className="flex items-center justify-center">
@@ -2154,7 +2154,7 @@ const RiskAssessment = ({ reportId, projectId, specificReportMode = false }) => 
                   {/* Risk Mitigation Plan column group */}
                   <th
                     className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
-                    onClick={() => toggleGroup("mitigationPlan")}
+                    onClick={() => handleToggleGroup("mitigationPlan")}
                     colSpan={expandedGroups.mitigationPlan ? 8 : 1}
                   >
                     <div className="flex items-center justify-center">
