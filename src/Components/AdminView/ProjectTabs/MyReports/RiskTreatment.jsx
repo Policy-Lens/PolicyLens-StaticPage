@@ -1,87 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { FilePlus, FileUp, Plus, Upload } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { FilePlus, FileUp, Plus, Upload, Trash2, Edit, Eye, Download, X } from "lucide-react";
 import { apiRequest } from "../../../../utils/api";
 import { useParams } from "react-router-dom";
 import LegendsModal from "./LegendsModal";
 import { message } from "antd";
+import UnifiedUploadModal from "./UnifiedUploadModal";
+import ConfirmationModal from "./ConfirmationModal";
+import { getRatingColor, getImpactColor } from "./colorUtils";
+import { toggleGroup, renderExpandIcon } from "./uiUtils.jsx";
 
-// Reusable Confirmation Modal Component (Copied from MyReports.jsx for standalone use)
-const ConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmText = "Delete",
-  cancelText = "Cancel",
-}) => {
-  if (!isOpen) return null;
+// ConfirmationModal component is now imported from shared component
 
-  return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto"
-      aria-labelledby="modal-title"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg
-                  className="h-6 w-6 text-red-600"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="1.5"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                  />
-                </svg>
-              </div>
-              <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3
-                  className="text-lg leading-6 font-medium text-gray-900"
-                  id="modal-title"
-                >
-                  {title}
-                </h3>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">{message}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-              onClick={onConfirm}
-            >
-              {confirmText}
-            </button>
-            <button
-              type="button"
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              onClick={onClose}
-            >
-              {cancelText}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
-const RiskTreatment = () => {
+
+const RiskTreatment = ({ reportId, projectId, specificReportMode = false }) => {
   // State to track which column groups are expanded
   const [expandedGroups, setExpandedGroups] = useState({
     impactAssessment: false,
@@ -109,6 +41,10 @@ const RiskTreatment = () => {
     name: "Project Alpha",
   });
   const { projectid } = useParams();
+  
+  // Use props if provided, otherwise fall back to URL params
+  const effectiveProjectId = projectId || projectid;
+  const effectiveReportId = reportId;
 
   // State for sheets and selected sheet
   const [sheets, setSheets] = useState([]);
@@ -122,6 +58,10 @@ const RiskTreatment = () => {
 
   // State for file upload
   const [excelFile, setExcelFile] = useState(null);
+
+  // State for vulnerability types
+  const [vulnerabilityTypes, setVulnerabilityTypes] = useState([]);
+  const [loadingVulnerabilityTypes, setLoadingVulnerabilityTypes] = useState(false);
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -164,6 +104,92 @@ const RiskTreatment = () => {
     title: "Confirm Action",
     message: "Are you sure?",
   });
+
+  // Add ref to track if we've already selected a sheet to prevent infinite loops
+  const hasSelectedSheet = useRef(false);
+
+  // Add drag scrolling state and refs
+  const tableContainerRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  // Mouse event handlers for drag scrolling
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - tableContainerRef.current.offsetLeft);
+    setScrollLeft(tableContainerRef.current.scrollLeft);
+    tableContainerRef.current.style.cursor = 'grabbing';
+    tableContainerRef.current.style.userSelect = 'none';
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.style.cursor = 'grab';
+      tableContainerRef.current.style.userSelect = 'auto';
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.style.cursor = 'grab';
+      tableContainerRef.current.style.userSelect = 'auto';
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - tableContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
+    tableContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  // Fetch vulnerability types when selected sheet changes
+  useEffect(() => {
+    if (selectedSheet) {
+      fetchVulnerabilityTypes();
+    }
+  }, [selectedSheet]);
+
+  // Fetch vulnerability types
+  const fetchVulnerabilityTypes = async () => {
+    if (!selectedSheet) return;
+    
+    setLoadingVulnerabilityTypes(true);
+    try {
+      const response = await apiRequest(
+        'GET',
+        `/api/rarpt/vulnerability-types/?report_type=treatment&report_id=${selectedSheet.id}&project_id=${effectiveProjectId}`,
+        null,
+        true
+      );
+      if (response && response.data && response.data.vulnerability_types) {
+        setVulnerabilityTypes(response.data.vulnerability_types);
+      }
+    } catch (error) {
+      console.error('Error fetching vulnerability types:', error);
+      // Fallback to some common types if API fails
+      setVulnerabilityTypes([
+        "Access card left unattended",
+        "Clear desk and screen policy not adhered",
+        "Unlocked screen",
+        "Weak password policy",
+        "No multi-factor authentication",
+        "Outdated software",
+        "Unpatched systems",
+        "Social engineering",
+        "Phishing attacks",
+        "Malware infection",
+        "Data breach",
+        "Insider threat"
+      ]);
+    } finally {
+      setLoadingVulnerabilityTypes(false);
+    }
+  };
 
   // --- Automatic Calculation Logic for Risk Treatment ---
   useEffect(() => {
@@ -213,44 +239,10 @@ const RiskTreatment = () => {
   ]);
 
   // Function to toggle column group expansion
-  const toggleGroup = (group) => {
-    setExpandedGroups((prev) => ({
-      ...prev,
-      [group]: !prev[group],
-    }));
-  };
+  // UI utility functions are now imported from shared uiUtils.js
 
-  // Function to render expand/collapse icons
-  const renderExpandIcon = (isExpanded) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className={`h-5 w-5 ml-2 transition-transform ${isExpanded ? "rotate-180" : ""
-        }`}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 9l-7 7-7-7"
-      />
-    </svg>
-  );
-
-  // Function to get color for impact cells
-  const getImpactColor = (value) => {
-    return value === "Y" ? "bg-red-100 text-red-800" : "";
-  };
-
-  // Function to get color for rating cells
-  const getRatingColor = (value) => {
-    if (value >= 4) return "bg-red-100 text-red-800";
-    if (value >= 3) return "bg-amber-100 text-amber-800";
-    if (value >= 2) return "bg-yellow-100 text-yellow-800";
-    return "bg-green-100 text-green-800";
-  };
+  // Color utility functions are now imported from shared colorUtils.js
+  const handleToggleGroup = (group) => toggleGroup(expandedGroups, setExpandedGroups, group);
 
   // Function to open modal
   const openModal = (type, riskToEdit = null) => {
@@ -308,7 +300,7 @@ const RiskTreatment = () => {
         },
       };
 
-      console.log("Setting formData to:", riskDataToSet); // Debugging
+      
       setFormData(riskDataToSet);
 
       // Force a UI update after setting state
@@ -433,15 +425,10 @@ const RiskTreatment = () => {
     }
   };
 
-  // Fetch risks on component mount - now fetches sheets instead
-  useEffect(() => {
-    if (projectid) {
-      fetchSheets(); // Fetches sheets, which then fetches risks for the selected sheet
-    }
-  }, [projectid]);
-
-  // Function to fetch risks for a specific treatment sheet
-  const fetchRisksForSheet = async (sheetId) => {
+  // Memoize fetch functions to prevent unnecessary re-renders
+  const fetchRisksForSheet = useCallback(async (sheetId) => {
+    if (!sheetId) return;
+    
     setIsLoading(true);
     try {
       const response = await apiRequest(
@@ -485,7 +472,7 @@ const RiskTreatment = () => {
               acceptableToOwner:
                 risk.rt_revision?.acceptable_to_risk_owner || "Y",
             },
-            // Map from the rt_mitigation_plans object
+            
             mitigationPlan: {
               furtherPlannedAction: mitigationPlan.further_planned_action || "",
               taskId: mitigationPlan.policy_lense_task_id || "",
@@ -513,7 +500,201 @@ const RiskTreatment = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const fetchSheets = useCallback(async () => {
+    if (!effectiveProjectId) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/rarpt/project/${effectiveProjectId}/treatment-sheets/`,
+        null,
+        true
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        setSheets(response.data);
+        
+        if (specificReportMode && effectiveReportId) {
+          // In specific report mode, find and select the specific report
+          const specificSheet = response.data.find(sheet => sheet.id === parseInt(effectiveReportId));
+          if (specificSheet) {
+            setSelectedSheet(specificSheet);
+            hasSelectedSheet.current = true;
+            // Call fetchRisksForSheet directly without dependency
+            const risksResponse = await apiRequest(
+              "GET",
+              `/api/rarpt/treatment-sheets/${specificSheet.id}/risks/`,
+              null,
+              true
+            );
+            if (risksResponse.data && Array.isArray(risksResponse.data)) {
+              const formattedRisks = risksResponse.data.map((risk) => {
+                const mitigationPlan = risk.rt_mitigation_plans || {};
+                return {
+                  id: risk.id || "",
+                  risk_id: risk.risk_id || "",
+                  vulnerabilityType: risk.vulnerability_type || "Not Specified",
+                  threatDescription: risk.threat_description || "",
+                  riskAssessment: {
+                    riskRating: risk.rt_assessment?.risk_rating || 1,
+                    riskCategory: risk.rt_assessment?.risk_category || "Not Significant",
+                    departmentBU: risk.rt_assessment?.department_bu || "",
+                    riskOwner: "",
+                    mitigationStrategy: risk.rt_assessment?.risk_mitigation_strategy || "Tolerate",
+                  },
+                  riskRevision: {
+                    soaControl: risk.rt_revision?.applicable_annex_control_number || "",
+                    soaControlDesc: "",
+                    meetsRequirements: risk.rt_revision?.meet_legal_requirements || "Y",
+                    revisedControlRating: risk.rt_revision?.revised_control_rating || 1,
+                    revisedConsequenceRating: risk.rt_revision?.revised_consequence_rating || 1,
+                    revisedLikelihoodRating: risk.rt_revision?.revised_likelihood_rating || 1,
+                    residualRiskRating: risk.rt_revision?.residual_risk_rating || 1,
+                    acceptableToOwner: risk.rt_revision?.acceptable_to_risk_owner || "Y",
+                  },
+                  mitigationPlan: {
+                    furtherPlannedAction: mitigationPlan.further_planned_action || "",
+                    taskId: mitigationPlan.policy_lense_task_id || "",
+                    taskDescription: mitigationPlan.task_description || "",
+                    taskOwner: mitigationPlan.task_owner || "",
+                    isOngoing: mitigationPlan.is_ongoing || "N",
+                    plannedCompletionDate: mitigationPlan.planned_completion_date || "",
+                    isRecurrent: mitigationPlan.is_recurrent || "N",
+                    frequency: mitigationPlan.frequency || "",
+                  },
+                  context: risk.context || "",
+                  applicableActivity: risk.applicable_activity || "",
+                };
+              });
+              setRiskData(formattedRisks);
+            }
+          } else {
+            message.error("Specified report not found");
+            setSelectedSheet(null);
+            setRiskData([]);
+          }
+        } else {
+          // Normal mode - auto-select the first sheet if none is selected and we haven't selected one yet
+          if (response.data.length > 0 && !selectedSheet && !hasSelectedSheet.current) {
+            const sheetToSelect = response.data[0];
+            setSelectedSheet(sheetToSelect);
+            hasSelectedSheet.current = true;
+            // Call fetchRisksForSheet directly without dependency
+            const risksResponse = await apiRequest(
+              "GET",
+              `/api/rarpt/treatment-sheets/${sheetToSelect.id}/risks/`,
+              null,
+              true
+            );
+            if (risksResponse.data && Array.isArray(risksResponse.data)) {
+              const formattedRisks = risksResponse.data.map((risk) => {
+                const mitigationPlan = risk.rt_mitigation_plans || {};
+                return {
+                  id: risk.id || "",
+                  risk_id: risk.risk_id || "",
+                  vulnerabilityType: risk.vulnerability_type || "Not Specified",
+                  threatDescription: risk.threat_description || "",
+                  riskAssessment: {
+                    riskRating: risk.rt_assessment?.risk_rating || 1,
+                    riskCategory: risk.rt_assessment?.risk_category || "Not Significant",
+                    departmentBU: risk.rt_assessment?.department_bu || "",
+                    riskOwner: "",
+                    mitigationStrategy: risk.rt_assessment?.risk_mitigation_strategy || "Tolerate",
+                  },
+                  riskRevision: {
+                    soaControl: risk.rt_revision?.applicable_annex_control_number || "",
+                    soaControlDesc: "",
+                    meetsRequirements: risk.rt_revision?.meet_legal_requirements || "Y",
+                    revisedControlRating: risk.rt_revision?.revised_control_rating || 1,
+                    revisedConsequenceRating: risk.rt_revision?.revised_consequence_rating || 1,
+                    revisedLikelihoodRating: risk.rt_revision?.revised_likelihood_rating || 1,
+                    residualRiskRating: risk.rt_revision?.residual_risk_rating || 1,
+                    acceptableToOwner: risk.rt_revision?.acceptable_to_risk_owner || "Y",
+                  },
+                  mitigationPlan: {
+                    furtherPlannedAction: mitigationPlan.further_planned_action || "",
+                    taskId: mitigationPlan.policy_lense_task_id || "",
+                    taskDescription: mitigationPlan.task_description || "",
+                    taskOwner: mitigationPlan.task_owner || "",
+                    isOngoing: mitigationPlan.is_ongoing || "N",
+                    plannedCompletionDate: mitigationPlan.planned_completion_date || "",
+                    isRecurrent: mitigationPlan.is_recurrent || "N",
+                    frequency: mitigationPlan.frequency || "",
+                  },
+                  context: risk.context || "",
+                  applicableActivity: risk.applicable_activity || "",
+                };
+              });
+              setRiskData(formattedRisks);
+            }
+          }
+        }
+      } else {
+        setSheets([]);
+        setSelectedSheet(null);
+        setRiskData([]);
+      }
+    } catch (err) {
+      console.error("Error fetching treatment sheets:", err);
+      message.error(err.message || "Failed to fetch treatment sheets");
+      setSheets([]);
+      setSelectedSheet(null);
+      setRiskData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [effectiveProjectId, effectiveReportId, specificReportMode]);
+
+  // Optimized useEffect - only fetch sheets on projectid change
+  useEffect(() => {
+    if (effectiveProjectId) {
+      hasSelectedSheet.current = false; // Reset selection flag when project changes
+      fetchSheets();
+    }
+  }, [effectiveProjectId, fetchSheets]);
+
+  // Optimized useEffect - only fetch risks when selectedSheet changes
+  useEffect(() => {
+    if (selectedSheet && selectedSheet.id) {
+      setRiskData([]);
+      setFormData({
+        risk_id: "",
+        vulnerability_type: "",
+        threat_description: "",
+        rt_assessment: {
+          risk_rating: 1,
+          risk_category: "Not Significant",
+          department_bu: "",
+          risk_mitigation_strategy: "Tolerate",
+        },
+        rt_revision: {
+          applicable_annex_control_number: "",
+          meet_legal_requirements: "Y",
+          revised_control_rating: 1,
+          revised_consequence_rating: 1,
+          revised_likelihood_rating: 1,
+          residual_risk_rating: 1,
+          acceptable_to_risk_owner: "Y",
+        },
+        rt_mitigation_plans: {
+          further_planned_action: "",
+          policy_lense_task_id: "",
+          task_description: "",
+          task_owner: "",
+          is_ongoing: "N",
+          planned_completion_date: "",
+          is_recurrent: "N",
+          frequency: null,
+        },
+      });
+      fetchRisksForSheet(selectedSheet.id);
+    } else {
+      setRiskData([]);
+    }
+  }, [selectedSheet, fetchRisksForSheet]);
 
   // Submit treatment plan form
   const handleRiskSubmit = async (e) => {
@@ -522,6 +703,13 @@ const RiskTreatment = () => {
       message.error("Please select a treatment report first");
       return;
     }
+    
+    // Client-side validation for required fields - Only Risk ID is required
+    if (!formData.risk_id?.trim()) {
+      message.error("Risk ID is required");
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -529,7 +717,10 @@ const RiskTreatment = () => {
         risk_id: formData.risk_id || "RT_" + Date.now(),
         vulnerability_type: formData.vulnerability_type || "Default",
         threat_description: formData.threat_description || "Default",
-        rt_assessment: { ...formData.rt_assessment },
+        rt_assessment: { 
+          ...formData.rt_assessment,
+          department_bu: formData.rt_assessment.department_bu || "Default Department"
+        },
         rt_revision: { ...formData.rt_revision },
         // Send rt_mitigation_plans as an object
         rt_mitigation_plans: {
@@ -577,6 +768,13 @@ const RiskTreatment = () => {
       message.error("Report or treatment plan not selected");
       return;
     }
+    
+    // Client-side validation for required fields - Only Risk ID is required
+    if (!formData.risk_id?.trim()) {
+      message.error("Risk ID is required");
+      return;
+    }
+    
     setIsLoading(true);
     try {
       // Construct the API payload based on the required structure
@@ -591,7 +789,7 @@ const RiskTreatment = () => {
         rt_assessment: {
           risk_rating: formData.rt_assessment.risk_rating,
           risk_category: formData.rt_assessment.risk_category, // This is calculated, ensure it's up-to-date
-          department_bu: formData.rt_assessment.department_bu,
+          department_bu: formData.rt_assessment.department_bu || "Default Department",
           risk_mitigation_strategy:
             formData.rt_assessment.risk_mitigation_strategy,
         },
@@ -599,7 +797,7 @@ const RiskTreatment = () => {
         // Map rt_revision from formData
         rt_revision: {
           applicable_annex_control_number:
-            formData.rt_revision.applicable_annex_control_number,
+            formData.rt_revision.applicable_annex_control_number || "",
           meet_legal_requirements: formData.rt_revision.meet_legal_requirements,
           revised_control_rating: formData.rt_revision.revised_control_rating,
           revised_consequence_rating:
@@ -610,25 +808,34 @@ const RiskTreatment = () => {
           acceptable_to_risk_owner:
             formData.rt_revision.acceptable_to_risk_owner,
         },
-
-        // Map rt_mitigation_plans object from formData
-        rt_mitigation_plans: {
-          further_planned_action:
-            formData.rt_mitigation_plans.further_planned_action,
-          policy_lense_task_id:
-            formData.rt_mitigation_plans.policy_lense_task_id,
-          task_description: formData.rt_mitigation_plans.task_description,
-          task_owner: formData.rt_mitigation_plans.task_owner,
-          is_ongoing: formData.rt_mitigation_plans.is_ongoing,
-          planned_completion_date:
-            formData.rt_mitigation_plans.planned_completion_date,
-          is_recurrent: formData.rt_mitigation_plans.is_recurrent,
-          frequency: formData.rt_mitigation_plans.frequency,
-        },
       };
+      
+      // Only include rt_mitigation_plans if it has valid data
+       const mitigationPlans = formData.rt_mitigation_plans;
+       if (mitigationPlans && (
+           mitigationPlans.further_planned_action ||
+           mitigationPlans.policy_lense_task_id ||
+           mitigationPlans.task_description ||
+           mitigationPlans.task_owner ||
+           mitigationPlans.planned_completion_date
+         )) {
+         apiData.rt_mitigation_plans = {
+           further_planned_action: mitigationPlans.further_planned_action || "",
+           policy_lense_task_id: mitigationPlans.policy_lense_task_id || "",
+           task_description: mitigationPlans.task_description || "",
+           task_owner: mitigationPlans.task_owner || "",
+           is_ongoing: mitigationPlans.is_ongoing || "N",
+           planned_completion_date: mitigationPlans.planned_completion_date || null,
+           is_recurrent: mitigationPlans.is_recurrent || "N",
+           frequency: mitigationPlans.frequency || null,
+         };
+       } else {
+         // If no valid data, send empty object to trigger deletion if it exists
+         apiData.rt_mitigation_plans = {};
+       }
 
       const response = await apiRequest(
-        "PUT", // Ensure PUT method is used
+        "PATCH", // Use PATCH method instead of PUT
         `/api/rarpt/treatment-risks/${editingRisk.id}/`, // Correct endpoint for update
         apiData, // Send the structured data
         true
@@ -648,10 +855,8 @@ const RiskTreatment = () => {
   };
 
   // Submit excel file for treatment plans
-  const handleExcelSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!excelFile) {
+  const handleExcelSubmit = async (file) => {
+    if (!file) {
       message.error("Please select an Excel file");
       return;
     }
@@ -665,7 +870,7 @@ const RiskTreatment = () => {
 
     try {
       const formData = new FormData();
-      formData.append("file", excelFile);
+      formData.append("file", file);
 
       // Use the API endpoint for uploading treatment plans via Excel
       const response = await apiRequest(
@@ -675,12 +880,13 @@ const RiskTreatment = () => {
         true
       );
 
-      if (response.status === 200 || response.status === 201) {
-        message.success("Excel file uploaded successfully.");
-        // Refresh the treatment plan list
-        await fetchRisksForSheet(selectedSheet.id);
-        // Close modal immediately after success
-        closeModal();
+      if (response.status === 200 || response.status === 207) {
+        message.success("Treatment data uploaded successfully");
+        setShowModal(false); // Close the modal
+        // Immediately refresh risk data for the selected sheet
+        if (selectedSheet) {
+          await fetchRisksForSheet(selectedSheet.id);
+        }
       }
     } catch (err) {
       console.error(
@@ -690,7 +896,6 @@ const RiskTreatment = () => {
       message.error(err.message || "Failed to upload Excel file");
     } finally {
       setIsLoading(false);
-      setExcelFile(null); // Reset file state
     }
   };
 
@@ -725,47 +930,7 @@ const RiskTreatment = () => {
     });
   };
 
-  // Function to fetch all treatment sheets for current project
-  const fetchSheets = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiRequest(
-        "GET",
-        `/api/rarpt/project/${projectid}/treatment-sheets/`,
-        null,
-        true
-      );
-
-      if (response.data && Array.isArray(response.data)) {
-        setSheets(response.data);
-        if (response.data.length > 0 && !selectedSheet) {
-          const previouslySelected = sheets.find(
-            (s) => s.id === selectedSheet?.id
-          );
-          const sheetToSelect = previouslySelected || response.data[0];
-          setSelectedSheet(sheetToSelect);
-          await fetchRisksForSheet(sheetToSelect.id);
-        } else if (response.data.length === 0) {
-          setRiskData([]);
-          setSelectedSheet(null);
-        }
-      } else {
-        setSheets([]);
-        setRiskData([]);
-        setSelectedSheet(null);
-      }
-    } catch (err) {
-      console.error("Error fetching treatment reports:", err);
-      message.error(err.message || "Failed to fetch treatment reports");
-      setSheets([]);
-      setRiskData([]);
-      setSelectedSheet(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Function to create a new treatment sheet
+  // Function to create a new assessment sheet
   const createSheet = async () => {
     if (!newSheetName.trim()) {
       message.error("Report name cannot be empty");
@@ -782,12 +947,27 @@ const RiskTreatment = () => {
       message.success("Report created successfully");
       setNewSheetName("");
       setShowSheetModal(false);
-      await fetchSheets(); // Refresh sheet list
-      if (response.data) {
-        const newSheet = response.data;
+      
+      // Fetch sheets, then select the new one by id
+      const sheetsResponse = await apiRequest(
+        "GET",
+        `/api/rarpt/project/${projectid}/treatment-sheets/`,
+        null,
+        true
+      );
+      
+      if (sheetsResponse.data && Array.isArray(sheetsResponse.data)) {
+        setSheets(sheetsResponse.data);
+        const newSheet = sheetsResponse.data.find(s => s.id === response.data.id);
+        
         if (newSheet) {
           setSelectedSheet(newSheet);
-          await fetchRisksForSheet(newSheet.id);
+          setRiskData([]);
+          setFormData({ /* ...default form data... */ });
+          // Notify parent to open a new tab with unique URL
+          if (typeof onReportCreated === 'function') {
+            onReportCreated({ id: newSheet.id, type: 'riskTreatment', name: newSheet.name });
+          }
         }
       }
     } catch (err) {
@@ -814,6 +994,19 @@ const RiskTreatment = () => {
             true
           );
           message.success("Report deleted successfully");
+
+          // Notify parent component to close any open tabs for this report
+          // This assumes that MyReports.jsx has added a prop called onReportDeleted
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            // Create and dispatch a custom event that MyReports component can listen for
+            const deleteEvent = new CustomEvent('reportDeleted', {
+              detail: {
+                reportId: sheetId,
+                reportType: 'riskTreatment'
+              }
+            });
+            window.dispatchEvent(deleteEvent);
+          }
 
           // Fetch updated treatment sheets list *after* deletion
           const response = await apiRequest(
@@ -863,10 +1056,41 @@ const RiskTreatment = () => {
       setShowSheetModal(true);
       return;
     }
-    const sheet = sheets.find((s) => s.id === parseInt(sheetId));
-    if (sheet) {
+    setSelectedSheet(null);
+    setRiskData([]);
+    setFormData({
+      risk_id: "",
+      vulnerability_type: "",
+      threat_description: "",
+      rt_assessment: {
+        risk_rating: 1,
+        risk_category: "Not Significant",
+        department_bu: "",
+        risk_mitigation_strategy: "Tolerate",
+      },
+      rt_revision: {
+        applicable_annex_control_number: "",
+        meet_legal_requirements: "Y",
+        revised_control_rating: 1,
+        revised_consequence_rating: 1,
+        revised_likelihood_rating: 1,
+        residual_risk_rating: 1,
+        acceptable_to_risk_owner: "Y",
+      },
+      rt_mitigation_plans: {
+        further_planned_action: "",
+        policy_lense_task_id: "",
+        task_description: "",
+        task_owner: "",
+        is_ongoing: "N",
+        planned_completion_date: "",
+        is_recurrent: "N",
+        frequency: null,
+      },
+    });
+    if (sheetId) {
+      const sheet = sheets.find((s) => s.id === sheetId);
       setSelectedSheet(sheet);
-      await fetchRisksForSheet(sheet.id);
     }
   };
 
@@ -896,19 +1120,15 @@ const RiskTreatment = () => {
       <div className="flex items-center justify-between border-b border-slate-200 p-2 bg-white sticky top-0 z-10 shadow-sm">
         <div className="flex items-center">
           <h2 className="text-xl font-bold text-slate-800">Risk Treatment Plans</h2>
-          <div className="ml-3 text-slate-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
-            {riskData.length}
-          </div>
-
-          {/* Report Selection Dropdown */}
-          {sheets.length > 0 && (
+          {/* Report Selection Dropdown - Only show if not in specific report mode */}
+          {sheets.length > 0 && !specificReportMode && (
             <div className="ml-4 flex items-center">
               <label className="text-sm font-medium text-gray-700 mr-2">
                 Report:
               </label>
               <select
                 value={selectedSheet ? selectedSheet.id : ""}
-                onChange={(e) => handleSheetChange(e.target.value)}
+                onChange={(e) => handleSheetChange(e.target.value === "create" ? "create" : parseInt(e.target.value))}
                 className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white shadow-sm min-w-[200px]"
               >
                 {sheets.map((sheet) => (
@@ -920,6 +1140,18 @@ const RiskTreatment = () => {
                   + Create New Report
                 </option>
               </select>
+            </div>
+          )}
+          
+          {/* Show current report name in specific report mode */}
+          {specificReportMode && selectedSheet && (
+            <div className="ml-4 flex items-center">
+              <span className="text-sm font-medium text-gray-700 mr-2">
+                Current Report:
+              </span>
+              <span className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-md text-sm text-indigo-700 font-medium">
+                {selectedSheet.name}
+              </span>
             </div>
           )}
         </div>
@@ -1019,7 +1251,16 @@ const RiskTreatment = () => {
           {/* Wrap conditional content in fragment */}
           {riskData.length === 0 ? (
             // Empty Table with Headers - Show when sheet is selected but has no risks
-            <div className="overflow-x-auto w-full px-1 pt-1" style={{ maxWidth: "100vw" }}>
+            <div 
+              className="overflow-x-auto w-full px-1 pt-1 cursor-grab active:cursor-grabbing select-none" 
+              style={{ maxWidth: "100vw" }}
+              ref={tableContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onDragStart={(e) => e.preventDefault()}
+            >
               <div className="inline-block min-w-full whitespace-nowrap">
                 <table className="border-collapse shadow-lg rounded-lg overflow-hidden">
                   <thead>
@@ -1040,22 +1281,22 @@ const RiskTreatment = () => {
                         Threat Description
                       </th>
 
-                      {/* Risk Assessment column group */}
-                      <th
-                        className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
-                        onClick={() => toggleGroup("riskAssessment")}
-                        colSpan={expandedGroups.riskAssessment ? 4 : 1}
-                      >
-                        <div className="flex items-center justify-center">
-                          <span>Risk Assessment</span>
-                          {renderExpandIcon(expandedGroups.riskAssessment)}
-                        </div>
-                      </th>
+                                        {/* Risk Assessment column group */}
+                  <th
+                    className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
+                    onClick={() => handleToggleGroup("riskAssessment")}
+                    colSpan={expandedGroups.riskAssessment ? 4 : 1}
+                  >
+                    <div className="flex items-center justify-center">
+                      <span>Risk Assessment</span>
+                      {renderExpandIcon(expandedGroups.riskAssessment)}
+                    </div>
+                  </th>
 
                       {/* Risk Revision column group */}
                       <th
                         className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
-                        onClick={() => toggleGroup("riskRevision")}
+                        onClick={() => handleToggleGroup("riskRevision")}
                         colSpan={expandedGroups.riskRevision ? 7 : 1}
                       >
                         <div className="flex items-center justify-center">
@@ -1064,17 +1305,17 @@ const RiskTreatment = () => {
                         </div>
                       </th>
 
-                      {/* Risk Mitigation Plan column group */}
-                      <th
-                        className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
-                        onClick={() => toggleGroup("mitigationPlan")}
-                        colSpan={expandedGroups.mitigationPlan ? 8 : 1}
-                      >
-                        <div className="flex items-center justify-center">
-                          <span>Risk Mitigation Plan</span>
-                          {renderExpandIcon(expandedGroups.mitigationPlan)}
-                        </div>
-                      </th>
+                                        {/* Risk Mitigation Plan column group */}
+                  <th
+                    className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
+                    onClick={() => handleToggleGroup("mitigationPlan")}
+                    colSpan={expandedGroups.mitigationPlan ? 8 : 1}
+                  >
+                    <div className="flex items-center justify-center">
+                      <span>Risk Mitigation Plan</span>
+                      {renderExpandIcon(expandedGroups.mitigationPlan)}
+                    </div>
+                  </th>
                     </tr>
 
                     {/* Second row for subheaders */}
@@ -1176,8 +1417,14 @@ const RiskTreatment = () => {
           ) : (
             // Existing Table Rendering
             <div
-              className="overflow-x-auto w-full px-1 pt-1"
+              className="overflow-x-auto w-full px-1 pt-1 cursor-grab active:cursor-grabbing select-none"
               style={{ maxWidth: "100vw" }}
+              ref={tableContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onDragStart={(e) => e.preventDefault()}
             >
               <div className="inline-block min-w-full whitespace-nowrap">
                 <table className="border-collapse shadow-lg rounded-lg overflow-hidden">
@@ -1205,7 +1452,7 @@ const RiskTreatment = () => {
                       {/* Risk Assessment column group (from rt_assessment) */}
                       <th
                         className="border border-slate-200 bg-slate-700 text-white p-3.5 cursor-pointer font-semibold hover:bg-slate-800 transition-colors duration-300"
-                        onClick={() => toggleGroup("riskAssessment")} // Keep state key or update if needed
+                        onClick={() => handleToggleGroup("riskAssessment")} // Keep state key or update if needed
                         colSpan={expandedGroups.riskAssessment ? 4 : 1} // Adjusted colspan
                       >
                         <div className="flex items-center justify-center">
@@ -1217,7 +1464,7 @@ const RiskTreatment = () => {
                       {/* Risk Revision column group (from rt_revision) */}
                       <th
                         className="border border-slate-200 bg-indigo-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-indigo-700 transition-colors duration-300"
-                        onClick={() => toggleGroup("riskRevision")} // Keep state key or update if needed
+                        onClick={() => handleToggleGroup("riskRevision")} // Keep state key or update if needed
                         colSpan={expandedGroups.riskRevision ? 7 : 1} // Adjusted colspan
                       >
                         <div className="flex items-center justify-center">
@@ -1229,7 +1476,7 @@ const RiskTreatment = () => {
                       {/* Risk Mitigation Plan column group (from rt_mitigation_plans) */}
                       <th
                         className="border border-slate-200 bg-green-600 text-white p-3.5 cursor-pointer font-semibold hover:bg-green-700 transition-colors duration-300"
-                        onClick={() => toggleGroup("mitigationPlan")} // Keep state key or update if needed
+                        onClick={() => handleToggleGroup("mitigationPlan")} // Keep state key or update if needed
                         colSpan={expandedGroups.mitigationPlan ? 8 : 1} // Adjusted colspan
                       >
                         <div className="flex items-center justify-center">
@@ -1336,8 +1583,8 @@ const RiskTreatment = () => {
                           key={risk.id}
                           className={
                             index % 2 === 0
-                              ? "bg-white hover:bg-indigo-50 transition-colors duration-150"
-                              : "bg-slate-50 hover:bg-indigo-50 transition-colors duration-150"
+                              ? "bg-white hover:bg-indigo-50 transition-colors duration-150 cursor-pointer"
+                              : "bg-slate-50 hover:bg-indigo-50 transition-colors duration-150 cursor-pointer"
                           }
                         >
                           {/* Action buttons - Link to openModal with type 'edit' or 'view' */}
@@ -1618,8 +1865,7 @@ const RiskTreatment = () => {
         </div>
       )}
 
-      {/* Treatment Plan Modal (Add/Edit/View) */}
-      {showModal && (
+      {showModal && modalType !== "excel" && (
         <div
           className="fixed inset-0 z-50 overflow-y-auto"
           aria-labelledby="modal-title"
@@ -1633,18 +1879,15 @@ const RiskTreatment = () => {
               aria-hidden="true"
               onClick={closeModal}
             ></div>
-
             {/* Modal panel - Use max-w-5xl for consistency */}
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
               <div className="bg-indigo-50 px-4 py-3 border-b border-gray-200">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">
                   {modalType === "edit"
                     ? "Edit Treatment Plan"
-                    : modalType === "excel"
-                      ? "Upload Excel Treatment Data"
-                      : modalType === "view"
-                        ? "View Treatment Plan"
-                        : "New Treatment Plan"}
+                    : modalType === "view"
+                      ? "View Treatment Plan"
+                      : "New Treatment Plan"}
                 </h3>
               </div>
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[80vh] overflow-y-auto">
@@ -1679,15 +1922,21 @@ const RiskTreatment = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Vulnerability Type
                             </label>
-                            <input
-                              type="text"
+                            <select
                               value={formData.vulnerability_type}
                               onChange={(e) =>
                                 handleFormChange(e, null, "vulnerability_type")
                               }
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              disabled={modalType === "view"}
-                            />
+                              disabled={modalType === "view" || loadingVulnerabilityTypes}
+                            >
+                              <option value="">Select vulnerability type</option>
+                              {vulnerabilityTypes.map((type, index) => (
+                                <option key={index} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                           <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1750,7 +1999,7 @@ const RiskTreatment = () => {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Department/BU
+                              Department/BU <span className="text-red-500">*</span>
                             </label>
                             <input
                               type="text"
@@ -2139,137 +2388,6 @@ const RiskTreatment = () => {
                       </div>
                     </form>
                   )}
-
-                {/* Form for uploading Excel */}
-                {modalType === "excel" && (
-                  <form className="space-y-6">
-                    {/* Download Template Section */}
-                    <div className="bg-blue-50 p-4 rounded-md mb-5">
-                      <div className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="w-5 h-5 text-blue-600"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                            />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-blue-800">
-                            Download Template
-                          </h3>
-                          <div className="mt-1 text-sm text-blue-700">
-                            <p>
-                              Please download and fill in the template below
-                              before submitting your treatment plan data.
-                            </p>
-                          </div>
-                          <div className="mt-3">
-                            <a
-                              href="/risk_treatment_template.xlsx"
-                              download
-                              className="inline-flex items-center px-3 py-2 border border-blue-300 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-4 h-4 mr-2"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                                />
-                              </svg>
-                              Download Treatment Plan Template
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Upload Section */}
-                    <div className="bg-white-50 p-6 rounded-lg border-2 border-dashed border-blue-300">
-                      <div className="text-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="mx-auto h-12 w-12 text-blue-500"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                          />
-                        </svg>
-                        <h4 className="mt-2 text-lg font-medium text-gray-900">
-                          Upload Excel File
-                        </h4>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Upload a .xlsx or .xls file with multiple treatment
-                          plans.
-                        </p>
-                        <div className="mt-6">
-                          <label
-                            htmlFor="file-upload"
-                            className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50"
-                          >
-                            <span>Select file</span>
-                            <input
-                              id="file-upload"
-                              name="file-upload"
-                              type="file"
-                              accept=".xlsx,.xls"
-                              className="sr-only"
-                              onChange={handleFileChange} // Ensure this uses the new function
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {excelFile && (
-                      <div className="mt-4 flex items-center justify-center text-sm">
-                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                          Selected: {excelFile.name}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Submit Buttons */}
-                    <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                      <button
-                        type="button"
-                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        onClick={closeModal}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                        onClick={handleExcelSubmit} // Use the new function
-                        disabled={!excelFile || isLoading} // Disable if no file or loading
-                      >
-                        {isLoading ? "Uploading..." : "Upload Treatment Data"}
-                      </button>
-                    </div>
-                  </form>
-                )}
               </div>
             </div>
           </div>
@@ -2287,6 +2405,21 @@ const RiskTreatment = () => {
         title={confirmModalProps.title}
         message={confirmModalProps.message}
       />
+
+      {/* Excel Upload Modal */}
+      <UnifiedUploadModal
+        isOpen={showModal && modalType === "excel"}
+        onClose={closeModal}
+        onSubmit={handleExcelSubmit}
+        isSubmitting={isLoading}
+        title="Upload Risk Treatment Excel"
+        reportName={selectedSheet?.name}
+        fileType="excel"
+        showDownloadTemplate={true}
+        reportType="risk_treatment"
+      />
+
+
     </>
   );
 };

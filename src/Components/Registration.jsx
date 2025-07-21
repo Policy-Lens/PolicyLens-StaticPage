@@ -25,7 +25,7 @@ const RegisterPage = () => {
         e.preventDefault();
         if (!validate()) return;
 
-        console.log("Sending data:", JSON.stringify(formData)); // Debugging: Check what's being sent
+    
 
         try {
             const response = await fetch("http://localhost:5000/register", {
@@ -36,7 +36,7 @@ const RegisterPage = () => {
             });
 
             const data = await response.json();
-            console.log("Server Response:", data); // Debugging: Check server response
+    
 
             if (response.ok) {
                 setMessage("Registration successful! Redirecting...");

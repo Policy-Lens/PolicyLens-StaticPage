@@ -1,12 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Edit, Trash2, Calendar, User, Users, Plus, Upload, Eye, UserPlus, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Edit, Trash2, Calendar, User, Users, Plus, Upload, Eye, UserPlus, X, FileText } from 'lucide-react';
 import { apiRequest } from '../../../../utils/api';
 import { message } from 'antd';
+import PropTypes from 'prop-types';
+import PDFTronViewer from '../../../FileViewer/PDFTronViewer';
+import ActivityLogs from './ActivityLogs';
+import { AuthContext } from '../../../../AuthContext';
+import { ProjectContext } from '../../../../Context/ProjectContext';
+import UnifiedUploadModal from './UnifiedUploadModal';
+import ConfirmationModal from './ConfirmationModal';
 
-const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
+
+
+
+// ConfirmationModal component is now imported from shared component
+
+const ReportsTable = ({ refreshTrigger, onRowClick, onReportDelete }) => {
     const { projectid } = useParams();
     const navigate = useNavigate();
+    const { reportType: urlReportType, reportId: urlReportId } = useParams();
+    const location = useLocation();
+    
+    // Context hooks - must be at the top level
+    const { user } = useContext(AuthContext);
+    const { projectRole } = useContext(ProjectContext);
+    
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -15,7 +34,7 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     // Create Report form states
     const [createReportOpen, setCreateReportOpen] = useState(false);
     const [reportName, setReportName] = useState('');
-    const [reportType, setReportType] = useState('Risk Assessment');
+    const [reportType, setReportType] = useState('');
     const [uploadedFile, setUploadedFile] = useState(null);
     const fileInputRef = useRef(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -36,8 +55,16 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     // New state for VAPT upload modal
     const [vaptUploadOpen, setVaptUploadOpen] = useState(false);
     const [selectedVaptReport, setSelectedVaptReport] = useState(null);
-    const [vaptExcelFile, setVaptExcelFile] = useState(null);
-    const [isUploadingVaptExcel, setIsUploadingVaptExcel] = useState(false);
+    const [vaptPdfFile, setVaptPdfFile] = useState(null);
+    const [isUploadingVaptPdf, setIsUploadingVaptPdf] = useState(false);
+
+    // New state for VAPT PDF viewer modal
+    const [vaptPdfViewerOpen, setVaptPdfViewerOpen] = useState(false);
+    const [selectedVaptPdfUrl, setSelectedVaptPdfUrl] = useState(null);
+    const [selectedVaptPdfName, setSelectedVaptPdfName] = useState(null);
+
+    // New refs for VAPT upload
+    const vaptPdfFileInputRef = useRef(null);
 
     // New state for ASIS upload modal
     const [asisUploadOpen, setAsisUploadOpen] = useState(false);
@@ -47,7 +74,6 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
 
     const excelFileInputRef = useRef(null);
     const treatmentExcelFileInputRef = useRef(null);
-    const vaptExcelFileInputRef = useRef(null);
     const asisExcelFileInputRef = useRef(null);
 
     // Assign Report Modal state
@@ -57,6 +83,36 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     const [selectedRepresentative, setSelectedRepresentative] = useState(null);
     const [selectedReports, setSelectedReports] = useState([]);
     const [isAssigning, setIsAssigning] = useState(false);
+
+    // 1. Add edit modal state
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editReport, setEditReport] = useState(null);
+    const [editName, setEditName] = useState("");
+    const [editFile, setEditFile] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editError, setEditError] = useState("");
+
+    // Activity Logs state
+    const [showLogs, setShowLogs] = useState(false);
+
+    // State for detailed log view modal
+    const [selectedLog, setSelectedLog] = useState(null);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+
+    // Add state for unassign confirmation modal
+    const [unassignModalOpen, setUnassignModalOpen] = useState(false);
+    const [reportToUnassign, setReportToUnassign] = useState(null);
+
+    // Refs for drag scrolling
+    const tableContainerRef = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+
+    // Add state for extracted data modal at the top of the component
+    // const [extractedData, setExtractedData] = useState([]);
+    // const [extractedType, setExtractedType] = useState("");
+    // const [extractedErrors, setExtractedErrors] = useState([]);
 
     // Define fetchReports outside useEffect to avoid duplication
     const fetchReports = async () => {
@@ -70,13 +126,9 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                 true
             );
 
-            console.log("Reports overview response:", response);
-
             if (response && response.data) {
                 // Process the API response to format the data correctly
                 const formattedReports = response.data.map(report => {
-                    // Log each report to debug
-                    console.log("Processing report:", report);
 
                     // Determine the appropriate report_tab based on the type
                     let reportTab;
@@ -101,18 +153,20 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                     const dateObj = new Date(report.created_at);
                     const formattedDate = dateObj.toLocaleDateString();
 
-                    // Extract creator and assignee names
-                    // If created_by or assigned_to are objects with name property, use that
-                    // Otherwise, use the ID or fallback to a default value
+                    // Extract creator and assignee names using *_details if available
                     const creatorName =
-                        typeof report.created_by === 'object' && report.created_by?.name
-                            ? report.created_by.name
-                            : report.created_by || 'Unknown';
+                        report.created_by_details && report.created_by_details.name
+                            ? report.created_by_details.name
+                            : (typeof report.created_by === 'object' && report.created_by?.name)
+                                ? report.created_by.name
+                                : report.created_by || 'Unknown';
 
                     const assigneeName =
-                        typeof report.assigned_to === 'object' && report.assigned_to?.name
-                            ? report.assigned_to.name
-                            : report.assigned_to || 'Unassigned';
+                        report.assigned_to_details && report.assigned_to_details.name
+                            ? report.assigned_to_details.name
+                            : (typeof report.assigned_to === 'object' && report.assigned_to?.name)
+                                ? report.assigned_to.name
+                                : report.assigned_to || 'Unassigned';
 
                     // Return formatted report object
                     return {
@@ -123,7 +177,10 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                         assigned_to: assigneeName,
                         updated_on: formattedDate,
                         report_tab: reportTab,
-                        project_id: report.project
+                        project_id: report.project,
+                        // Preserve original data for filtering
+                        assigned_to_details: report.assigned_to_details,
+                        created_by_details: report.created_by_details
                     };
                 });
 
@@ -156,12 +213,19 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
         }
     }, [refreshTrigger, projectid]);
 
+    useEffect(() => {
+        // If URL contains a report ID, auto-open that report
+        if (urlReportId && urlReportType && reports.length > 0) {
+            const report = reports.find(r => r.id.toString() === urlReportId && r.type.replace(/\s/g, '').toLowerCase() === urlReportType.toLowerCase());
+            if (report) {
+                handleView({ stopPropagation: () => {} }, report, true);
+            }
+        }
+    }, [urlReportId, urlReportType, reports]);
+
     // Handle navigation to report
     const navigateToReport = (reportId, reportTab, reportName) => {
         try {
-            // Ensure reportId is correctly passed
-            console.log(`Opening report with ID ${reportId} in tab ${reportTab}`);
-
             // Important: Check that reportId is a valid value
             if (!reportId) {
                 console.error("Invalid report ID for navigation:", reportId);
@@ -169,9 +233,9 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                 return;
             }
 
-            // If onReportOpen prop is provided, use it for multi-tab functionality
-            if (onReportOpen) {
-                onReportOpen({
+            // If onRowClick prop is provided, use it for multi-tab functionality
+            if (onRowClick) {
+                onRowClick({
                     id: reportId,
                     type: reportTab,
                     name: reportName,
@@ -189,14 +253,19 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
 
     // Handle view report
     const handleView = (e, report) => {
-        e.stopPropagation();
-        navigateToReport(report.id, report.report_tab, report.name);
+        e.stopPropagation && e.stopPropagation();
+        if (onRowClick) {
+            onRowClick(report);
+        } else {
+            // Fallback to navigation if onRowClick is not provided
+            const typeSlug = report.type.replace(/\s/g, '').toLowerCase();
+            navigate(`/project/${projectid}/myreports/${typeSlug}/${report.id}/extracted`);
+        }
     };
 
     // Handle edit report
     const handleEdit = (e, report) => {
         e.stopPropagation();
-        console.log('Edit report:', report);
         // Implement edit functionality here
     };
 
@@ -233,8 +302,8 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     };
 
     // Submit Risk Assessment Excel upload
-    const handleRiskAssessmentExcelSubmit = async () => {
-        if (!excelFile) {
+    const handleRiskAssessmentExcelSubmit = async (file) => {
+        if (!file) {
             message.error('Please select an Excel file');
             return;
         }
@@ -248,7 +317,7 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
 
         try {
             const formData = new FormData();
-            formData.append('file', excelFile);
+            formData.append('file', file);
 
             const response = await apiRequest(
                 'POST',
@@ -260,11 +329,12 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
             if (response.status === 200 || response.status === 201) {
                 message.success('Risk Assessment Excel file uploaded successfully');
                 setRiskAssessmentUploadOpen(false);
-                setExcelFile(null);
-                if (excelFileInputRef.current) {
-                    excelFileInputRef.current.value = '';
-                }
                 fetchReports(); // Refresh the reports list
+                // After successful Excel upload in handleRiskAssessmentExcelSubmit, handleRiskTreatmentExcelSubmit, handleAsisExcelSubmit:
+                // setExtractedData(response.data.risks || response.data.controls || []);
+                // setExtractedType('Risk Assessment'/'Risk Treatment'/'ASIS');
+                // setExtractedErrors(response.data.errors || []);
+                // setExtractedModalOpen(true);
             }
         } catch (error) {
             console.error('Error uploading Risk Assessment Excel:', error);
@@ -300,8 +370,8 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     };
 
     // Submit Risk Treatment Excel upload
-    const handleRiskTreatmentExcelSubmit = async () => {
-        if (!treatmentExcelFile) {
+    const handleRiskTreatmentExcelSubmit = async (file) => {
+        if (!file) {
             message.error('Please select an Excel file');
             return;
         }
@@ -315,7 +385,7 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
 
         try {
             const formData = new FormData();
-            formData.append('file', treatmentExcelFile);
+            formData.append('file', file);
 
             const response = await apiRequest(
                 'POST',
@@ -327,11 +397,12 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
             if (response.status === 200 || response.status === 201) {
                 message.success('Risk Treatment Excel file uploaded successfully');
                 setRiskTreatmentUploadOpen(false);
-                setTreatmentExcelFile(null);
-                if (treatmentExcelFileInputRef.current) {
-                    treatmentExcelFileInputRef.current.value = '';
-                }
                 fetchReports(); // Refresh the reports list
+                // After successful Excel upload in handleRiskAssessmentExcelSubmit, handleRiskTreatmentExcelSubmit, handleAsisExcelSubmit:
+                // setExtractedData(response.data.risks || response.data.controls || []);
+                // setExtractedType('Risk Assessment'/'Risk Treatment'/'ASIS');
+                // setExtractedErrors(response.data.errors || []);
+                // setExtractedModalOpen(true);
             }
         } catch (error) {
             console.error('Error uploading Risk Treatment Excel:', error);
@@ -341,35 +412,34 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
         }
     };
 
-    // Handle VAPT Excel upload
+    // Handle VAPT PDF upload
     const handleVaptUpload = (e, report) => {
         e.stopPropagation();
         setSelectedVaptReport(report);
         setVaptUploadOpen(true);
-        setVaptExcelFile(null);
+        setVaptPdfFile(null);
     };
 
-    // Handle Excel file selection for VAPT
-    const handleVaptExcelFileChange = (e) => {
+    // Handle PDF file selection for VAPT
+    const handleVaptPdfFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
             const allowedTypes = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.ms-excel'
+                'application/pdf'
             ];
             if (allowedTypes.includes(file.type)) {
-                setVaptExcelFile(file);
+                setVaptPdfFile(file);
             } else {
-                message.error('Please select a valid Excel file (.xlsx or .xls)');
+                message.error('Please select a valid PDF file (.pdf)');
                 e.target.value = '';
             }
         }
     };
 
-    // Submit VAPT Excel upload
-    const handleVaptExcelSubmit = async () => {
-        if (!vaptExcelFile) {
-            message.error('Please select an Excel file');
+    // Submit VAPT PDF upload
+    const handleVaptPdfSubmit = async (file) => {
+        if (!file) {
+            message.error('Please select a PDF file');
             return;
         }
 
@@ -378,33 +448,30 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
             return;
         }
 
-        setIsUploadingVaptExcel(true);
+        setIsUploadingVaptPdf(true);
 
         try {
             const formData = new FormData();
-            formData.append('file', vaptExcelFile);
+            formData.append('file', file);
 
             const response = await apiRequest(
-                'POST',
-                `/api/rarpt/vapt/${selectedVaptReport.id}/risks/create/`,
+                'PATCH',
+                `/api/rarpt/vapt/${selectedVaptReport.id}/update/`,
                 formData,
-                true
+                true,
+                true // Enable multipart/form-data
             );
 
-            if (response.status === 200 || response.status === 201) {
-                message.success('VAPT Excel file uploaded successfully');
+            if (response.status === 200) {
+                message.success('VAPT PDF file uploaded successfully');
                 setVaptUploadOpen(false);
-                setVaptExcelFile(null);
-                if (vaptExcelFileInputRef.current) {
-                    vaptExcelFileInputRef.current.value = '';
-                }
                 fetchReports(); // Refresh the reports list
             }
         } catch (error) {
-            console.error('Error uploading VAPT Excel:', error);
-            message.error('Failed to upload Excel file');
+            console.error('Error uploading VAPT PDF:', error);
+            message.error('Failed to upload PDF file');
         } finally {
-            setIsUploadingVaptExcel(false);
+            setIsUploadingVaptPdf(false);
         }
     };
 
@@ -434,8 +501,8 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     };
 
     // Submit ASIS Excel upload
-    const handleAsisExcelSubmit = async () => {
-        if (!asisExcelFile) {
+    const handleAsisExcelSubmit = async (file) => {
+        if (!file) {
             message.error('Please select an Excel file');
             return;
         }
@@ -449,11 +516,11 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
 
         try {
             const formData = new FormData();
-            formData.append('file', asisExcelFile);
+            formData.append('file', file);
 
             const response = await apiRequest(
                 'POST',
-                `/api/rarpt/asis-reports/${selectedAsisReport.id}/risks/create/`,
+                `/api/rarpt/asis-reports/${selectedAsisReport.id}/controls/create/`,
                 formData,
                 true
             );
@@ -461,11 +528,12 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
             if (response.status === 200 || response.status === 201) {
                 message.success('ASIS Report Excel file uploaded successfully');
                 setAsisUploadOpen(false);
-                setAsisExcelFile(null);
-                if (asisExcelFileInputRef.current) {
-                    asisExcelFileInputRef.current.value = '';
-                }
                 fetchReports(); // Refresh the reports list
+                // After successful Excel upload in handleRiskAssessmentExcelSubmit, handleRiskTreatmentExcelSubmit, handleAsisExcelSubmit:
+                // setExtractedData(response.data.risks || response.data.controls || []);
+                // setExtractedType('Risk Assessment'/'Risk Treatment'/'ASIS');
+                // setExtractedErrors(response.data.errors || []);
+                // setExtractedModalOpen(true);
             }
         } catch (error) {
             console.error('Error uploading ASIS Excel:', error);
@@ -475,45 +543,36 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
         }
     };
 
-    // Handle delete report - use specific API endpoints based on report type
+    // 2. Fix delete logic
     const handleDelete = async () => {
         if (!reportToDelete) return;
-
         try {
-            // Use the appropriate API endpoint based on report type
             let deleteEndpoint;
             switch (reportToDelete.type) {
                 case 'Risk Assessment':
-                    deleteEndpoint = `/api/rarpt/assessment-risks/${reportToDelete.id}/`;
+                    deleteEndpoint = `/api/rarpt/assessment-sheets/${reportToDelete.id}/`;
                     break;
                 case 'Risk Treatment':
-                    deleteEndpoint = `/api/rarpt/assessment-risks/${reportToDelete.id}/`; // Same as Risk Assessment
+                    deleteEndpoint = `/api/rarpt/treatment-sheets/${reportToDelete.id}/`;
                     break;
                 case 'VAPT':
                     deleteEndpoint = `/api/rarpt/vapt/${reportToDelete.id}/delete/`;
                     break;
-                case 'ASIS Report':
                 case 'ASIS':
                     deleteEndpoint = `/api/rarpt/asis-reports/${reportToDelete.id}/`;
                     break;
                 default:
-                    // Fallback to generic sheets endpoint
                     deleteEndpoint = `/api/rarpt/sheets/${reportToDelete.id}/`;
             }
-
-            // Call the API to delete the report
-            await apiRequest(
-                'DELETE',
-                deleteEndpoint,
-                null,
-                true
-            );
-
-            // Update local state after successful delete
-            setReports(reports.filter(report => report.id !== reportToDelete.id));
+            await apiRequest('DELETE', deleteEndpoint, null, true);
+            setReports(reports.filter(r => r.id !== reportToDelete.id));
             message.success('Report deleted successfully');
+            
+            // Close the corresponding tab if it's open
+            if (onReportDelete) {
+                onReportDelete(reportToDelete);
+            }
         } catch (error) {
-            console.error('Error deleting report:', error);
             message.error('Failed to delete report');
         } finally {
             setDeleteModalOpen(false);
@@ -522,30 +581,30 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     };
 
     // Create new report
-    const handleCreateReport = async () => {
-        if (!reportName.trim()) {
+    const handleCreateReport = async (name, type, file) => {
+        if (!name.trim()) {
             message.warning('Please enter a report name');
             return;
         }
 
         // Require file upload only for VAPT type
-        if (reportType === 'VAPT' && !uploadedFile) {
+        if (type === 'VAPT' && !file) {
             message.warning(`Please upload a file for VAPT reports`);
             return;
         }
 
-        try {
             setIsUploading(true);
             setErrorMessage('');
+        try {
             let endpoint;
             let payload;
             let formData = null;
 
             // Use specific endpoints based on report type
-            if (reportType === 'Risk Assessment') {
+            if (type === 'Risk Assessment') {
                 endpoint = `/api/rarpt/project/${projectid}/assessment-sheets/create/`;
                 payload = {
-                    name: reportName.trim()
+                    name: name.trim()
                 };
 
                 const response = await apiRequest(
@@ -565,11 +624,11 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                     }
                     fetchReports(); // Refresh list
                 }
-            } else if (reportType === 'Risk Treatment') {
+            } else if (type === 'Risk Treatment') {
                 // Use the Risk Treatment API endpoint
                 endpoint = `/api/rarpt/project/${projectid}/treatment-sheets/create/`;
                 payload = {
-                    name: reportName.trim()
+                    name: name.trim()
                 };
 
                 const response = await apiRequest(
@@ -589,12 +648,12 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                     }
                     fetchReports(); // Refresh list
                 }
-            } else if (reportType === 'VAPT') {
+            } else if (type === 'VAPT') {
                 // Use the VAPT API endpoint
                 endpoint = `/api/rarpt/project/${projectid}/vapt/create/`;
                 formData = new FormData();
-                formData.append('name', reportName.trim());
-                formData.append('file', uploadedFile);
+                formData.append('name', name.trim());
+                formData.append('file', file);
                 formData.append('project', projectid);
 
                 // We're getting token from Cookies, not localStorage as in the sample
@@ -618,11 +677,11 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                     }
                     fetchReports(); // Refresh list
                 }
-            } else if (reportType === 'ASIS') {
+            } else if (type === 'ASIS' || type === 'ASIS Report') {
                 // Use the ASIS Report API endpoint
                 endpoint = `/api/rarpt/project/${projectid}/asis-reports/create/`;
                 payload = {
-                    name: reportName.trim()
+                    name: name.trim()
                 };
 
                 const response = await apiRequest(
@@ -646,8 +705,8 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                 // Use standard endpoint for other report types
                 endpoint = `/api/rarpt/project/${projectid}/sheets/`;
                 payload = {
-                    name: reportName.trim(),
-                    type: reportType,
+                    name: name.trim(),
+                    type: type,
                     project: projectid
                 };
 
@@ -673,6 +732,7 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
             console.error('Error creating report:', error);
             setErrorMessage(error.message || 'Failed to create report');
             message.error('Failed to create report');
+        } finally {
             setIsUploading(false);
         }
     };
@@ -696,33 +756,7 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
     // Function to open the assign report modal
     const openAssignReportModal = async () => {
         setIsAssignReportModalOpen(true);
-        fetchCompanyRepresentatives();
-    };
-
-    // Function to fetch company representatives for assignment (static data)
-    const fetchCompanyRepresentatives = async () => {
-        // Static data - no API calls
-        const staticRepresentatives = [
-            {
-                id: 1,
-                name: "Company 1 Representative 2",
-                email: "com1c2@test.com"
-            },
-            {
-                id: 2,
-                name: "Company Representative",
-                email: "com1c1@test.com"
-            },
-            {
-                id: 3,
-                name: "Company 1 Representative 3",
-                email: "com1c3@test.com"
-            }
-        ];
-
-        // Simulate loading delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setCompanyRepresentatives(staticRepresentatives);
+        // No need to call fetchCompanyRepresentatives - project team is already loaded via useEffect
     };
 
     // Handle assign reports
@@ -740,14 +774,48 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
 
         setIsAssigning(true);
         try {
-            // This is a static implementation - no actual API call
-            // In a real implementation, you would make an API call here
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            // Make real API calls for each selected report
+            const assignPromises = selectedReports.map(async (reportId) => {
+                const report = reports.find((r) => r.id === reportId);
+                if (!report) return;
 
-            message.success(`Successfully assigned ${selectedReports.length} report(s)`);
-            setIsAssignReportModalOpen(false);
-            setSelectedReports([]);
-            setSelectedRepresentative(null);
+                let endpoint;
+                switch (report.type) {
+                    case 'Risk Assessment':
+                        endpoint = `/api/rarpt/assessment-sheets/${reportId}/assign/`;
+                        break;
+                    case 'Risk Treatment':
+                        endpoint = `/api/rarpt/treatment-sheets/${reportId}/assign/`;
+                        break;
+                    case 'VAPT':
+                        endpoint = `/api/rarpt/vapt/${reportId}/assign/`;
+                        break;
+                    case 'ASIS':
+                    case 'ASIS Report':
+                        endpoint = `/api/rarpt/asis-reports/${reportId}/assign/`;
+                        break;
+                    default:
+                        return;
+                }
+
+                const payload = { assigned_to: selectedRepresentative };
+                const response = await apiRequest('POST', endpoint, payload, true);
+                if (response.status !== 200 && response.status !== 201) {
+                    throw new Error(`Failed to assign report ${reportId}: ${response.statusText}`);
+                }
+                return response;
+            });
+
+            const results = await Promise.all(assignPromises);
+            if (results.every(r => r && (r.status === 200 || r.status === 201))) {
+                message.success('Reports assigned successfully');
+                setIsAssignReportModalOpen(false);
+                setSelectedReports([]);
+                setSelectedRepresentative(null);
+                fetchReports(); // Refresh to reflect assignment
+            } else {
+                throw new Error('One or more assignments failed');
+            }
         } catch (error) {
             console.error("Error assigning reports:", error);
             message.error("Failed to assign reports");
@@ -761,848 +829,593 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
         return reports.filter(report => report.assigned_to === 'Unassigned');
     };
 
-    // Simple delete confirmation modal
-    const DeleteConfirmationModal = () => {
-        if (!deleteModalOpen) return null;
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-                    <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
-                    <p className="mb-6">Are you sure you want to delete the report "{reportToDelete?.name}"? This action cannot be undone.</p>
-                    <div className="flex justify-end space-x-3">
-                        <button
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => setDeleteModalOpen(false)}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                            onClick={handleDelete}
-                        >
-                            Delete
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
+    // 3. Edit modal logic
+    const openEditModal = (report) => {
+        setEditReport(report);
+        setEditName(report.name);
+        setEditFile(null);
+        setEditError("");
+        setEditModalOpen(true);
+    };
+    const closeEditModal = () => {
+        setEditModalOpen(false);
+        setEditReport(null);
+        setEditName("");
+        setEditFile(null);
+        setEditError("");
+    };
+    const handleEditFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) setEditFile(file);
+    };
+    const handleEditSubmit = async (name, file) => {
+        if (!editReport) return;
+        setIsEditing(true);
+        setEditError("");
+        try {
+            let endpoint, payload, method = 'PUT', isVapt = false;
+            switch (editReport.type) {
+                case 'Risk Assessment':
+                    endpoint = `/api/rarpt/assessment-sheets/${editReport.id}/`;
+                    payload = { name };
+                    break;
+                case 'Risk Treatment':
+                    endpoint = `/api/rarpt/treatment-sheets/${editReport.id}/`;
+                    payload = { name };
+                    break;
+                case 'VAPT':
+                    endpoint = `/api/rarpt/vapt/${editReport.id}/update/`;
+                    method = 'PATCH';
+                    isVapt = true;
+                    break;
+                case 'ASIS':
+                    endpoint = `/api/rarpt/asis-reports/${editReport.id}/`;
+                    payload = { name };
+                    break;
+                default:
+                    endpoint = `/api/rarpt/sheets/${editReport.id}/`;
+                    payload = { name };
+            }
+            let response;
+            if (isVapt) {
+                const formData = new FormData();
+                formData.append('name', name);
+                if (file) formData.append('file', file);
+                response = await apiRequest(method, endpoint, formData, true, true);
+            } else {
+                response = await apiRequest(method, endpoint, payload, true);
+            }
+            if (response && response.data) {
+                setReports(reports.map(r => r.id === editReport.id ? { ...r, name } : r));
+                message.success('Report updated successfully');
+                closeEditModal();
+                fetchReports();
+            } else {
+                setEditError('Failed to update report');
+            }
+        } catch (error) {
+            setEditError('Failed to update report');
+        } finally {
+            setIsEditing(false);
+        }
     };
 
-    // Create report modal component
-    const CreateReportModal = () => {
-        if (!createReportOpen) return null;
+    // 4. Add Edit button to table
 
-        // Use local state for form inputs to prevent focus loss
-        const [localReportName, setLocalReportName] = useState(reportName);
-        const [localReportType, setLocalReportType] = useState(reportType);
-        const [localIsUploading, setLocalIsUploading] = useState(isUploading);
 
-        // Update local state when parent state changes
+    // Add openCreateReportModal
+    const openCreateReportModal = () => {
+        setCreateReportOpen(true);
+        setIsUploading(false);
+        setErrorMessage('');
+        setUploadedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // Add the new ExtractedDataModal component at the bottom of the file, before return:
+    const riskAssessmentFields = [
+      { key: 'risk_id', label: 'Risk ID', group: 'gray' },
+      { key: 'vulnerability_type', label: 'Vulnerability Type', group: 'gray' },
+      { key: 'threat_description', label: 'Threat Description', group: 'gray' },
+      { key: 'context', label: 'Context', group: 'gray' },
+      { key: 'applicable_activity', label: 'Applicable Activity', group: 'gray' },
+      { key: 'impact_confidentiality', label: 'Impact on Confidentiality (Y/N)', group: 'blue' },
+      { key: 'impact_integrity', label: 'Impact on Integrity (Y/N)', group: 'blue' },
+      { key: 'impact_availability', label: 'Impact on Availability (Y/N)', group: 'blue' },
+      { key: 'breach_legal', label: 'Breach of legal obligation (Y/N)', group: 'blue' },
+      { key: 'impact_customer', label: 'On customer', group: 'blue' },
+      { key: 'impact_operating', label: 'On operating capability', group: 'blue' },
+      { key: 'impact_financial', label: 'Financial damage', group: 'blue' },
+      { key: 'impact_severity', label: 'Severity / Magnitude', group: 'blue' },
+      { key: 'consequence_rating', label: 'Consequence rating', group: 'orange' },
+      { key: 'likelihood_rating', label: 'Likelihood rating', group: 'orange' },
+      { key: 'existing_control_desc', label: 'Description', group: 'yellow' },
+      { key: 'existing_control_rating', label: 'Rating', group: 'yellow' },
+      { key: 'risk_rating', label: 'Risk Rating', group: 'black' },
+      { key: 'risk_category', label: 'Risk Category', group: 'black' },
+      { key: 'department', label: 'Department', group: 'black' },
+      { key: 'risk_owner', label: 'Risk Owner', group: 'black' },
+      { key: 'risk_mitigation_strategy', label: 'Risk Mitigation Strategy', group: 'black' },
+      { key: 'applicable_saf_control', label: 'Applicable Saf Control', group: 'blue2' },
+      { key: 'saf_control_desc', label: 'Saf Control Description', group: 'blue2' },
+      { key: 'meets_legal', label: 'Meets all relevant controls meet legal/other requirements? (Y/N)', group: 'blue2' },
+      { key: 'revised_control_rating', label: 'Revised control rating', group: 'blue2' },
+      { key: 'residual_risk_acceptable', label: 'Residual risk Acceptable to risk owner? (Y/N)', group: 'blue2' },
+      { key: 'further_planned_action', label: 'Further Planned action', group: 'green' },
+      { key: 'task_id', label: 'Task ID', group: 'green' },
+      { key: 'task_description', label: 'Task Description', group: 'green' },
+      { key: 'task_owner', label: 'Task Owner', group: 'green' },
+      { key: 'ongoing_task', label: 'Ongoing task? (Y/N)', group: 'green' },
+      { key: 'planned_completion_date', label: 'If not ongoing, planned completion date', group: 'green' },
+      { key: 'recurrent_task', label: 'Recurrent task? (Y/N)', group: 'green' },
+      { key: 'recurrent_frequency', label: 'If yes, frequency', group: 'green' },
+    ];
+
+    const groupColors = {
+      gray: 'bg-gray-200 text-gray-800',
+      blue: 'bg-blue-100 text-blue-800',
+      blue2: 'bg-blue-300 text-blue-900',
+      orange: 'bg-orange-100 text-orange-800',
+      yellow: 'bg-yellow-100 text-yellow-800',
+      green: 'bg-green-100 text-green-800',
+      black: 'bg-black text-white',
+    };
+
+    // Remove ExtractedDataModal, DetailedViewModal, and all usages for extracted data
+    // Ensure only navigation to /extracted is used for viewing extracted data
+
+    // Add this handler function
+    // const handleRowView = async (report) => {
+    //     try {
+    //         // For VAPT reports, show PDF viewer if file exists
+    //         if (report.type === 'VAPT') {
+    //             const response = await apiRequest(
+    //                 'GET',
+    //                 `/api/rarpt/vapt/${report.id}/`,
+    //                 null,
+    //                 true
+    //             );
+
+    //             if (response && response.data && response.data.file) {
+    //                 setSelectedVaptPdfUrl(response.data.file);
+    //                 setSelectedVaptPdfName(response.data.name);
+    //                 setVaptPdfViewerOpen(true);
+    //             } else {
+    //                 message.warning('No PDF file available for this VAPT report');
+    //             }
+    //             return;
+    //         }
+
+    //         // For other report types, fetch extracted data and show modal
+    //         let endpoint;
+    //         switch (report.type) {
+    //             case 'Risk Assessment':
+    //                 endpoint = `/api/rarpt/assessment-sheets/${report.id}/risks/`;
+    //                 break;
+    //             case 'Risk Treatment':
+    //                 endpoint = `/api/rarpt/treatment-sheets/${report.id}/risks/`;
+    //                 break;
+    //             case 'ASIS':
+    //                 endpoint = `/api/rarpt/asis-reports/${report.id}/controls/`;
+    //                 break;
+    //             default:
+    //                 endpoint = `/api/rarpt/sheets/${report.id}/data/`;
+    //         }
+
+    //         const response = await apiRequest('GET', endpoint, null, true);
+
+    //         if (response && response.data) {
+    //             setExtractedData(response.data.risks || response.data.controls || response.data || []);
+    //             setExtractedType(report.type);
+    //             setExtractedErrors(response.data.errors || []);
+    //             // setExtractedModalOpen(true); // This line is removed
+    //         } else {
+    //             message.info('No data available for this report');
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching report data:', error);
+    //         message.error('Failed to load report data');
+    //     }
+    // };
+
+    // Add Create Report Modal Component
+    const CreateReportModal = ({ isOpen, onClose, onSubmit, isSubmitting, error }) => {
+      const [localReportName, setLocalReportName] = useState('');
+      const [localReportType, setLocalReportType] = useState('');
+      const [localUploadedFile, setLocalUploadedFile] = useState(null);
+
         useEffect(() => {
-            setLocalReportName(reportName);
-            setLocalReportType(reportType);
-            setLocalIsUploading(isUploading);
-        }, [reportName, reportType, isUploading]);
+        if (isOpen) {
+          setLocalReportName('');
+          setLocalReportType('');
+          setLocalUploadedFile(null);
+        }
+      }, [isOpen]);
 
-        // Handle local submit that uses the local state values
+      const handleLocalFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) setLocalUploadedFile(file);
+      };
+
         const handleLocalSubmit = () => {
-            // Update parent state with local values
-            setReportName(localReportName);
-            setReportType(localReportType);
-            // Call the actual submit function
-            handleCreateReport();
-        };
+        if (!localReportType) {
+          // Show error or prevent submission
+          return;
+        }
+        onSubmit(localReportName, localReportType, localUploadedFile);
+      };
+
+      if (!isOpen) return null;
 
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
                     <h3 className="text-lg font-semibold mb-4">Create New Report</h3>
-
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Report Name</label>
                         <input
                             type="text"
                             value={localReportName}
-                            onChange={(e) => setLocalReportName(e.target.value)}
+                onChange={e => setLocalReportName(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting}
                             placeholder="Enter report name"
                         />
                     </div>
-
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
                         <select
                             value={localReportType}
-                            onChange={(e) => setLocalReportType(e.target.value)}
+                onChange={e => setLocalReportType(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting}
                         >
+                            <option value="">Select report type</option>
                             <option value="Risk Assessment">Risk Assessment</option>
                             <option value="Risk Treatment">Risk Treatment</option>
                             <option value="VAPT">VAPT</option>
-                            <option value="ASIS">ASIS Report</option>
+                <option value="ASIS">ASIS</option>
                         </select>
                     </div>
-
                     {localReportType === 'VAPT' && (
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Upload File <span className="text-red-500">*</span>
-                            </label>
-                            <div className="flex items-center justify-center w-full">
-                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                                        <p className="mb-2 text-sm text-gray-500">
-                                            <span className="font-semibold">Click to upload</span> or drag and drop
-                                        </p>
-                                        <p className="text-xs text-gray-500">Accepted file types: PDF, DOC, DOCX, XLS, XLSX, ZIP, RAR</p>
-                                    </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Upload File (optional)</label>
                                     <input
-                                        ref={fileInputRef}
                                         type="file"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar"
-                                        required={localReportType === 'VAPT'}
-                                    />
-                                </label>
-                            </div>
-                            {uploadedFile && (
-                                <div className="mt-2 text-sm text-green-600 flex items-center">
-                                    <div className="mr-2">✓</div>
-                                    <div>File selected: {uploadedFile.name}</div>
+                  onChange={handleLocalFileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  accept=".pdf,.doc,.docx"
+                />
                                 </div>
                             )}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
                         </div>
                     )}
-
                     <div className="flex justify-end space-x-3">
                         <button
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => {
-                                setCreateReportOpen(false);
-                                setUploadedFile(null);
-                                setErrorMessage('');
-                                if (fileInputRef.current) {
-                                    fileInputRef.current.value = '';
-                                }
-                            }}
-                            disabled={localIsUploading}
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting}
                         >
                             Cancel
                         </button>
                         <button
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
                             onClick={handleLocalSubmit}
-                            disabled={localIsUploading}
-                        >
-                            {localIsUploading ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Uploading...
-                                </>
-                            ) : 'Create'}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting || !localReportName.trim() || !localReportType}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Report'}
                         </button>
                     </div>
-
-                    {errorMessage && (
-                        <div className="mt-4 text-sm text-red-600 p-2 bg-red-50 rounded-md">
-                            {errorMessage}
-                        </div>
-                    )}
                 </div>
             </div>
         );
     };
 
-    // Risk Assessment Excel Upload Modal
-    const RiskAssessmentUploadModal = () => {
-        if (!riskAssessmentUploadOpen) return null;
+    CreateReportModal.propTypes = {
+      isOpen: PropTypes.bool.isRequired,
+      onClose: PropTypes.func.isRequired,
+      onSubmit: PropTypes.func.isRequired,
+      isSubmitting: PropTypes.bool.isRequired,
+      error: PropTypes.string,
+    };
+
+    // UploadModal component removed - using UnifiedUploadModal instead
+
+    // Fix the EditReportModal to be a proper component
+    const EditReportModal = ({ isOpen, onClose, report, onSubmit, isSubmitting, error }) => {
+      const [localEditName, setLocalEditName] = useState('');
+      const [localEditFile, setLocalEditFile] = useState(null);
+
+      useEffect(() => {
+        if (report) {
+          setLocalEditName(report.name);
+          setLocalEditFile(null);
+        }
+      }, [report]);
+
+      const handleLocalEditFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) setLocalEditFile(file);
+      };
+
+      const handleLocalEditSubmit = () => {
+        onSubmit(localEditName, localEditFile);
+      };
+
+      if (!isOpen || !report) return null;
 
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h3 className="text-lg font-medium text-gray-900">
-                            Upload Risk Assessment Excel
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Upload Excel file for: <span className="font-medium">{selectedRiskReport?.name}</span>
-                        </p>
-                    </div>
-                    <div className="p-6">
-                        <div className="space-y-4">
-                            {/* Template Download Section */}
-                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                <div className="flex items-start">
-                                    <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <h4 className="text-sm font-medium text-blue-800">Download Template</h4>
-                                        <p className="mt-1 text-sm text-blue-600">
-                                            Download the Risk Assessment template before uploading your data.
-                                        </p>
-                                        <div className="mt-2">
-                                            <a
-                                                href="/risk_assessment_template.xlsx"
-                                                download="risk_assessment_template.xlsx"
-                                                className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50"
-                                            >
-                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                Download Template
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* File Upload Section */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Select Excel File
-                                </label>
-                                <div className="flex items-center justify-center w-full">
-                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                                            <p className="mb-2 text-sm text-gray-500">
-                                                <span className="font-semibold">Click to upload</span> or drag and drop
-                                            </p>
-                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
-                                        </div>
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Edit Report</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Report Name</label>
                                         <input
-                                            ref={excelFileInputRef}
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleExcelFileChange}
-                                            accept=".xlsx,.xls"
-                                        />
-                                    </label>
+                type="text"
+                value={localEditName}
+                onChange={e => setLocalEditName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting}
+              />
                                 </div>
-                                {excelFile && (
-                                    <div className="mt-2 text-sm text-green-600 flex items-center">
-                                        <div className="mr-2">✓</div>
-                                        <div>File selected: {excelFile.name}</div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => {
-                                setRiskAssessmentUploadOpen(false);
-                                setExcelFile(null);
-                                if (excelFileInputRef.current) {
-                                    excelFileInputRef.current.value = '';
-                                }
-                            }}
-                            disabled={isUploadingExcel}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-                            onClick={handleRiskAssessmentExcelSubmit}
-                            disabled={!excelFile || isUploadingExcel}
-                        >
-                            {isUploadingExcel ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Uploading...
-                                </>
-                            ) : 'Upload Excel'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // Risk Treatment Excel Upload Modal
-    const RiskTreatmentUploadModal = () => {
-        if (!riskTreatmentUploadOpen) return null;
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h3 className="text-lg font-medium text-gray-900">
-                            Upload Risk Treatment Excel
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Upload Excel file for: <span className="font-medium">{selectedTreatmentReport?.name}</span>
-                        </p>
-                    </div>
-                    <div className="p-6">
-                        <div className="space-y-4">
-                            {/* Template Download Section */}
-                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                <div className="flex items-start">
-                                    <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <h4 className="text-sm font-medium text-blue-800">Download Template</h4>
-                                        <p className="mt-1 text-sm text-blue-600">
-                                            Download the Risk Treatment template before uploading your data.
-                                        </p>
-                                        <div className="mt-2">
-                                            <a
-                                                href="/risk_treatment_template.xlsx"
-                                                download="risk_treatment_template.xlsx"
-                                                className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50"
-                                            >
-                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                Download Template
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* File Upload Section */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Select Excel File
-                                </label>
-                                <div className="flex items-center justify-center w-full">
-                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                                            <p className="mb-2 text-sm text-gray-500">
-                                                <span className="font-semibold">Click to upload</span> or drag and drop
-                                            </p>
-                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
-                                        </div>
-                                        <input
-                                            ref={treatmentExcelFileInputRef}
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleTreatmentExcelFileChange}
-                                            accept=".xlsx,.xls"
-                                        />
-                                    </label>
-                                </div>
-                                {treatmentExcelFile && (
-                                    <div className="mt-2 text-sm text-green-600 flex items-center">
-                                        <div className="mr-2">✓</div>
-                                        <div>File selected: {treatmentExcelFile.name}</div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => {
-                                setRiskTreatmentUploadOpen(false);
-                                setTreatmentExcelFile(null);
-                                if (treatmentExcelFileInputRef.current) {
-                                    treatmentExcelFileInputRef.current.value = '';
-                                }
-                            }}
-                            disabled={isUploadingTreatmentExcel}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-                            onClick={handleRiskTreatmentExcelSubmit}
-                            disabled={!treatmentExcelFile || isUploadingTreatmentExcel}
-                        >
-                            {isUploadingTreatmentExcel ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Uploading...
-                                </>
-                            ) : 'Upload Excel'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // VAPT Excel Upload Modal
-    const VaptUploadModal = () => {
-        if (!vaptUploadOpen) return null;
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h3 className="text-lg font-medium text-gray-900">
-                            Upload VAPT Excel
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Upload Excel file for: <span className="font-medium">{selectedVaptReport?.name}</span>
-                        </p>
-                    </div>
-                    <div className="p-6">
-                        <div className="space-y-4">
-                            {/* File Upload Section - No template for VAPT */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Select Excel File
-                                </label>
-                                <div className="flex items-center justify-center w-full">
-                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                                            <p className="mb-2 text-sm text-gray-500">
-                                                <span className="font-semibold">Click to upload</span> or drag and drop
-                                            </p>
-                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
-                                        </div>
-                                        <input
-                                            ref={vaptExcelFileInputRef}
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleVaptExcelFileChange}
-                                            accept=".xlsx,.xls"
-                                        />
-                                    </label>
-                                </div>
-                                {vaptExcelFile && (
-                                    <div className="mt-2 text-sm text-green-600 flex items-center">
-                                        <div className="mr-2">✓</div>
-                                        <div>File selected: {vaptExcelFile.name}</div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => {
-                                setVaptUploadOpen(false);
-                                setVaptExcelFile(null);
-                                if (vaptExcelFileInputRef.current) {
-                                    vaptExcelFileInputRef.current.value = '';
-                                }
-                            }}
-                            disabled={isUploadingVaptExcel}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-                            onClick={handleVaptExcelSubmit}
-                            disabled={!vaptExcelFile || isUploadingVaptExcel}
-                        >
-                            {isUploadingVaptExcel ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Uploading...
-                                </>
-                            ) : 'Upload Excel'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // ASIS Excel Upload Modal
-    const AsisUploadModal = () => {
-        if (!asisUploadOpen) return null;
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h3 className="text-lg font-medium text-gray-900">
-                            Upload ASIS Report Excel
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Upload Excel file for: <span className="font-medium">{selectedAsisReport?.name}</span>
-                        </p>
-                    </div>
-                    <div className="p-6">
-                        <div className="space-y-4">
-                            {/* Template Download Section */}
-                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                <div className="flex items-start">
-                                    <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <h4 className="text-sm font-medium text-blue-800">Download Template</h4>
-                                        <p className="mt-1 text-sm text-blue-600">
-                                            Download the ASIS Report template before uploading your data.
-                                        </p>
-                                        <div className="mt-2">
-                                            <a
-                                                href="/asis_report_template.xlsx"
-                                                download="asis_report_template.xlsx"
-                                                className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50"
-                                            >
-                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                Download Template
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* File Upload Section */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Select Excel File
-                                </label>
-                                <div className="flex items-center justify-center w-full">
-                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                                            <p className="mb-2 text-sm text-gray-500">
-                                                <span className="font-semibold">Click to upload</span> or drag and drop
-                                            </p>
-                                            <p className="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
-                                        </div>
-                                        <input
-                                            ref={asisExcelFileInputRef}
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleAsisExcelFileChange}
-                                            accept=".xlsx,.xls"
-                                        />
-                                    </label>
-                                </div>
-                                {asisExcelFile && (
-                                    <div className="mt-2 text-sm text-green-600 flex items-center">
-                                        <div className="mr-2">✓</div>
-                                        <div>File selected: {asisExcelFile.name}</div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => {
-                                setAsisUploadOpen(false);
-                                setAsisExcelFile(null);
-                                if (asisExcelFileInputRef.current) {
-                                    asisExcelFileInputRef.current.value = '';
-                                }
-                            }}
-                            disabled={isUploadingAsisExcel}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-                            onClick={handleAsisExcelSubmit}
-                            disabled={!asisExcelFile || isUploadingAsisExcel}
-                        >
-                            {isUploadingAsisExcel ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Uploading...
-                                </>
-                            ) : 'Upload Excel'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // Assign Report Modal
-    const AssignReportModal = () => {
-        if (!isAssignReportModalOpen) return null;
-
-        const unassignedReports = getUnassignedReports();
-
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-                    {/* Modal Header */}
-                    <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
-                        <h2 className="text-lg font-semibold text-slate-800">
-                            Assign Reports
-                        </h2>
-                        <button
-                            className="p-1 hover:bg-slate-100 rounded-full transition-colors"
-                            onClick={() => setIsAssignReportModalOpen(false)}
-                        >
-                            <X size={20} className="text-slate-500" />
-                        </button>
-                    </div>
-
-                    {/* Modal Body */}
-                    <div className="flex flex-col flex-1 overflow-hidden">
-                        {/* Assignment Method Selector */}
-                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-                            <label className="text-sm font-medium text-slate-700 mb-2 block">
-                                Assignment Method
-                            </label>
-                            <div className="flex gap-3">
-                                <button
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "specific"
-                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                                        }`}
-                                    onClick={() => setAssignmentMethod("specific")}
-                                >
-                                    <span>Specific Assignment</span>
-                                </button>
-                                <button
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "random"
-                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                                        }`}
-                                    onClick={() => setAssignmentMethod("random")}
-                                >
-                                    <span>Random Assignment</span>
-                                </button>
-                                <button
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${assignmentMethod === "sequential"
-                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                                        }`}
-                                    onClick={() => setAssignmentMethod("sequential")}
-                                >
-                                    <span>Sequential Assignment</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Content based on assignment method */}
-                        {assignmentMethod === "specific" ? (
-                            <div className="flex flex-1 overflow-hidden">
-                                {/* Representative Selection */}
-                                <div className="w-1/3 border-r border-slate-200 p-4 overflow-auto">
-                                    <label className="text-sm font-medium text-slate-700 mb-2 block">
-                                        Select Representative
-                                    </label>
-                                    <div className="space-y-2">
-                                        {companyRepresentatives.map((rep) => (
-                                            <div
-                                                key={rep.id}
-                                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedRepresentative?.id === rep.id
-                                                    ? "border-indigo-300 bg-indigo-50"
-                                                    : "border-slate-200 hover:border-slate-300"
-                                                    }`}
-                                                onClick={() => setSelectedRepresentative(rep)}
-                                            >
-                                                <div className="flex items-center">
-                                                    <div className="h-8 w-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                                                        <User size={14} />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="text-sm font-medium text-slate-900">
-                                                            {rep.name}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500">
-                                                            {rep.email}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Reports Selection */}
-                                <div className="flex-1 overflow-auto p-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <label className="text-sm font-medium text-slate-700">
-                                            Select Reports to Assign
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-slate-500">
-                                                {selectedReports.length} of{" "}
-                                                {unassignedReports.length} selected
-                                            </span>
-                                            {selectedReports.length > 0 && (
-                                                <button
-                                                    className="text-xs text-indigo-600 hover:text-indigo-800"
-                                                    onClick={() => setSelectedReports([])}
-                                                >
-                                                    Clear Selection
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {unassignedReports.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                                            <Users size={48} className="mb-4" />
-                                            <p className="text-lg font-medium mb-2">No unassigned reports found</p>
-                                            <p className="text-sm">All reports have been assigned</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {unassignedReports.map((report) => (
-                                                <div
-                                                    key={report.id}
-                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReports.includes(report.id)
-                                                        ? "border-indigo-300 bg-indigo-50"
-                                                        : "border-slate-200 hover:border-slate-300"
-                                                        }`}
-                                                    onClick={() => {
-                                                        setSelectedReports(prev =>
-                                                            prev.includes(report.id)
-                                                                ? prev.filter(id => id !== report.id)
-                                                                : [...prev, report.id]
-                                                        );
-                                                    }}
-                                                >
-                                                    <div className="flex items-center">
+            {report.type === 'VAPT' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Replace File (optional)</label>
                                                         <input
-                                                            type="checkbox"
-                                                            checked={selectedReports.includes(report.id)}
-                                                            onChange={() => { }}
-                                                            className="mr-3"
-                                                        />
-                                                        <div className="flex-1">
-                                                            <div className="text-sm font-medium text-slate-900">
-                                                                {report.name}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500">
-                                                                {report.type}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
+                  type="file"
+                  onChange={handleLocalEditFileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  accept=".pdf,.doc,.docx"
+                />
                                         </div>
                                     )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center flex-1 p-8 text-slate-500">
-                                <Users size={48} className="mb-4" />
-                                <p className="text-lg font-medium mb-2">
-                                    {assignmentMethod === "random" ? "Random Assignment" : "Sequential Assignment"}
-                                </p>
-                                <p className="text-sm text-center">
-                                    {assignmentMethod === "random"
-                                        ? "Reports will be randomly assigned to available representatives"
-                                        : "Reports will be assigned sequentially to representatives in order"
-                                    }
-                                </p>
-                                <div className="mt-4 text-sm text-slate-400">
-                                    {companyRepresentatives.length} representative(s) available
-                                </div>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
                             </div>
                         )}
-                    </div>
-
-                    {/* Modal Footer */}
-                    <div className="p-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+            <div className="flex justify-end space-x-3">
                         <button
-                            className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                            onClick={() => setIsAssignReportModalOpen(false)}
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting}
                         >
                             Cancel
                         </button>
                         <button
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center disabled:opacity-50"
-                            onClick={handleAssignReports}
-                            disabled={
-                                isAssigning ||
-                                (assignmentMethod === "specific" &&
-                                    (selectedReports.length === 0 ||
-                                        !selectedRepresentative)) ||
-                                (assignmentMethod !== "specific" &&
-                                    companyRepresentatives.length === 0)
-                            }
-                        >
-                            {isAssigning && (
-                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                            )}
-                            {isAssigning
-                                ? "Assigning..."
-                                : `Assign ${assignmentMethod === "specific"
-                                    ? `${selectedReports.length} Report${selectedReports.length !== 1 ? "s" : ""
-                                    }`
-                                    : "Reports"
-                                }`}
+                onClick={handleLocalEditSubmit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </button>
                     </div>
                 </div>
             </div>
         );
+    };
+
+    EditReportModal.propTypes = {
+      isOpen: PropTypes.bool.isRequired,
+      onClose: PropTypes.func.isRequired,
+      report: PropTypes.object,
+      onSubmit: PropTypes.func.isRequired,
+      isSubmitting: PropTypes.bool.isRequired,
+      error: PropTypes.string,
+    };
+
+    // Helper: check role (use actual roles)
+    const isSuperConsultant = user?.role === 'Super Consultant' || projectRole === 'super consultant';
+    const isConsultantAdmin = user?.role === 'consultant admin' || projectRole === 'consultant admin';
+    const isCompanyAdmin = user?.role === 'company' || projectRole === 'company';
+    const isCompanyRep = user?.role === 'company_representative' || projectRole === 'company_representative';
+    const isConsultant = user?.role === 'consultant' || projectRole === 'consultant';
+    const isAuditor = user?.role === 'auditor' || projectRole === 'auditor';
+    const isInternalAuditor = user?.role === 'internal_auditor' || projectRole === 'internal_auditor';
+    const isAssignedUser = isCompanyRep || isConsultant || isAuditor || isInternalAuditor;
+    const isNormalUser = !isSuperConsultant && !isConsultantAdmin && !isCompanyAdmin && !isAssignedUser;
+
+    // Filter reports based on role
+    let visibleReports = reports;
+    if (isAssignedUser) {
+        // For assigned users, show only reports assigned to them
+        visibleReports = reports.filter(r => {
+            return r.assigned_to_details && r.assigned_to_details.id === user?.id;
+        });
+    } else if (isNormalUser) {
+        visibleReports = [];
+    }
+
+    // Permissions
+    const canCreate = isSuperConsultant || isConsultantAdmin || isCompanyAdmin;
+    const canEdit = (isSuperConsultant || isConsultantAdmin || isCompanyAdmin) || isAssignedUser;
+    const canDelete = isSuperConsultant || isConsultantAdmin;
+    const canAssign = isSuperConsultant || isConsultantAdmin || isCompanyAdmin;
+    const canViewLogs = isSuperConsultant || isConsultantAdmin || isCompanyAdmin;
+
+    // Fetch project team for assignment (only project members, no duplicates, show role)
+    useEffect(() => {
+        const fetchTeam = async () => {
+            if (!projectid) return;
+            try {
+                const res = await apiRequest('GET', `/api/project/${projectid}/members/`, null, true);
+                if (res.status === 200 && Array.isArray(res.data.members)) {
+                    // Only allow assignment to project members (no duplicates)
+                    const uniqueMembers = [];
+                    const seen = new Set();
+                    for (const m of res.data.members) {
+                        if (!seen.has(m.id)) {
+                            seen.add(m.id);
+                            uniqueMembers.push(m);
+                        }
+                    }
+                    setCompanyRepresentatives(uniqueMembers);
+                }
+            } catch (err) {
+                setCompanyRepresentatives([]);
+            }
+        };
+        fetchTeam();
+    }, [projectid]);
+
+    // Hide table for normal users with no assigned reports
+    if (isNormalUser || (isAssignedUser && visibleReports.length === 0)) {
+        return (
+            <div className="w-full h-full p-6 flex items-center justify-center text-gray-400 text-lg">
+                No reports assigned to you yet.
+            </div>
+        );
+    }
+
+    // Unassign handler
+    const handleUnassign = async (report) => {
+        if (!report) return;
+        let endpoint;
+        switch (report.type) {
+            case 'Risk Assessment':
+                endpoint = `/api/rarpt/assessment-sheets/${report.id}/assign/`;
+                break;
+            case 'Risk Treatment':
+                endpoint = `/api/rarpt/treatment-sheets/${report.id}/assign/`;
+                break;
+            case 'VAPT':
+                endpoint = `/api/rarpt/vapt/${report.id}/assign/`;
+                break;
+            case 'ASIS':
+            case 'ASIS Report':
+                endpoint = `/api/rarpt/asis-reports/${report.id}/assign/`;
+                break;
+            default:
+                return;
+        }
+        try {
+            await apiRequest('POST', endpoint, { assigned_to: null }, true);
+            message.success('Access revoked successfully');
+            setUnassignModalOpen(false);
+            setReportToUnassign(null);
+            fetchReports();
+        } catch (err) {
+            message.error('Failed to revoke access');
+        }
+    };
+
+    // Handle unassign button click - opens confirmation modal
+    const handleUnassignClick = (e, report) => {
+        e.stopPropagation();
+        setReportToUnassign(report);
+        setUnassignModalOpen(true);
     };
 
     return (
         <div className="w-full h-full p-6">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Reports Table</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-800">Reports Table</h2>
                 <div className="flex gap-3">
-                    <button
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-                        onClick={openAssignReportModal}
-                    >
-                        <UserPlus size={18} className="mr-2" />
-                        Assign Reports
-                    </button>
-                    <button
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-                        onClick={() => setCreateReportOpen(true)}
-                    >
-                        <Plus size={18} className="mr-2" />
-                        Create Report
-                    </button>
+                    {canViewLogs && (
+                        <button
+                            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md font-medium flex items-center"
+                            onClick={() => setShowLogs(true)}
+                        >
+                            <span className="mr-2"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/></svg></span>
+                            Activity Logs
+                        </button>
+                    )}
+                    {canAssign && (
+                        <button
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center"
+                            onClick={openAssignReportModal}
+                        >
+                            <UserPlus className="mr-2" size={18} /> Assign Reports
+                        </button>
+                    )}
+                    {canCreate && (
+                        <button
+                            className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md font-medium flex items-center"
+                            onClick={openCreateReportModal}
+                        >
+                            <Plus className="mr-2" size={18} /> Create Report
+                        </button>
+                    )}
                 </div>
             </div>
+            {showLogs && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-6"
+                    onWheel={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                >
+                    <div 
+                        className="bg-white rounded-lg shadow-lg w-full max-w-4xl h-[90vh] flex flex-col"
+                        onWheel={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl font-semibold text-gray-800">Activity Logs</span>
+                            </div>
+                            <button
+                                className="text-gray-500 hover:text-gray-700 transition-colors"
+                                onClick={() => setShowLogs(false)}
+                            >
+                                <span className="text-2xl">&times;</span>
+                            </button>
+                        </div>
+                        <div 
+                            className="flex-1 overflow-hidden p-4"
+                            onWheel={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div 
+                                className="h-full overflow-y-auto"
+                                onWheel={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                            >
+                                <ActivityLogs />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            <div className="overflow-hidden bg-white rounded-lg shadow">
+            <div className="overflow-hidden bg-white rounded-lg shadow border border-gray-200">
                 {loading ? (
                     <div className="flex justify-center items-center h-64">
                         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                        <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                            <thead className="bg-gray-50 sticky top-0 z-10">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                                         Report Name
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                         Report Type
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                         Created By
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                         Assigned To
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                         Updated On
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {reports.map((report) => (
+                                {visibleReports.map((report) => (
                                     <tr
                                         key={report.id}
                                         className="hover:bg-gray-50 cursor-pointer"
-                                        onClick={() => navigateToReport(report.id, report.report_tab, report.name)}
+                                        onClick={(e) => handleView(e, report)}
                                     >
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900">
@@ -1638,78 +1451,88 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             <div className="flex justify-center space-x-3">
-                                                <button
-                                                    className="p-1.5 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors focus:outline-none"
-                                                    onClick={(e) => handleView(e, report)}
-                                                    title="View"
-                                                >
-                                                    <Eye size={18} className="text-blue-600" />
-                                                </button>
-                                                <button
-                                                    className="p-1.5 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors focus:outline-none"
-                                                    onClick={(e) => handleEdit(e, report)}
-                                                    title="Edit"
-                                                >
-                                                    <Edit size={18} className="text-indigo-600" />
-                                                </button>
-
-                                                {/* Risk Assessment Upload Button */}
-                                                {report.type === 'Risk Assessment' && (
+                                                {canEdit && (
                                                     <button
-                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
-                                                        onClick={(e) => handleRiskAssessmentUpload(e, report)}
-                                                        title="Upload Excel"
+                                                        className="p-1.5 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors focus:outline-none"
+                                                        onClick={e => { e.stopPropagation(); openEditModal(report); }}
+                                                        title="Edit"
                                                     >
-                                                        <Upload size={18} className="text-green-600" />
+                                                        <Edit size={18} className="text-indigo-600" />
                                                     </button>
                                                 )}
-
-                                                {/* Risk Treatment Upload Button */}
-                                                {report.type === 'Risk Treatment' && (
-                                                    <button
-                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
-                                                        onClick={(e) => handleRiskTreatmentUpload(e, report)}
-                                                        title="Upload Excel"
-                                                    >
-                                                        <Upload size={18} className="text-green-600" />
-                                                    </button>
-                                                )}
-
-                                                {/* VAPT Upload Button */}
                                                 {report.type === 'VAPT' && (
                                                     <button
                                                         className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
-                                                        onClick={(e) => handleVaptUpload(e, report)}
+                                                        onClick={e => { e.stopPropagation(); handleVaptUpload(e, report); }}
+                                                        title="Upload PDF"
+                                                    >
+                                                        <Upload size={18} className="text-green-600" />
+                                                    </button>
+                                                )}
+                                                {report.type === 'Risk Assessment' && (
+                                                    <button
+                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                                        onClick={e => { e.stopPropagation(); handleRiskAssessmentUpload(e, report); }}
                                                         title="Upload Excel"
                                                     >
                                                         <Upload size={18} className="text-green-600" />
                                                     </button>
                                                 )}
-
-                                                {/* ASIS Upload Button */}
+                                                {report.type === 'Risk Treatment' && (
+                                                    <button
+                                                        className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
+                                                        onClick={e => { e.stopPropagation(); handleRiskTreatmentUpload(e, report); }}
+                                                        title="Upload Excel"
+                                                    >
+                                                        <Upload size={18} className="text-green-600" />
+                                                    </button>
+                                                )}
                                                 {report.type === 'ASIS' && (
                                                     <button
                                                         className="p-1.5 bg-green-50 rounded-full hover:bg-green-100 transition-colors focus:outline-none"
-                                                        onClick={(e) => handleAsisUpload(e, report)}
+                                                        onClick={e => { e.stopPropagation(); handleAsisUpload(e, report); }}
                                                         title="Upload Excel"
                                                     >
                                                         <Upload size={18} className="text-green-600" />
                                                     </button>
                                                 )}
-
-                                                <button
-                                                    className="p-1.5 bg-red-50 rounded-full hover:bg-red-100 transition-colors focus:outline-none"
-                                                    onClick={(e) => handleDeleteClick(e, report)}
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={18} className="text-red-600" />
-                                                </button>
+                                                {canDelete && (
+                                                    <button
+                                                        className="p-1.5 bg-red-50 rounded-full hover:bg-red-100 transition-colors focus:outline-none"
+                                                        onClick={e => { e.stopPropagation(); handleDeleteClick(e, report); }}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={18} className="text-red-600" />
+                                                    </button>
+                                                )}
+                                                {isSuperConsultant && (
+                                                    <button
+                                                        className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-200 ${
+                                                            report.assigned_to !== 'Unassigned' 
+                                                                ? 'bg-red-50 hover:bg-red-100 cursor-pointer' 
+                                                                : 'bg-gray-50 cursor-not-allowed opacity-50'
+                                                        }`}
+                                                        onClick={e => report.assigned_to !== 'Unassigned' ? handleUnassignClick(e, report) : null}
+                                                        title={report.assigned_to !== 'Unassigned' 
+                                                            ? `Revoke access from ${report.assigned_to}` 
+                                                            : 'No assignment to revoke'
+                                                        }
+                                                        disabled={report.assigned_to === 'Unassigned'}
+                                                    >
+                                                        <Users 
+                                                            size={16}
+                                                            className={`${
+                                                                report.assigned_to !== 'Unassigned' ? 'text-red-600' : 'text-gray-400'
+                                                            }`}
+                                                        />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
                                 ))}
 
-                                {reports.length === 0 && (
+                                {visibleReports.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-16 text-center">
                                             <div className="text-gray-500">
@@ -1725,13 +1548,234 @@ const ReportsTable = ({ refreshTrigger, onReportOpen }) => {
                 )}
             </div>
 
-            <DeleteConfirmationModal />
-            <CreateReportModal />
-            <RiskAssessmentUploadModal />
-            <RiskTreatmentUploadModal />
-            <VaptUploadModal />
-            <AsisUploadModal />
-            <AssignReportModal />
+            {/* Modals */}
+            <ConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={handleDelete}
+                title="Delete Report"
+                message="Are you sure you want to delete this report? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+            />
+
+            <CreateReportModal
+                isOpen={createReportOpen}
+                onClose={() => setCreateReportOpen(false)}
+                onSubmit={handleCreateReport}
+                isSubmitting={isUploading}
+                error={errorMessage}
+            />
+
+            <EditReportModal
+                isOpen={editModalOpen}
+                onClose={closeEditModal}
+                report={editReport}
+                onSubmit={handleEditSubmit}
+                isSubmitting={isEditing}
+                error={editError}
+            />
+
+            <UnifiedUploadModal
+                isOpen={riskAssessmentUploadOpen}
+                onClose={() => setRiskAssessmentUploadOpen(false)}
+                onSubmit={handleRiskAssessmentExcelSubmit}
+                isSubmitting={isUploadingExcel}
+                title="Upload Risk Assessment Excel"
+                reportName={selectedRiskReport?.name}
+                fileType="excel"
+                showDownloadTemplate={true}
+                reportType="risk_assessment"
+            />
+
+            <UnifiedUploadModal
+                isOpen={riskTreatmentUploadOpen}
+                onClose={() => setRiskTreatmentUploadOpen(false)}
+                onSubmit={handleRiskTreatmentExcelSubmit}
+                isSubmitting={isUploadingTreatmentExcel}
+                title="Upload Risk Treatment Excel"
+                reportName={selectedTreatmentReport?.name}
+                fileType="excel"
+                showDownloadTemplate={true}
+                reportType="risk_treatment"
+            />
+
+            <UnifiedUploadModal
+                isOpen={asisUploadOpen}
+                onClose={() => setAsisUploadOpen(false)}
+                onSubmit={handleAsisExcelSubmit}
+                isSubmitting={isUploadingAsisExcel}
+                title="Upload ASIS Excel"
+                reportName={selectedAsisReport?.name}
+                fileType="excel"
+                showDownloadTemplate={true}
+                reportType="asis"
+            />
+
+            <UnifiedUploadModal
+                isOpen={vaptUploadOpen}
+                onClose={() => setVaptUploadOpen(false)}
+                onSubmit={handleVaptPdfSubmit}
+                isSubmitting={isUploadingVaptPdf}
+                title="Upload VAPT PDF"
+                reportName={selectedVaptReport?.name}
+                fileType="pdf"
+                showDownloadTemplate={true}
+                reportType="vapt"
+            />
+
+            {/* VAPT PDF Viewer Modal */}
+            {vaptPdfViewerOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full h-5/6 flex flex-col">
+                        <div className="flex justify-between items-center p-4 border-b">
+                            <h3 className="text-lg font-semibold">
+                                VAPT PDF Viewer - {selectedVaptPdfName}
+                            </h3>
+                            <button
+                                onClick={() => setVaptPdfViewerOpen(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="flex-1 p-4">
+                            {selectedVaptPdfUrl ? (
+                                <PDFTronViewer fileUrl={selectedVaptPdfUrl} fileType="pdf" />
+                            ) : (
+                                <div className="flex items-center justify-center h-full">
+                                    <p className="text-gray-500">No PDF file available</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Extracted Data Modal - This modal is now only for navigation */}
+            {/* This modal is now only for navigation */}
+
+            {/* Assign Reports Modal */}
+            {isAssignReportModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative">
+                        <h3 className="text-lg font-semibold mb-4">Assign Reports</h3>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-1">Select Representative</label>
+                            <select
+                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                value={selectedRepresentative || ""}
+                                onChange={e => setSelectedRepresentative(Number(e.target.value))}
+                            >
+                                <option value="">Select...</option>
+                                {companyRepresentatives.map(rep => (
+                                    <option key={rep.id} value={rep.id}>
+                                        {rep.name} ({rep.email}){rep.project_role ? ` [${rep.project_role}]` : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-1">Select Reports</label>
+                            <div className="max-h-40 overflow-y-auto border rounded p-2">
+                                {getUnassignedReports().map(report => (
+                                    <label key={report.id} className="flex items-center space-x-2 mb-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedReports.includes(report.id)}
+                                            onChange={e => {
+                                                if (e.target.checked) {
+                                                    setSelectedReports([...selectedReports, report.id]);
+                                                } else {
+                                                    setSelectedReports(selectedReports.filter(id => id !== report.id));
+                                                }
+                                            }}
+                                        />
+                                        <span>{report.name} ({report.type})</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setIsAssignReportModalOpen(false)}
+                                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                                disabled={isAssigning}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAssignReports}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                                disabled={isAssigning}
+                            >
+                                {isAssigning ? "Assigning..." : "Assign"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Unassign Confirmation Modal */}
+            {unassignModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+                        <div className="flex items-center mb-4">
+                            <div className="flex-shrink-0">
+                                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-lg font-semibold text-gray-900">Revoke Access</h3>
+                            </div>
+                        </div>
+                        
+                        <div className="mb-6">
+                            <p className="text-sm text-gray-700 mb-3">
+                                Are you sure you want to revoke access to this report?
+                            </p>
+                            <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-600">Report:</span>
+                                    <span className="font-medium text-gray-900">{reportToUnassign?.name}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm mt-1">
+                                    <span className="text-gray-600">Type:</span>
+                                    <span className="font-medium text-gray-900">{reportToUnassign?.type}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm mt-1">
+                                    <span className="text-gray-600">Currently Assigned To:</span>
+                                    <span className="font-medium text-red-600">{reportToUnassign?.assigned_to}</span>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-3">
+                                This action will remove the user's access to view and edit this report.
+                            </p>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => {
+                                    setUnassignModalOpen(false);
+                                    setReportToUnassign(null);
+                                }}
+                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleUnassign(reportToUnassign)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-200 transition-colors"
+                            >
+                                Revoke Access
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

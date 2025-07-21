@@ -1,12 +1,70 @@
-import React, { useState, useEffect } from "react";
-import { FilePlus, FileUp } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { FilePlus, FileUp, Plus, Upload, Trash2, Edit, Eye, Download, X } from "lucide-react";
 import { apiRequest } from "../../../../utils/api";
 import { useParams } from "react-router-dom";
+import LegendsModal from "./LegendsModal";
 import { message } from "antd";
+import UnifiedUploadModal from "./UnifiedUploadModal";
+import { toggleGroup, renderExpandIcon } from './uiUtils.jsx';
+import ConfirmationModal from './ConfirmationModal.jsx';
 
-// Detailed View Modal Component for viewing control details
-const DetailedViewModal = ({ isOpen, onClose, control }) => {
-  if (!isOpen || !control) return null;
+// Add the detailed view modal component
+const DetailedViewModal = ({ isOpen, onClose, controlData, reportType }) => {
+  if (!isOpen || !controlData) return null;
+
+  const asisControlFields = [
+    { key: 'control_id', label: 'Control ID', group: 'gray' },
+    { key: 'control_name', label: 'Control Name', group: 'gray' },
+    { key: 'associated_functions', label: 'Associated org function', group: 'gray' },
+    { key: 'control_theme', label: 'Control Theme', group: 'gray' },
+    { key: 'control_type.preventive', label: 'Preventive', group: 'blue' },
+    { key: 'control_type.detective', label: 'Detective', group: 'blue' },
+    { key: 'control_type.corrective', label: 'Corrective', group: 'blue' },
+    { key: 'control_property.confidentiality', label: 'Confidentiality', group: 'blue' },
+    { key: 'control_property.integrity', label: 'Integrity', group: 'blue' },
+    { key: 'control_property.availability', label: 'Availability', group: 'blue' },
+    { key: 'control_property.does_control_cover_intent', label: 'Does the control cover intent?', group: 'blue' },
+    { key: 'control_property.does_control_cover_implementation', label: 'Does the control cover implementation?', group: 'blue' },
+    { key: 'control_property.does_control_cover_effectiveness', label: 'Does the control cover effectiveness?', group: 'blue' },
+    { key: 'cybersecurity_concept.identify', label: 'Identify', group: 'orange' },
+    { key: 'cybersecurity_concept.protect', label: 'Protect', group: 'orange' },
+    { key: 'cybersecurity_concept.detect', label: 'Detect', group: 'orange' },
+    { key: 'cybersecurity_concept.respond', label: 'Respond', group: 'orange' },
+    { key: 'cybersecurity_concept.recover', label: 'Recover', group: 'orange' },
+    { key: 'security_domain.governance_and_ecosystem', label: 'Governance_and_Ecosystem', group: 'yellow' },
+    { key: 'security_domain.protection', label: 'Protection', group: 'yellow' },
+    { key: 'security_domain.defence', label: 'Defence', group: 'yellow' },
+    { key: 'security_domain.resilience', label: 'Resilience', group: 'yellow' },
+    { key: 'operational_capability.governance', label: 'Governance', group: 'green' },
+    { key: 'operational_capability.asset_management', label: 'Asset_management', group: 'green' },
+    { key: 'operational_capability.information_protection', label: 'Information_protection', group: 'green' },
+    { key: 'operational_capability.human_resource_security', label: 'Human_resource_security', group: 'green' },
+    { key: 'operational_capability.physical_security', label: 'Physical_security', group: 'green' },
+    { key: 'operational_capability.system_and_network_security', label: 'System_and_network_security', group: 'green' },
+    { key: 'operational_capability.application_security', label: 'Application_security', group: 'green' },
+    { key: 'operational_capability.secure_configuration', label: 'Secure_configuration', group: 'green' },
+    { key: 'operational_capability.identity_and_access_management', label: 'Identity_and_access_management', group: 'green' },
+    { key: 'operational_capability.threat_and_vulnerability_management', label: 'Threat_and_vulnerability_management', group: 'green' },
+    { key: 'operational_capability.continuity', label: 'Continuity', group: 'green' },
+    { key: 'operational_capability.supplier_relationship_security', label: 'Supplier_relationships_security', group: 'green' },
+    { key: 'operational_capability.legal_and_compliance', label: 'Legal_and_compliance', group: 'green' },
+    { key: 'operational_capability.information_security_event_management', label: 'Information_security_event_management', group: 'green' },
+    { key: 'operational_capability.information_security_assurance', label: 'Information_security_assurance', group: 'green' },
+    { key: 'additional_info.related_to', label: 'Related to P or D or C or A', group: 'purple' },
+    { key: 'additional_info.must_have', label: 'Must have', group: 'purple' },
+    { key: 'additional_info.nice_to_have', label: 'Nice to have', group: 'purple' },
+    { key: 'additional_info.sample_audit_questions', label: 'Sample audit questions', group: 'purple' },
+  ];
+
+  const groupColors = {
+    gray: 'bg-gray-200 text-gray-800',
+    blue: 'bg-blue-100 text-blue-800',
+    orange: 'bg-orange-100 text-orange-800',
+    yellow: 'bg-yellow-100 text-yellow-800',
+    green: 'bg-green-100 text-green-800',
+    purple: 'bg-purple-100 text-purple-800',
+  };
+
 
   // Helper function to render Yes/No fields consistently
   const renderYesNo = (value) => (
@@ -14,6 +72,21 @@ const DetailedViewModal = ({ isOpen, onClose, control }) => {
       {value === 'Y' ? 'Yes' : 'No'}
     </div>
   );
+
+  // Helper function to get nested field value
+  const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : null;
+    }, obj);
+  };
+
+  // Helper function to format field value
+  const formatFieldValue = (value) => {
+    if (value === null || value === undefined) return 'Not specified';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) return value.map(item => item.name || item).join(', ');
+    return String(value);
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
@@ -30,238 +103,32 @@ const DetailedViewModal = ({ isOpen, onClose, control }) => {
           {/* Header */}
           <div className="bg-indigo-600 px-4 py-3 sm:px-6 flex justify-between items-center">
             <h3 className="text-lg leading-6 font-medium text-white">
-              Control Details: {control.control_id}
+              Detailed Control View - {controlData?.control_id || 'Control Details'}
             </h3>
             <button
               onClick={onClose}
               className="text-white hover:text-gray-200 focus:outline-none"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X size={20} />
             </button>
           </div>
 
           {/* Body */}
-          <div className="bg-white p-6 overflow-y-auto max-h-[70vh]">
-            {/* Basic Information */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Basic Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Control ID</label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                  {control.control_id}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Control Theme</label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                  {control.control_theme || "Not Specified"}
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Control Name</label>
-              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                {control.control_name}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Associated Functions</label>
-              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                {control.associated_functions?.map(f => f.name).join(", ") || "None"}
-              </div>
-            </div>
-
-            {/* Control Type */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Control Type</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Preventive</label>
-                {renderYesNo(control.control_type?.preventive)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Detective</label>
-                {renderYesNo(control.control_type?.detective)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Corrective</label>
-                {renderYesNo(control.control_type?.corrective)}
-              </div>
-            </div>
-
-            {/* Control Property */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Control Property</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confidentiality</label>
-                {renderYesNo(control.control_property?.confidentiality)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Integrity</label>
-                {renderYesNo(control.control_property?.integrity)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
-                {renderYesNo(control.control_property?.availability)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Covers Intent</label>
-                {renderYesNo(control.control_property?.does_control_cover_intent)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Covers Implementation</label>
-                {renderYesNo(control.control_property?.does_control_cover_implementation)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Covers Effectiveness</label>
-                {renderYesNo(control.control_property?.does_control_cover_effectiveness)}
-              </div>
-            </div>
-
-            {/* Cybersecurity Concept */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Cybersecurity Concept</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Identify</label>
-                {renderYesNo(control.cybersecurity_concept?.identify)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Protect</label>
-                {renderYesNo(control.cybersecurity_concept?.protect)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Detect</label>
-                {renderYesNo(control.cybersecurity_concept?.detect)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Respond</label>
-                {renderYesNo(control.cybersecurity_concept?.respond)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Recover</label>
-                {renderYesNo(control.cybersecurity_concept?.recover)}
-              </div>
-            </div>
-
-            {/* Security Domain */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Security Domain</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Governance and Ecosystem</label>
-                {renderYesNo(control.security_domain?.governance_and_ecosystem)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Protection</label>
-                {renderYesNo(control.security_domain?.protection)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Defence</label>
-                {renderYesNo(control.security_domain?.defence)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Resilience</label>
-                {renderYesNo(control.security_domain?.resilience)}
-              </div>
-            </div>
-
-            {/* Operational Capability */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Operational Capability</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Governance</label>
-                {renderYesNo(control.operational_capability?.governance)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asset Management</label>
-                {renderYesNo(control.operational_capability?.asset_management)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Information Protection</label>
-                {renderYesNo(control.operational_capability?.information_protection)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Human Resource Security</label>
-                {renderYesNo(control.operational_capability?.human_resource_security)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Physical Security</label>
-                {renderYesNo(control.operational_capability?.physical_security)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">System and Network Security</label>
-                {renderYesNo(control.operational_capability?.system_and_network_security)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Application Security</label>
-                {renderYesNo(control.operational_capability?.application_security)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Secure Configuration</label>
-                {renderYesNo(control.operational_capability?.secure_configuration)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Identity and Access Management</label>
-                {renderYesNo(control.operational_capability?.identity_and_access_management)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Threat and Vulnerability Management</label>
-                {renderYesNo(control.operational_capability?.threat_and_vulnerability_management)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Continuity</label>
-                {renderYesNo(control.operational_capability?.continuity)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Relationship Security</label>
-                {renderYesNo(control.operational_capability?.supplier_relationship_security)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Legal and Compliance</label>
-                {renderYesNo(control.operational_capability?.legal_and_compliance)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Information Security Event Management</label>
-                {renderYesNo(control.operational_capability?.information_security_event_management)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Information Security Assurance</label>
-                {renderYesNo(control.operational_capability?.information_security_assurance)}
-              </div>
-            </div>
-
-            {/* Additional Information */}
-            <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200">Additional Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Related To</label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                  {control.additional_info?.related_to || "Not Specified"}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Must Have</label>
-                {renderYesNo(control.additional_info?.must_have)}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nice to Have</label>
-                {renderYesNo(control.additional_info?.nice_to_have)}
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sample Audit Questions</label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md min-h-[80px]">
-                  {control.additional_info?.sample_audit_questions || "None provided"}
-                </div>
-              </div>
+          <div className="bg-white p-6 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {asisControlFields.map((field) => {
+                const value = getNestedValue(controlData, field.key);
+                return (
+                  <div key={field.key} className="space-y-2">
+                    <div className={`px-3 py-1 rounded-md text-xs font-medium ${groupColors[field.group]}`}>
+                      {field.label}
+                    </div>
+                    <div className="px-3 py-2 bg-gray-50 rounded-md text-sm">
+                      {formatFieldValue(value)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -269,7 +136,7 @@ const DetailedViewModal = ({ isOpen, onClose, control }) => {
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
-              className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
               onClick={onClose}
             >
               Close
@@ -281,98 +148,34 @@ const DetailedViewModal = ({ isOpen, onClose, control }) => {
   );
 };
 
-// Reusable Confirmation Modal Component
-const ConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmText = "Delete",
-  cancelText = "Cancel",
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto"
-      aria-labelledby="modal-title"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          aria-hidden="true"
-          onClick={onClose}
-        ></div>
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg
-                  className="h-6 w-6 text-red-600"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="1.5"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                  />
-                </svg>
-              </div>
-              <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3
-                  className="text-lg leading-6 font-medium text-gray-900"
-                  id="modal-title"
-                >
-                  {title}
-                </h3>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">{message}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-              onClick={onConfirm}
-            >
-              {confirmText}
-            </button>
-            <button
-              type="button"
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              onClick={onClose}
-            >
-              {cancelText}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// Color functions to match Legend modal scheme
+const getYesNoColor = (value) => {
+  if (!value) return 'bg-gray-100';
+  
+  const strValue = String(value).toUpperCase();
+  if (strValue === 'Y' || strValue === 'YES') {
+    return 'bg-green-200'; // Yes - Light green
+  } else if (strValue === 'N' || strValue === 'NO') {
+    return 'bg-red-200'; // No - Light red
+  } else {
+    return 'bg-gray-100'; // Default
+  }
 };
 
-const ASISReport = () => {
+// ConfirmationModal component is now imported from shared component
+
+const ASISReport = ({ reportId, projectId, specificReportMode = false }) => {
   // State for data - now empty as we'll fetch from API
   const [controls, setControls] = useState([]);
 
-  // Expanded groups state
+  // Expanded groups state - Set all to true by default to show all columns
   const [expandedGroups, setExpandedGroups] = useState({
-    controlType: false,
-    controlProperty: false,
-    cyberSecurityConcept: false,
-    securityDomain: false,
-    operationalCapability: false,
-    other: false,
+    controlType: true,
+    controlProperty: true,
+    cyberSecurityConcept: true,
+    securityDomain: true,
+    operationalCapability: true,
+    other: true,
   });
 
   // State for reports and selected report
@@ -462,41 +265,59 @@ const ASISReport = () => {
 
   // Get project ID from URL
   const { projectid } = useParams();
+  
+  // Use props if provided, otherwise fall back to URL params
+  const effectiveProjectId = projectId || projectid;
+  const effectiveReportId = reportId;
 
   // Add state for detailed view modal
   const [showDetailedView, setShowDetailedView] = useState(false);
   const [selectedControlForView, setSelectedControlForView] = useState(null);
 
-  // Toggle group expansion
-  const toggleGroup = (groupName) => {
-    setExpandedGroups((prev) => ({
-      ...prev,
-      [groupName]: !prev[groupName],
-    }));
+  // State for legends modal
+  const [showLegendsModal, setShowLegendsModal] = useState(false);
+
+  // Add drag scrolling state and refs
+  const tableContainerRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  // Mouse event handlers for drag scrolling
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - tableContainerRef.current.offsetLeft);
+    setScrollLeft(tableContainerRef.current.scrollLeft);
+    tableContainerRef.current.style.cursor = 'grabbing';
+    tableContainerRef.current.style.userSelect = 'none';
   };
 
-  // Helper function to render expand/collapse icon
-  const renderExpandIcon = (isExpanded) => (
-    <span
-      className={`ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-opacity-50 transition-transform duration-300 ${isExpanded ? "rotate-90" : ""
-        }`}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={2}
-        stroke="currentColor"
-        className="w-4 h-4"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M8.25 4.5l7.5 7.5-7.5 7.5"
-        />
-      </svg>
-    </span>
-  );
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.style.cursor = 'grab';
+      tableContainerRef.current.style.userSelect = 'auto';
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.style.cursor = 'grab';
+      tableContainerRef.current.style.userSelect = 'auto';
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - tableContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
+    tableContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  // UI utility functions are now imported from shared uiUtils.jsx
+  const handleToggleGroup = (groupName) => toggleGroup(expandedGroups, setExpandedGroups, groupName);
 
   // =================== FETCH FUNCTIONS =================== //
 
@@ -506,13 +327,27 @@ const ASISReport = () => {
     try {
       const response = await apiRequest(
         "GET",
-        `/api/rarpt/project/${projectid}/asis-reports/`,
+        `/api/rarpt/project/${effectiveProjectId}/asis-reports/`,
         null,
         true
       );
 
       if (response.data && Array.isArray(response.data)) {
         setReports(response.data);
+        
+        if (specificReportMode && effectiveReportId) {
+          // In specific report mode, find and select the specific report
+          const specificReport = response.data.find(report => report.id === parseInt(effectiveReportId));
+          if (specificReport) {
+            setSelectedReport(specificReport);
+            await fetchControlsForReport(specificReport.id);
+          } else {
+            message.error("Specified report not found");
+            setSelectedReport(null);
+            setControls([]);
+          }
+        } else {
+          // Normal mode - select first report if none selected
         if (response.data.length > 0 && !selectedReport) {
           const previouslySelected = reports.find(
             (r) => r.id === selectedReport?.id
@@ -523,6 +358,7 @@ const ASISReport = () => {
         } else if (response.data.length === 0) {
           setControls([]);
           setSelectedReport(null);
+          }
         }
       } else {
         setReports([]);
@@ -614,6 +450,10 @@ const ASISReport = () => {
         if (newReport) {
           setSelectedReport(newReport);
           await fetchControlsForReport(newReport.id);
+          // Notify parent to open a new tab with unique URL
+          if (typeof onReportCreated === 'function') {
+            onReportCreated({ id: newReport.id, type: 'asisReport', name: newReport.name });
+          }
         }
       }
     } catch (err) {
@@ -640,6 +480,18 @@ const ASISReport = () => {
             true
           );
           message.success("Report deleted successfully");
+
+          // Notify parent component to close any open tabs for this report
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            // Create and dispatch a custom event that MyReports component can listen for
+            const deleteEvent = new CustomEvent('reportDeleted', {
+              detail: {
+                reportId: reportId,
+                reportType: 'asisReport'
+              }
+            });
+            window.dispatchEvent(deleteEvent);
+          }
 
           // Fetch updated reports list after deletion
           const response = await apiRequest(
@@ -854,7 +706,6 @@ const ASISReport = () => {
     } else if (type === "excel") {
       setExcelFile(null);
     }
-    console.log("Modal opened with type:", type);
     setShowModal(true);
   };
 
@@ -999,10 +850,8 @@ const ASISReport = () => {
   };
 
   // Submit excel file for controls
-  const handleExcelSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!excelFile) {
+  const handleExcelSubmit = async (file) => {
+    if (!file) {
       message.error("Please select an Excel file");
       return;
     }
@@ -1016,7 +865,7 @@ const ASISReport = () => {
 
     try {
       const formData = new FormData();
-      formData.append("file", excelFile);
+      formData.append("file", file);
 
       const response = await apiRequest(
         "POST",
@@ -1038,7 +887,6 @@ const ASISReport = () => {
       message.error(err.message || "Failed to upload Excel file");
     } finally {
       setIsLoading(false);
-      setExcelFile(null);
     }
   };
 
@@ -1091,7 +939,7 @@ const ASISReport = () => {
   // Load reports on component mount
   useEffect(() => {
     fetchReports();
-  }, [projectid]);
+  }, [effectiveProjectId]);
 
   // Add function to handle viewing a control
   const handleViewControl = (control) => {
@@ -1105,6 +953,15 @@ const ASISReport = () => {
     setSelectedControlForView(null);
   };
 
+  // Function to toggle the legends modal
+  const toggleLegendsModal = () => {
+    setShowLegendsModal(!showLegendsModal);
+  };
+
+
+
+
+
   return (
     <>
       {/* Header with Buttons */}
@@ -1115,8 +972,8 @@ const ASISReport = () => {
             {controls.length}
           </div>
 
-          {/* Report Selection Dropdown */}
-          {reports.length > 0 && (
+          {/* Report Selection Dropdown - Only show if not in specific report mode */}
+          {reports.length > 0 && !specificReportMode && (
             <div className="ml-4 relative">
               <select
                 value={selectedReport ? selectedReport.id : ""}
@@ -1154,44 +1011,57 @@ const ASISReport = () => {
               </div>
             </div>
           )}
+          
+          {/* Show current report name in specific report mode */}
+          {specificReportMode && selectedReport && (
+            <div className="ml-4 flex items-center">
+              <span className="text-sm font-medium text-gray-700 mr-2">
+                Current Report:
+              </span>
+              <span className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-md text-sm text-indigo-700 font-medium">
+                {selectedReport.name}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex space-x-3 items-center">
+        <div className="flex items-center gap-3">
           {/* Action buttons */}
           <button
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md flex items-center"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
             onClick={() => openModal("form")}
             disabled={!selectedReport || isLoading}
           >
-            <FilePlus className="w-5 h-5 mr-2" />
-            Add Control
+            <Plus size={18} className="mr-1" /> Add Control
           </button>
-
           <button
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 flex items-center"
             onClick={() => openModal("excel")}
             disabled={!selectedReport || isLoading}
           >
-            <FileUp className="w-5 h-5 mr-2" />
-            Upload Excel
+            <Upload size={18} className="mr-1" /> Upload Excel
           </button>
 
-          <button className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md flex items-center">
+          <button
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-md flex items-center"
+            onClick={toggleLegendsModal}
+          >
             <svg
-              className="w-5 h-5 mr-2"
+              xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
+              strokeWidth={1.5}
               stroke="currentColor"
+              className="w-5 h-5 mr-2"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.007v.008H12V8.25z"
               />
             </svg>
-            Legend
+            <span>Legend</span>
           </button>
         </div>
       </div>
@@ -1251,7 +1121,15 @@ const ASISReport = () => {
 
       {/* Empty Table - Shown when a report is selected but has no controls */}
       {!isLoading && selectedReport && controls.length === 0 && (
-        <div className="overflow-x-auto">
+        <div 
+          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
+          ref={tableContainerRef}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          onDragStart={(e) => e.preventDefault()}
+        >
           <table className="min-w-full border-collapse">
             {/* Table Header */}
             <thead>
@@ -1277,7 +1155,7 @@ const ASISReport = () => {
 
                 {/* Control Type header group */}
                 <th
-                  onClick={() => toggleGroup("controlType")}
+                  onClick={() => handleToggleGroup("controlType")}
                   colSpan={expandedGroups.controlType ? 3 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1286,7 +1164,7 @@ const ASISReport = () => {
 
                 {/* Control property / Control objective header group */}
                 <th
-                  onClick={() => toggleGroup("controlProperty")}
+                  onClick={() => handleToggleGroup("controlProperty")}
                   colSpan={expandedGroups.controlProperty ? 6 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1296,7 +1174,7 @@ const ASISReport = () => {
 
                 {/* Control Type / Cyber security concept header group */}
                 <th
-                  onClick={() => toggleGroup("cyberSecurityConcept")}
+                  onClick={() => handleToggleGroup("cyberSecurityConcept")}
                   colSpan={expandedGroups.cyberSecurityConcept ? 5 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1306,7 +1184,7 @@ const ASISReport = () => {
 
                 {/* Security domain header group */}
                 <th
-                  onClick={() => toggleGroup("securityDomain")}
+                  onClick={() => handleToggleGroup("securityDomain")}
                   colSpan={expandedGroups.securityDomain ? 4 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1316,7 +1194,7 @@ const ASISReport = () => {
 
                 {/* Operational capability header group */}
                 <th
-                  onClick={() => toggleGroup("operationalCapability")}
+                  onClick={() => handleToggleGroup("operationalCapability")}
                   colSpan={expandedGroups.operationalCapability ? 15 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1326,7 +1204,7 @@ const ASISReport = () => {
 
                 {/* Other header group */}
                 <th
-                  onClick={() => toggleGroup("other")}
+                  onClick={() => handleToggleGroup("other")}
                   colSpan={expandedGroups.other ? 4 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1514,7 +1392,15 @@ const ASISReport = () => {
 
       {/* Table Container - Only shown when we have controls */}
       {!isLoading && selectedReport && controls.length > 0 && (
-        <div className="overflow-x-auto">
+        <div 
+          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
+          ref={tableContainerRef}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          onDragStart={(e) => e.preventDefault()}
+        >
           <table className="min-w-full border-collapse">
             {/* Table Header */}
             <thead>
@@ -1540,7 +1426,7 @@ const ASISReport = () => {
 
                 {/* Control Type header group */}
                 <th
-                  onClick={() => toggleGroup("controlType")}
+                  onClick={() => handleToggleGroup("controlType")}
                   colSpan={expandedGroups.controlType ? 3 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1549,7 +1435,7 @@ const ASISReport = () => {
 
                 {/* Control property / Control objective header group */}
                 <th
-                  onClick={() => toggleGroup("controlProperty")}
+                  onClick={() => handleToggleGroup("controlProperty")}
                   colSpan={expandedGroups.controlProperty ? 6 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1559,7 +1445,7 @@ const ASISReport = () => {
 
                 {/* Control Type / Cyber security concept header group */}
                 <th
-                  onClick={() => toggleGroup("cyberSecurityConcept")}
+                  onClick={() => handleToggleGroup("cyberSecurityConcept")}
                   colSpan={expandedGroups.cyberSecurityConcept ? 5 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1569,7 +1455,7 @@ const ASISReport = () => {
 
                 {/* Security domain header group */}
                 <th
-                  onClick={() => toggleGroup("securityDomain")}
+                  onClick={() => handleToggleGroup("securityDomain")}
                   colSpan={expandedGroups.securityDomain ? 4 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1579,7 +1465,7 @@ const ASISReport = () => {
 
                 {/* Operational capability header group */}
                 <th
-                  onClick={() => toggleGroup("operationalCapability")}
+                  onClick={() => handleToggleGroup("operationalCapability")}
                   colSpan={expandedGroups.operationalCapability ? 15 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1589,7 +1475,7 @@ const ASISReport = () => {
 
                 {/* Other header group */}
                 <th
-                  onClick={() => toggleGroup("other")}
+                  onClick={() => handleToggleGroup("other")}
                   colSpan={expandedGroups.other ? 4 : 1}
                   className="border border-slate-200 p-3 bg-slate-700 text-white text-left cursor-pointer font-medium"
                 >
@@ -1850,9 +1736,9 @@ const ASISReport = () => {
                     {control.control_name}
                   </td>
                   <td className="border border-slate-200 p-3">
-                    {control.associated_functions
-                      ?.map((f) => f.name)
-                      .join(", ")}
+                    {control.associated_functions && Array.isArray(control.associated_functions) && control.associated_functions.length > 0
+                      ? control.associated_functions.map((f) => f.name || f).join(", ")
+                      : "Not specified"}
                   </td>
                   <td className="border border-slate-200 p-3">
                     {control.control_theme}
@@ -1861,13 +1747,13 @@ const ASISReport = () => {
                   {/* Control Type cells */}
                   {expandedGroups.controlType ? (
                     <>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_type?.preventive)}`}>
                         {control.control_type?.preventive}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_type?.detective)}`}>
                         {control.control_type?.detective}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_type?.corrective)}`}>
                         {control.control_type?.corrective}
                       </td>
                     </>
@@ -1882,25 +1768,25 @@ const ASISReport = () => {
                   {/* Control property cells */}
                   {expandedGroups.controlProperty ? (
                     <>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_property?.confidentiality)}`}>
                         {control.control_property?.confidentiality}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_property?.integrity)}`}>
                         {control.control_property?.integrity}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_property?.availability)}`}>
                         {control.control_property?.availability}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_property?.does_control_cover_intent)}`}>
                         {control.control_property?.does_control_cover_intent}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_property?.does_control_cover_implementation)}`}>
                         {
                           control.control_property
                             ?.does_control_cover_implementation
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.control_property?.does_control_cover_effectiveness)}`}>
                         {
                           control.control_property
                             ?.does_control_cover_effectiveness
@@ -1918,19 +1804,19 @@ const ASISReport = () => {
                   {/* Cyber security concept cells */}
                   {expandedGroups.cyberSecurityConcept ? (
                     <>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.cybersecurity_concept?.identify)}`}>
                         {control.cybersecurity_concept?.identify}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.cybersecurity_concept?.protect)}`}>
                         {control.cybersecurity_concept?.protect}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.cybersecurity_concept?.detect)}`}>
                         {control.cybersecurity_concept?.detect}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.cybersecurity_concept?.respond)}`}>
                         {control.cybersecurity_concept?.respond}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.cybersecurity_concept?.recover)}`}>
                         {control.cybersecurity_concept?.recover}
                       </td>
                     </>
@@ -1945,16 +1831,16 @@ const ASISReport = () => {
                   {/* Security domain cells */}
                   {expandedGroups.securityDomain ? (
                     <>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.security_domain?.governance_and_ecosystem)}`}>
                         {control.security_domain?.governance_and_ecosystem}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.security_domain?.protection)}`}>
                         {control.security_domain?.protection}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.security_domain?.defence)}`}>
                         {control.security_domain?.defence}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.security_domain?.resilience)}`}>
                         {control.security_domain?.resilience}
                       </td>
                     </>
@@ -1971,67 +1857,67 @@ const ASISReport = () => {
                   {/* Operational capability cells */}
                   {expandedGroups.operationalCapability ? (
                     <>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.governance)}`}>
                         {control.operational_capability?.governance}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.asset_management)}`}>
                         {control.operational_capability?.asset_management}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.information_protection)}`}>
                         {control.operational_capability?.information_protection}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.human_resource_security)}`}>
                         {
                           control.operational_capability
                             ?.human_resource_security
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.physical_security)}`}>
                         {control.operational_capability?.physical_security}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.system_and_network_security)}`}>
                         {
                           control.operational_capability
                             ?.system_and_network_security
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.application_security)}`}>
                         {control.operational_capability?.application_security}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.secure_configuration)}`}>
                         {control.operational_capability?.secure_configuration}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.identity_and_access_management)}`}>
                         {
                           control.operational_capability
                             ?.identity_and_access_management
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.threat_and_vulnerability_management)}`}>
                         {
                           control.operational_capability
                             ?.threat_and_vulnerability_management
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.continuity)}`}>
                         {control.operational_capability?.continuity}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.supplier_relationship_security)}`}>
                         {
                           control.operational_capability
                             ?.supplier_relationship_security
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.legal_and_compliance)}`}>
                         {control.operational_capability?.legal_and_compliance}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.information_security_event_management)}`}>
                         {
                           control.operational_capability
                             ?.information_security_event_management
                         }
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.operational_capability?.information_security_assurance)}`}>
                         {
                           control.operational_capability
                             ?.information_security_assurance
@@ -2055,10 +1941,10 @@ const ASISReport = () => {
                       <td className="border border-slate-200 p-3 text-center">
                         {control.additional_info?.related_to}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.additional_info?.must_have)}`}>
                         {control.additional_info?.must_have}
                       </td>
-                      <td className="border border-slate-200 p-3 text-center">
+                      <td className={`border border-slate-200 p-3 text-center ${getYesNoColor(control.additional_info?.nice_to_have)}`}>
                         {control.additional_info?.nice_to_have}
                       </td>
                       <td className="border border-slate-200 p-3 text-center">
@@ -2493,87 +2379,19 @@ const ASISReport = () => {
       )}
 
       {/* Excel Upload Modal */}
-      {showModal && modalType === "excel" && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={closeModal}
-            ></div>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <form onSubmit={handleExcelSubmit}>
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    Upload Excel File
-                  </h3>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-center w-full">
-                      <label
-                        htmlFor="excel-file"
-                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                      >
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <svg
-                            className="w-10 h-10 mb-3 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                            />
-                          </svg>
-                          <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Excel files only
-                          </p>
-                        </div>
-                        <input
-                          id="excel-file"
-                          type="file"
-                          className="hidden"
-                          accept=".xlsx,.xls"
-                          onChange={handleFileChange}
-                        />
-                      </label>
-                    </div>
-                    {excelFile && (
-                      <p className="mt-2 text-sm text-gray-500 truncate">
-                        Selected file: {excelFile.name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="submit"
-                    disabled={!excelFile || isLoading}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-gray-300"
-                  >
-                    {isLoading ? "Uploading..." : "Upload"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      <UnifiedUploadModal
+        isOpen={showModal && modalType === "excel"}
+        onClose={closeModal}
+        onSubmit={handleExcelSubmit}
+        isSubmitting={isLoading}
+        title="Upload ASIS Excel"
+        reportName={selectedReport?.name}
+        fileType="excel"
+        showDownloadTemplate={true}
+        reportType="asis"
+        reportId={selectedReport?.id}
+        projectId={effectiveProjectId}
+      />
 
       {/* Confirmation Modal */}
       <ConfirmationModal
@@ -2584,11 +2402,18 @@ const ASISReport = () => {
         message={confirmModalProps.message}
       />
 
+      {/* Legends Modal */}
+      <LegendsModal
+        isOpen={showLegendsModal}
+        onClose={toggleLegendsModal}
+      />
+
       {/* Detailed View Modal */}
       <DetailedViewModal
         isOpen={showDetailedView}
         onClose={closeDetailedView}
-        control={selectedControlForView}
+        controlData={selectedControlForView}
+        reportType="asis"
       />
     </>
   );

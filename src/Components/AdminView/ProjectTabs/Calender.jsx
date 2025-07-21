@@ -356,7 +356,7 @@ const MeetingCalendar = () => {
     const day = String(date.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
 
-    console.log(`📅 Looking for meetings on: ${dateString}`);
+    
     const foundMeetings = filteredMeetings.filter((meeting) => meeting.date === dateString);
     console.log(`📅 Found ${foundMeetings.length} meetings:`, foundMeetings.map(m => m.title));
 

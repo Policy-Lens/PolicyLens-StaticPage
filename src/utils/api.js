@@ -11,7 +11,8 @@ const apiRequest = async (
   endpoint,
   body = null,
   requiresAuth = false,
-  isMultipart = false
+  isMultipart = false,
+  responseType = null
 ) => {
   try {
     const headers = {};
@@ -29,6 +30,10 @@ const apiRequest = async (
       headers,
     };
 
+    if (responseType) {
+      config.responseType = responseType;
+    }
+
     if (body) {
       if (body instanceof FormData) {
         config.data = body;
@@ -42,6 +47,12 @@ const apiRequest = async (
     }
 
     const response = await axios(config);
+    
+    // For blob responses, return the data directly
+    if (responseType === 'blob') {
+      return response.data;
+    }
+    
     return response;
   } catch (error) {
     if (error.response?.status === 401 && requiresAuth) {
@@ -76,7 +87,7 @@ const handleTokenRefresh = async (
       sameSite: "Strict",
     });
 
-    return apiRequest(method, endpoint, body, true, isMultipart);
+    return apiRequest(method, endpoint, body, true, isMultipart, responseType);
   } catch (error) {
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
