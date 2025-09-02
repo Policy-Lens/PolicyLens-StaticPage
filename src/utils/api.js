@@ -56,9 +56,16 @@ const apiRequest = async (
     return response;
   } catch (error) {
     if (error.response?.status === 401 && requiresAuth) {
-      return handleTokenRefresh(method, endpoint, body, isMultipart);
+      return handleTokenRefresh(method, endpoint, body, isMultipart, responseType);
     }
-    throw error.response?.data || { message: "Something went wrong" };
+    // Preserve previous behavior (throwing response data) but also attach status
+    const status = error.response?.status;
+    const data = error.response?.data;
+    if (data && typeof data === "object") {
+      // Merge status and raw data while keeping top-level keys for backward compatibility
+      throw { status, data, ...data };
+    }
+    throw { status, message: "Something went wrong" };
   }
 };
 
@@ -67,7 +74,8 @@ const handleTokenRefresh = async (
   method,
   endpoint,
   body,
-  isMultipart = false
+  isMultipart = false,
+  responseType = null
 ) => {
   try {
     const refreshToken = Cookies.get("refreshToken");
