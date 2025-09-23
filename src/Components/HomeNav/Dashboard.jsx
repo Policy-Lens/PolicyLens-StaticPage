@@ -1,15 +1,9 @@
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext";
+import { Select } from "antd";
 import {
-  BarChart3,
-  Home,
-  FileText,
-  Users,
-  Settings,
-  LogOut,
   Search,
-  Sliders,
   ArrowUpRight,
   ArrowDownRight,
   Clipboard,
@@ -18,7 +12,6 @@ import {
   AlertCircle,
   Filter,
 } from "lucide-react";
-import Sidebar from "./Sidebar";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -33,7 +26,7 @@ import {
   LineElement,
   Filler,
 } from "chart.js";
-import { Doughnut, Bar, Pie, Line } from "react-chartjs-2";
+import { Doughnut, Bar, Line } from "react-chartjs-2";
 
 // Register ChartJS components
 ChartJS.register(
@@ -202,7 +195,7 @@ const DashboardPage = () => {
         display: false,
       },
       legend: {
-        position: "top",
+        position: "bottom",
       },
     },
     responsive: true,
@@ -527,7 +520,7 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto">
         {/* Header section - simplified */}
         <div className="flex flex-col mb-6">
           <div className="flex items-baseline">
@@ -555,37 +548,37 @@ const DashboardPage = () => {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            {filterOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setActiveFilter(option.value)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
-                  activeFilter === option.value
-                    ? "bg-blue-100 text-blue-700 border border-blue-200"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                {option.value === "all" && <Filter size={14} />}
-                {option.value === "high" && (
-                  <AlertCircle size={14} className="text-red-500" />
-                )}
-                {option.value === "medium" && (
-                  <AlertCircle size={14} className="text-yellow-500" />
-                )}
-                {option.value === "low" && (
-                  <AlertCircle size={14} className="text-green-500" />
-                )}
-                {option.value === "compliance" && (
-                  <Shield size={14} className="text-blue-500" />
-                )}
-                {option.label}
-              </button>
-            ))}
+          <div className="w-full md:w-auto">
+
+            <Select
+              value={activeFilter}
+              onChange={setActiveFilter}
+              style={{ minWidth: 200 }}
+              className="w-full md:w-[220px]"
+              options={filterOptions.map((option) => ({
+                value: option.value,
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    {option.value === "all" && <Filter size={14} />}
+                    {option.value === "high" && (
+                      <AlertCircle size={14} className="text-red-500" />
+                    )}
+                    {option.value === "medium" && (
+                      <AlertCircle size={14} className="text-yellow-500" />
+                    )}
+                    {option.value === "low" && (
+                      <AlertCircle size={14} className="text-green-500" />
+                    )}
+                    {option.value === "compliance" && (
+                      <Shield size={14} className="text-blue-500" />
+                    )}
+                    {option.label}
+                  </span>
+                ),
+              }))}
+            />
           </div>
         </div>
-
-        {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {metricCards.map((card, index) => (
             <div
@@ -668,7 +661,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Middle row - Compliance Trends - Left-aligned */}
-        <div className="mb-5 ml-0 mr-auto" style={{ width: "90%" }}>
+        <div className="mb-5 ml-0 mr-auto">
           <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risk Compliance Trends (Last 12 Months)
@@ -707,9 +700,7 @@ const DashboardPage = () => {
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risk Heat Map
             </h2>
-            <div className="h-[300px] flex items-center justify-center">
-              <RiskHeatMap />
-            </div>
+            <RiskHeatMap />
           </div>
         </div>
       </div>

@@ -42,6 +42,7 @@ import NotificationToast from "./Components/Common/NotificationToast";
 import ConsultantTeamPage from "./Components/HomeNav/ConsultantTeamPage";
 import VaptQuestions from "./Components/AdminView/ProjectTabs/VaptQuestions";
 import VaptForm from "./Components/AdminView/ProjectTabs/VaptForm";
+import EditorView from "./Components/EditorView/EditorView";
 
 const router = createBrowserRouter([
   {
@@ -208,6 +209,10 @@ const router = createBrowserRouter([
         path: "policylibrary",
         element: <PolicyLibrary />,
       },
+      {
+        path: "editor",
+        element: <EditorView />,
+      },
     ],
   },
 ]);
@@ -217,8 +222,10 @@ const AppLayout = () => {
     <AuthProvider>
       <NotificationProvider>
         <ProjectProvider>
-          <RouterProvider router={router} />
-          <NotificationToast />
+          <div className="font-sans"> {/* Add this wrapper */}
+            <RouterProvider router={router} />
+            <NotificationToast />
+          </div>
         </ProjectProvider>
       </NotificationProvider>
     </AuthProvider>

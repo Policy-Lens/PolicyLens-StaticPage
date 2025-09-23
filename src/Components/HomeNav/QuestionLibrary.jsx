@@ -1,26 +1,23 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
 import {
-  Search,
   Filter,
   X,
-  FileText,
   Plus,
   Edit,
   Trash2,
   AlertCircle,
   UploadCloud,
   Download,
+  Search,
 } from "lucide-react";
 import { AuthContext } from "../../AuthContext";
 import { apiRequest } from "../../utils/api";
-import { message, Spin } from "antd";
+import { message, Spin, Button, Input, Space, Tabs } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
-import Sidebar from "./Sidebar";
 import { useLocation } from "react-router-dom";
 
 const QuestionLibrary = () => {
   const { user } = useContext(AuthContext);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState("clause"); // "clause", "control", "vapt", or "vapt_form"
@@ -114,14 +111,6 @@ const QuestionLibrary = () => {
     setIsAdmin(user?.role == "Admin");
   }, [user]);
 
-  // Update question form when active tab changes
-  useEffect(() => {
-    setNewQuestion((prev) => ({
-      ...prev,
-      type: activeTab,
-    }));
-  }, [activeTab]);
-
   // Fetch questions
   const handleGetQuestions = async () => {
     if (!isAdmin) return;
@@ -155,6 +144,15 @@ const QuestionLibrary = () => {
       setIsQuestionsLoading(false);
     }
   };
+
+  // Update question form when active tab changes
+  useEffect(() => {
+    setNewQuestion((prev) => ({
+      ...prev,
+      type: activeTab,
+      type_description: "", // Reset subtype when tab changes
+    }));
+  }, [activeTab]);
 
   // Toggle filter dropdown
   const toggleFilterDropdown = () => {
@@ -547,38 +545,23 @@ const QuestionLibrary = () => {
             </h2>
 
             {/* Search, Filter, and Actions */}
-            <div className="flex ml-auto gap-2">
+            <Space className="ml-auto" size="middle">
               {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search questions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
-                />
-              </div>
+              <Input
+                placeholder="Search questions..."
+                prefix={<Search size={16} className="text-slate-400" />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: 250 }}
+                allowClear
+              />
 
               {/* Filter Button */}
               <div className="relative">
-                <button
-                  className={`px-4 py-2.5 border ${
-                    filterDropdownOpen
-                      ? "border-indigo-300 ring-2 ring-indigo-300"
-                      : "border-slate-200"
-                  } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
+                <Button
                   onClick={toggleFilterDropdown}
+                  icon={<Filter size={16} />}
                 >
-                  <Filter
-                    size={16}
-                    className={`mr-2 ${
-                      Object.values(pendingFilters).some((f) => f !== "") ||
-                      searchQuery
-                        ? "text-indigo-500"
-                        : "text-slate-400"
-                    }`}
-                  />
                   <span>Filter</span>
                   {(pendingFilters.type || searchQuery) && (
                     <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
@@ -591,7 +574,7 @@ const QuestionLibrary = () => {
                       Active
                     </span>
                   )}
-                </button>
+                </Button>
 
                 {/* Filter Dropdown Content */}
                 {filterDropdownOpen && (
@@ -697,68 +680,36 @@ const QuestionLibrary = () => {
               </div>
 
               {/* Upload Button */}
-              <button
-                className="px-4 py-2.5 border border-slate-200 rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm"
+              <Button
                 onClick={openUploadModal}
+                icon={<UploadCloud size={16} />}
               >
-                <UploadCloud size={16} className="mr-2 text-slate-400" />
-                <span>Upload Excel</span>
-              </button>
+                Upload Excel
+              </Button>
 
               {/* Add Question Button */}
-              <button
-                className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg flex items-center hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
+              <Button
+                type="primary"
                 onClick={openAddModal}
+                icon={<Plus size={16} />}
               >
-                <Plus size={16} className="mr-1.5" />
-                <span>Add Question</span>
-              </button>
-            </div>
+                Add Question
+              </Button>
+            </Space>
           </div>
 
           {/* Tabs */}
-          <div className="flex px-4 border-t border-slate-200">
-            <button
-              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "clause"
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
-              onClick={() => setActiveTab("clause")}
-            >
-              Clause Questions
-            </button>
-            <button
-              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "control"
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
-              onClick={() => setActiveTab("control")}
-            >
-              Control Questions
-            </button>
-            <button
-              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "vapt"
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
-              onClick={() => setActiveTab("vapt")}
-            >
-              VAPT Questions
-            </button>
-            <button
-              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "vapt_form"
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
-              onClick={() => setActiveTab("vapt_form")}
-            >
-              VAPT Form
-            </button>
-          </div>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            className="px-4"
+            items={[
+              { label: "Clause Questions", key: "clause" },
+              { label: "Control Questions", key: "control" },
+              { label: "VAPT Questions", key: "vapt" },
+              { label: "VAPT Form", key: "vapt_form" },
+            ]}
+          />
         </div>
 
         {/* Questions Table */}
@@ -954,12 +905,13 @@ const QuestionLibrary = () => {
                   </label>
                   <select
                     name="type"
-                    value={newQuestion.type}
+                    value={activeTab} // The type is controlled by the active tab
                     onChange={(e) => {
-                      handleQuestionInputChange(e);
+                      // This should not change via the form, but if it does, sync with activeTab
+                      setActiveTab(e.target.value);
                       setNewQuestion((prev) => ({
                         ...prev,
-                        type_description: "",
+                        type_description: "", // Reset subtype on type change
                         pdca_cycle: "",
                       }));
                     }}
@@ -976,11 +928,11 @@ const QuestionLibrary = () => {
                 {/* Type Description */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    {activeTab === "clause"
+                    {newQuestion.type === "clause"
                       ? "Clause"
-                      : activeTab === "control"
+                      : newQuestion.type === "control"
                       ? "Control"
-                      : activeTab === "vapt"
+                      : newQuestion.type === "vapt"
                       ? "VAPT Type"
                       : "VAPT Form Type"} *
                   </label>
@@ -993,27 +945,27 @@ const QuestionLibrary = () => {
                   >
                     <option value="">
                       Select a{" "}
-                      {activeTab === "clause"
+                      {newQuestion.type === "clause"
                         ? "clause"
-                        : activeTab === "control"
+                        : newQuestion.type === "control"
                         ? "control"
-                        : activeTab === "vapt"
+                        : newQuestion.type === "vapt"
                         ? "VAPT type"
                         : "VAPT form type"}
                     </option>
-                    {activeTab === "clause"
+                    {newQuestion.type === "clause"
                       ? clauseTypeChoices.map((type) => (
                           <option key={type} value={type}>
                             {type}
                           </option>
                         ))
-                      : activeTab === "control"
+                      : newQuestion.type === "control"
                       ? controlTypeChoices.map((type) => (
                           <option key={type} value={type}>
                             {type}
                           </option>
                         ))
-                      : activeTab === "vapt"
+                      : newQuestion.type === "vapt"
                       ? vaptTypeChoices.map((type) => (
                           <option key={type} value={type}>
                             {type}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Eye,
   Download,
@@ -18,11 +19,10 @@ import {
   Calendar,
 } from "lucide-react";
 import FileViewerModal from "../../FileViewer/FileViewerModal";
-import { useParams } from "react-router-dom";
 import { apiRequest } from "../../../utils/api";
 import { AuthContext } from "../../../AuthContext";
 import { ProjectContext } from "../../../Context/ProjectContext";
-import { message } from "antd";
+import { Button, message } from "antd";
 
 // Control name options for filtering
 const CONTROL_NAME_OPTIONS = [
@@ -730,6 +730,7 @@ const PolicyLibrary = () => {
   const { projectid } = useParams();
   const { user } = useContext(AuthContext);
   const { projectRole } = useContext(ProjectContext);
+  const navigate = useNavigate();
 
   // Log roles for debugging
   useEffect(() => {
@@ -1365,7 +1366,15 @@ const PolicyLibrary = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4 text-gray-800">Policy Library</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold mb-4 text-gray-800">Policy Library</h1>
+        <Button 
+          type="primary" 
+          onClick={() => navigate(`/project/${projectid}/editor`)}
+        >
+          Open Editor
+        </Button>
+      </div>
 
       {/* Tabs */}
       <div className="flex border-b mb-4 bg-gradient-to-r from-indigo-50 to-white rounded-t-lg">

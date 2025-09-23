@@ -252,7 +252,7 @@ const FileViewerModal = ({ visible, file, onClose }) => {
       title={file?.name || 'File Viewer'}
       open={visible}
       onCancel={onClose}
-      width="75%"
+      width="90%"
       centered
       footer={[
         <Button key="download" type="primary" icon={<DownloadOutlined />} onClick={() => handleDownload(file?.url, file?.name)}>
