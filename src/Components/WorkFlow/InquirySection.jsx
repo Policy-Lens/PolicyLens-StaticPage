@@ -1,503 +1,51 @@
 import React, { useState, useContext, useEffect } from "react";
 import {
-  Modal,
-  Input,
-  Upload,
   Button,
+  Input,
+  Form,
+  Row,
+  Col,
+  Card,
+  Divider,
+  Space,
+  Typography,
+  Tooltip,
+  Collapse,
   message,
+  Modal,
+  Dropdown,
   Select,
   DatePicker,
-  Dropdown,
-  Card,
-  Form,
+  Upload,
   Table,
-  Space,
-  Spin,
-  Collapse,
-  Tooltip,
+  Checkbox,
   Radio,
-  Checkbox
+  Switch,
+  InputNumber,
+  TimePicker,
 } from "antd";
-import { PaperClipOutlined, FileTextOutlined, PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, MailOutlined, PhoneOutlined, LoadingOutlined } from "@ant-design/icons";
+import { 
+  PaperClipOutlined, 
+  FileTextOutlined, 
+  LoadingOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  SaveOutlined,
+  DownloadOutlined
+} from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-import { BASE_URL } from "../../utils/api";
-import { apiRequest } from "../../utils/api";
+import { BASE_URL, apiRequest } from "../../utils/api";
 import InteractiveIsoClause from "../Common/InteractiveIsoClause";
+
 const { TextArea } = Input;
 const { Option } = Select;
+const { Title, Text } = Typography;
 
-function InquirySection({ isVisible, onClose }) {
-  const [fileLists, setFileLists] = useState({});
-  const [inputs, setInputs] = useState({
-    Scope: "",
-    Timeline: "",
-    Budget: "",
-    Availability: "",
-    "Draft Proposal": "",
-  });
-  const [stepId, setStepId] = useState(null);
-  const [isAssignedUser, setIsAssignedUser] = useState(false);
-  const [inquiryData, setInquiryData] = useState([]);
-  const [oldFilesNeeded, setOldFilesNeeded] = useState({});
-  const [removedOldFiles, setRemovedOldFiles] = useState({});
-  const [downloadingFiles, setDownloadingFiles] = useState([]);
-  const { projectid } = useParams();
-  const { addStepData, getStepData, getStepId, checkStepAuth, projectRole } =
-    useContext(ProjectContext);
-
-  const handleInputChange = (field, value) => {
-    setInputs((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleUploadChange = (panelKey, { fileList }) => {
-    setFileLists((prev) => ({ ...prev, [panelKey]: fileList }));
-  };
-
-  const handleRemoveFile = (fieldKey, fileUrl) => {
-    setOldFilesNeeded((prev) => ({
-      ...prev,
-      [fieldKey]: prev[fieldKey].filter((file) => file !== fileUrl),
-    }));
-    setRemovedOldFiles((prev) => ({
-      ...prev,
-      [fieldKey]: [...(prev[fieldKey] || []), fileUrl],
-    }));
-  };
-
-  const handleRestoreFile = (fieldKey, fileUrl) => {
-    setRemovedOldFiles((prev) => ({
-      ...prev,
-      [fieldKey]: prev[fieldKey].filter((file) => file !== fileUrl),
-    }));
-    setOldFilesNeeded((prev) => ({
-      ...prev,
-      [fieldKey]: [...(prev[fieldKey] || []), fileUrl],
-    }));
-  };
-
-  const checkAssignedUser = async (step_id) => {
-    const isAuthorized = await checkStepAuth(step_id);
-    setIsAssignedUser(isAuthorized);
-  };
-
-  const handleSubmit = async (fieldName) => {
-    if (!inputs[fieldName]?.trim()) {
-      message.warning(`Please provide ${fieldName} details.`);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("field_name", fieldName);
-    formData.append("text_data", inputs[fieldName]);
-
-    if (oldFilesNeeded[fieldName]?.length > 0) {
-      formData.append("old_files", JSON.stringify(oldFilesNeeded[fieldName]));
-    }
-
-    if (fileLists[fieldName]) {
-      fileLists[fieldName].forEach((file) => {
-        formData.append("files", file.originFileObj || file);
-      });
-    }
-
-    try {
-      const response = await addStepData(stepId, formData);
-
-      if (response.status === 201) {
-        message.success(`${fieldName} submitted successfully!`);
-
-        setFileLists((prev) => ({ ...prev, [fieldName]: [] }));
-
-        await get_step_data(stepId);
-      } else {
-        message.error(`Failed to submit ${fieldName}.`);
-      }
-    } catch (error) {
-      message.error(`Failed to submit ${fieldName}.`);
-      console.error(error);
-    }
-  };
-
-  const get_step_id = async () => {
-    const response = await getStepId(projectid, 2);
-    if (response) {
-      setStepId(response.plc_step_id);
-      setAssociatedIsoClause(response.associated_iso_clause);
-      setProcess(response.process || "core");
-      await get_step_data(response.plc_step_id);
-      await checkAssignedUser(response.plc_step_id);
-    }
-  };
-
-  const get_step_data = async (step_id) => {
-    const stepData = await getStepData(step_id);
-    setInquiryData(stepData || []);
-
-    if (stepData && stepData.length > 0) {
-      const newInputs = {};
-      const newOldFiles = {};
-      const newRemovedFiles = {};
-
-      const groupedData = stepData.reduce((acc, item) => {
-        const fieldName = item.field_name;
-        acc[fieldName] = item;
-        return acc;
-      }, {});
-
-      Object.entries(groupedData).forEach(([fieldName, item]) => {
-        newInputs[fieldName] = item.text_data;
-
-        if (item.documents && item.documents.length > 0) {
-          newOldFiles[fieldName] = item.documents.map((doc) => doc.file);
-          newRemovedFiles[fieldName] = [];
-        } else {
-          newOldFiles[fieldName] = [];
-          newRemovedFiles[fieldName] = [];
-        }
-      });
-
-      const allFields = [
-        "Scope",
-        "Timeline",
-        "Budget",
-        "Availability",
-        "Draft Proposal",
-      ];
-      allFields.forEach((field) => {
-        if (!newInputs[field]) newInputs[field] = "";
-        if (!newOldFiles[field]) newOldFiles[field] = [];
-        if (!newRemovedFiles[field]) newRemovedFiles[field] = [];
-      });
-
-      setInputs(newInputs);
-      setOldFilesNeeded(newOldFiles);
-      setRemovedOldFiles(newRemovedFiles);
-      setFileLists({});
-    } else {
-      setInputs({
-        Scope: "",
-        Timeline: "",
-        Budget: "",
-        Availability: "",
-        "Draft Proposal": "",
-      });
-      setOldFilesNeeded({
-        Scope: [],
-        Timeline: [],
-        Budget: [],
-        Availability: [],
-        "Draft Proposal": [],
-      });
-      setRemovedOldFiles({
-        Scope: [],
-        Timeline: [],
-        Budget: [],
-        Availability: [],
-        "Draft Proposal": [],
-      });
-      setFileLists({});
-    }
-  };
-
-  const handleFileDownload = async (fileUrl, fileName) => {
-    setDownloadingFiles((prev) => [...prev, fileUrl]);
-    try {
-      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}${fileUrl}`;
-      const response = await fetch(fullUrl, { credentials: 'include' });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      message.error('Failed to download file');
-    } finally {
-      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
-    }
-  };
-
-  useEffect(() => {
-    get_step_id();
-  }, []);
-
-  useEffect(() => {
-    if (isVisible && stepId) {
-      get_step_data(stepId);
-    }
-  }, [isVisible]);
-
-  const getFileName = (filePath) => {
-    return filePath.split("/").pop();
-  };
-
-  const renderInputWithAttachButton = (
-    fieldName,
-    placeholder,
-    isLarge = false
-  ) => {
-    const hasExistingData = inquiryData.some(
-      (item) => item.field_name === fieldName
-    );
-
-    return (
-      <div className="space-y-4">
-        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mt-0.5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 text-blue-600"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-2">
-              <div className="text-sm text-blue-600">
-                <p>
-                  Please download and fill in the template before submitting.
-                </p>
-              </div>
-              <div className="mt-2">
-                <a
-                  href="/templates/Inquiry_template.xlsx"
-                  download={`${fieldName
-                    .toLowerCase()
-                    .replace(/\s+/g, "_")}_template.xlsx`}
-                  className="inline-flex items-center px-3 py-1 border border-blue-300 shadow-sm text-xs font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <svg
-                    className="-ml-0.5 mr-1.5 h-4 w-4 text-blue-500"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                  Download {fieldName} Template
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative border border-gray-300 rounded-lg overflow-hidden">
-          {isLarge ? (
-            <TextArea
-              rows={6}
-              placeholder={placeholder}
-              value={inputs[fieldName] || ""}
-              onChange={(e) => handleInputChange(fieldName, e.target.value)}
-              className="border-none resize-none p-4 pr-[100px] text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          ) : (
-            <Input
-              placeholder={placeholder}
-              value={inputs[fieldName] || ""}
-              onChange={(e) => handleInputChange(fieldName, e.target.value)}
-              className="border-none p-4 pr-[100px] text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          )}
-        </div>
-
-        {oldFilesNeeded[fieldName]?.length > 0 && (
-          <div className="mt-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">
-              Existing Files
-            </h4>
-            <div className="space-y-2">
-              {oldFilesNeeded[fieldName].map((fileUrl) => (
-                <div
-                  key={fileUrl}
-                  className="flex items-center justify-between bg-gray-50 p-2 rounded"
-                >
-                  <div className="flex items-center">
-                    <FileTextOutlined className="text-blue-500 mr-2" />
-                    <span className="text-sm text-gray-600">
-                      <button
-                        onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                        className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                        title={getFileName(fileUrl)}
-                        disabled={downloadingFiles.includes(fileUrl)}
-                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                      >
-                        {getFileName(fileUrl)}
-                        {downloadingFiles.includes(fileUrl) && (
-                          <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                        )}
-                      </button>
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <a
-                      href={`${BASE_URL}${fileUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-700 mr-2"
-                    >
-                      View File
-                    </a>
-                    <Button
-                      type="text"
-                      danger
-                      onClick={() => handleRemoveFile(fieldName, fileUrl)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {removedOldFiles[fieldName]?.length > 0 && (
-          <div className="mt-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">
-              Removed Files
-            </h4>
-            <div className="space-y-2">
-              {removedOldFiles[fieldName].map((fileUrl) => (
-                <div
-                  key={fileUrl}
-                  className="flex items-center justify-between bg-gray-50 p-2 rounded"
-                >
-                  <div className="flex items-center">
-                    <FileTextOutlined className="text-red-500 mr-2" />
-                    <span className="text-sm text-gray-600">
-                      <button
-                        onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                        className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                        title={getFileName(fileUrl)}
-                        disabled={downloadingFiles.includes(fileUrl)}
-                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                      >
-                        {getFileName(fileUrl)}
-                        {downloadingFiles.includes(fileUrl) && (
-                          <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                        )}
-                      </button>
-                    </span>
-                  </div>
-                  <Button
-                    type="text"
-                    onClick={() => handleRestoreFile(fieldName, fileUrl)}
-                  >
-                    Restore
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4">
-          <Upload
-            fileList={fileLists[fieldName] || []}
-            onChange={(info) => handleUploadChange(fieldName, info)}
-            beforeUpload={() => false}
-            showUploadList={true}
-            multiple
-          >
-            <Button
-              icon={<PaperClipOutlined />}
-              className="bg-gray-100 rounded-full px-4 py-1 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-200 focus:outline-none"
-            >
-              Attach New Files
-            </Button>
-          </Upload>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="primary"
-            onClick={() => handleSubmit(fieldName)}
-            className="bg-blue-500 text-white"
-          >
-            {hasExistingData ? "Update" : "Submit"} {fieldName}
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <Modal
-      open={isVisible}
-      onCancel={() => {
-        onClose();
-      }}
-      footer={null}
-      width={800}
-    >
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Inquiry Section</h2>
-
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">Scope</h3>
-          {renderInputWithAttachButton(
-            "Scope",
-            "Enter the scope of the project",
-            true
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">Timeline</h3>
-          {renderInputWithAttachButton("Timeline", "Add timeline details")}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">Budget</h3>
-          {renderInputWithAttachButton("Budget", "Enter budget")}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">
-            Availability
-          </h3>
-          {renderInputWithAttachButton(
-            "Availability",
-            "Enter availability details"
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">
-            Draft Proposal
-          </h3>
-          {renderInputWithAttachButton(
-            "Draft Proposal",
-            "Upload draft proposal",
-            true
-          )}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function InquiryPage() {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [inquiryData, setInquiryData] = useState([]);
-  const [stepId, setStepId] = useState(null);
+function InquirySection({ stepData, plcStepData, projectPlcData, projectId, refreshProjectData }) {
+  const [form] = Form.useForm();
+  const [inquiryData, setInquiryData] = useState(null);
   const [isAssignedUser, setIsAssignedUser] = useState(false);
   const [stepStatus, setStepStatus] = useState("pending");
   const [reviewStatus, setReviewStatus] = useState("not_submitted");
@@ -511,27 +59,383 @@ function InquiryPage() {
   const [taskReferences, setTaskReferences] = useState("");
   const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
   const [process, setProcess] = useState("core");
-  const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
-  const [reviewAction, setReviewAction] = useState("accept");
-  const [reviewModalComment, setReviewModalComment] = useState("");
-  const [reviewFileList, setReviewFileList] = useState([]);
+  const [isNeedsMoreInfoModalVisible, setIsNeedsMoreInfoModalVisible] = useState(false);
+  const [moreInfoComment, setMoreInfoComment] = useState("");
+  // New: accept/reject comment modals
+  const [isAcceptModalVisible, setIsAcceptModalVisible] = useState(false);
+  const [acceptComment, setAcceptComment] = useState("");
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [rejectComment, setRejectComment] = useState("");
+  const [moreInfoFileList, setMoreInfoFileList] = useState([]);
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
   const [downloadingFiles, setDownloadingFiles] = useState([]);
+  const [loading, setLoading] = useState(false); // Changed to false since we have bulk data
+  const [fileLists, setFileLists] = useState({});
 
   const { projectid } = useParams();
   const {
-    getStepData,
-    getStepId,
     checkStepAuth,
     projectRole,
     assignStep,
     getStepAssignment,
     getMembers,
+    addStepData,
+    getStepData,
   } = useContext(ProjectContext);
+
+  // Initialize data from bulk props instead of API calls
+  useEffect(() => {
+    if (stepData) {
+      setStepStatus(stepData.status || "pending");
+      setProcess(stepData.process || "core");
+      setAssociatedIsoClause(stepData.associated_iso_clause);
+      setReviewStatus(stepData.review_status || "not_submitted");
+      setReviewComment(stepData.review_comment || "");
+    }
+  }, [stepData]);
+
+  // Initialize Inquiry data from bulk props (overview payload)
+  useEffect(() => {
+    if (plcStepData) {
+      // Prefer the normalized inquiry_data snapshot provided by backend overview
+      if (plcStepData.inquiry_data) {
+        setInquiryData(plcStepData.inquiry_data);
+        const raw = plcStepData.inquiry_data;
+        const formData = {};
+        Object.keys(raw).forEach((key) => {
+          if (
+            [
+              "id",
+              "step",
+              "created_by",
+              "updated_by",
+              "created_at",
+              "updated_at",
+            ].includes(key)
+          ) {
+            return;
+          }
+          const value = raw[key];
+          if (typeof value === "string" && value.includes(";")) {
+            formData[key] = value.split(";");
+          } else {
+            formData[key] = value;
+          }
+        });
+        form.setFieldsValue(formData);
+      }
+
+      // Extract assignments
+      if (plcStepData.assignments && plcStepData.assignments.length > 0) {
+        setTaskAssignment(plcStepData.assignments[0]);
+      }
+    }
+  }, [plcStepData, form]);
+
+  // Fallback: Fetch data from API if bulk inquiry snapshot is not available
+  useEffect(() => {
+    if (stepData?.step_id && (!plcStepData || !plcStepData.inquiry_data)) {
+      fetchInquiryData(stepData.step_id);
+    }
+  }, [stepData?.step_id, plcStepData]);
+
+  // Check if user is assigned to this step
+  useEffect(() => {
+    if (taskAssignment && taskAssignment.assigned_to_names) {
+      // This would need to be enhanced based on current user context
+      // For now, we'll assume the user is assigned if there are assignments
+      setIsAssignedUser(taskAssignment.assigned_to_names.length > 0);
+    }
+  }, [taskAssignment]);
+
+  // Field definitions for the form
+  const scopeFields = [
+    // Location Information
+    { name: "country", label: "Country", type: "select", options: ["India", "USA", "UK", "Canada", "Australia", "Germany", "France", "Japan", "China", "Singapore", "Other"] },
+    { name: "city", label: "City", type: "select", options: ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Pune", "Kolkata", "Ahmedabad", "Jaipur", "Surat", "Other"] },
+    { name: "headcount", label: "Headcount", type: "number" },
+    { name: "servers", label: "#Servers", type: "number" },
+    { name: "desktops", label: "#Desktops", type: "number" },
+    { name: "laptops", label: "#Laptops", type: "number" },
+    { name: "network_devices", label: "#Active Network Devices", type: "number" },
+    { name: "cloud_services", label: "Active Cloud Services", type: "multiselect", options: ["AWS", "Azure", "Google Cloud", "IBM Cloud", "Oracle Cloud", "Alibaba Cloud", "DigitalOcean", "Heroku", "Other"] },
+    { name: "departments", label: "Departments", type: "multiselect", options: ["IT", "HR", "Finance", "Marketing", "Sales", "Operations", "Legal", "Compliance", "Security", "Other"] },
+    { name: "vendors_suppliers", label: "Vendors / Suppliers", type: "multiselect", options: ["Microsoft", "Oracle", "SAP", "Salesforce", "Adobe", "Cisco", "Dell", "HP", "IBM", "Other"] },
+    { name: "iso_standards", label: "ISO Standards", type: "multiselect", options: ["ISO 27001", "ISO 27701", "PCI", "ISO 27001;ISO27701;PCI"] },
+    { name: "statutory_requirements", label: "Statutory Requirements", type: "multiselect", options: ["GDPR", "SOX", "HIPAA", "GLBA", "CCPA", "LGPD", "PDPA", "Other"] },
+    { name: "regulatory_requirements", label: "Regulatory Requirements", type: "multiselect", options: ["SEBI", "RBI", "IRDAI", "TRAI", "CERC", "Other"] },
+    
+    // Company Documents
+    { name: "legal_status", label: "Legal Status of the Company", type: "multiselect", options: ["Proprietory", "Partnership", "Pvt. Ltd.", "Ltd.", "LLP", "Public Limited", "Sole Proprietorship", "Other"] },
+    { name: "pan", label: "PAN", type: "upload" },
+    { name: "gst", label: "GST", type: "upload" },
+    { name: "uan", label: "UAN", type: "upload" },
+    { name: "cin", label: "CIN", type: "upload" },
+    { name: "document_incorporation", label: "Document of Incorporation", type: "upload" },
+    { name: "document_establishment", label: "Document of Establishment", type: "upload" },
+    { name: "membership_ids", label: "Membership IDs", type: "upload" },
+    { name: "billing_address", label: "Billing Address", type: "textarea" },
+    { name: "bill_to_person", label: "Bill to Person Name", type: "input" },
+    { name: "bill_to_department", label: "Bill to Department", type: "input" },
+    { name: "company_logo", label: "Company Logo", type: "upload" },
+    { name: "company_color_pallet", label: "Company Color Pallet", type: "upload" },
+    
+    // Scope of Services
+    { name: "services", label: "Services", type: "select", options: ["ISO 27001 Certification", "ISO 9001 Certification", "SOC 2 Certification", "GDPR Compliance", "HIPAA Compliance", "PCI-DSS Compliance", "SOX Compliance", "NIST Compliance", "Gap Analysis", "Risk Assessment", "Audit Support", "Other"] },
+    { name: "duration", label: "Duration", type: "input" },
+    { name: "applicable_phases", label: "Applicable Phases", type: "multiselect", options: ["Phase 1", "Phase 2", "Phase 3", "Phase 4", "Phase 5"] },
+    { name: "resource_deployment", label: "Resource Deployment", type: "table" },
+    { name: "gannt_chart", label: "Gannt Chart", type: "upload" },
+    { name: "expected_deliverable", label: "Expected Deliverable", type: "textarea" },
+    { name: "budget", label: "Budget", type: "table" },
+    { name: "currency_transaction", label: "Currency of Transaction", type: "select", options: ["USD", "EUR", "GBP", "INR", "CAD", "AUD"] },
+    { name: "dependencies", label: "Dependencies", type: "table" },
+  ];
+
+
+
+  const checkAssignedUser = async (step_id) => {
+    const isAuthorized = await checkStepAuth(step_id);
+    setIsAssignedUser(isAuthorized);
+  };
+
+  const fetchInquiryData = async (step_id) => {
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/plc/inquiry-data/${step_id}/`,
+        null,
+        true
+      );
+      if (response.status === 200) {
+        setInquiryData(response.data);
+        // Transform the data to match form field names
+        const formData = {};
+        Object.keys(response.data).forEach(key => {
+          if (key !== 'id' && key !== 'step' && key !== 'created_by' && key !== 'updated_by' && key !== 'created_at' && key !== 'updated_at') {
+            const value = response.data[key];
+            if (value && typeof value === 'string' && value.includes(';')) {
+              // Handle multiselect fields - split by semicolon
+              formData[key] = value.split(';');
+            } else {
+              formData[key] = value;
+            }
+          }
+        });
+        form.setFieldsValue(formData);
+      }
+    } catch (error) {
+      if (error?.status !== 404) {
+        console.error("Error fetching inquiry data:", error);
+      }
+    }
+  };
+
+  const handleFormSubmit = async (values) => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Prepare form data for the new InquiryData API
+          const formData = new FormData();
+      
+      // Add all field values to form data
+      Object.keys(values).forEach(key => {
+        if (values[key] !== undefined && values[key] !== null && values[key] !== '') {
+          if (Array.isArray(values[key])) {
+            // Handle multiselect fields - join with semicolon
+            formData.append(key, values[key].join(';'));
+          } else {
+            formData.append(key, values[key]);
+          }
+        }
+      });
+      
+      // Add files for upload fields
+      Object.keys(fileLists).forEach(fieldName => {
+          if (fileLists[fieldName] && fileLists[fieldName].length > 0) {
+            fileLists[fieldName].forEach((file) => {
+            formData.append(fieldName, file.originFileObj || file);
+          });
+        }
+      });
+
+      // Determine if this is a create or update operation
+      // Safer check: require an id on inquiryData to enable PUT
+      let method = inquiryData?.id ? "PUT" : "POST";
+      let response;
+      let success = false;
+      
+      console.log("Current inquiryData:", inquiryData);
+      console.log("Selected method:", method);
+      
+      try {
+        // First attempt with determined method
+        response = await apiRequest(
+          method,
+          `/api/plc/inquiry-data/${stepData.step_id}/`,
+              formData,
+              true,
+              true
+        );
+        success = true;
+      } catch (error) {
+        console.log("Initial request failed:", error);
+        console.log("Error status:", error?.status);
+        console.log("Error message:", error?.error || error?.message);
+        
+        // If PUT fails with "not found" error, retry as POST
+        if (method === "PUT" && 
+            error?.status === 404) {
+          console.log("PUT failed, retrying as POST...");
+          try {
+            method = "POST";
+            response = await apiRequest(
+              method,
+              `/api/plc/inquiry-data/${stepData.step_id}/`,
+              formData,
+              true,
+              true
+            );
+            success = true;
+          } catch (retryError) {
+            console.error("Retry as POST also failed:", retryError);
+            throw retryError;
+          }
+      } else {
+          // Re-throw the error if it's not a 404 "not found" case
+          throw error;
+        }
+      }
+      
+      if (success && (response.status === 200 || response.status === 201)) {
+        message.success(
+          method === "PUT" 
+            ? "Inquiry data updated successfully!" 
+            : "Inquiry data saved successfully!"
+        );
+        setInquiryData(response.data);
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      } else {
+        message.error("Failed to save inquiry data.");
+      }
+      
+    } catch (error) {
+      console.error("Error saving inquiry data:", error);
+      message.error("Failed to save inquiry data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendForReview = async () => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepData.step_id}/update-status/`,
+        { status: "completed" },
+        true
+      );
+      if (response.status === 200) {
+        message.success("Step sent for review successfully!");
+        setStepStatus("completed");
+        setReviewStatus("under_review");
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      } else {
+        message.error("Failed to send step for review.");
+      }
+    } catch (error) {
+      console.error("Error sending for review:", error);
+      message.error("Failed to send step for review.");
+    }
+  };
+
+  const handleReviewAction = async (action) => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    // Comments per action
+    let commentToSend = "";
+    if (action === "accept") {
+      commentToSend = acceptComment.trim();
+    } else if (action === "reject") {
+      if (!rejectComment.trim()) {
+        message.warning("Please provide a rejection comment.");
+        return;
+      }
+      commentToSend = rejectComment.trim();
+    } else if (action === "needs_info") {
+      if (!moreInfoComment.trim()) {
+        message.warning("Please provide details for your request.");
+        return;
+      }
+      commentToSend = moreInfoComment.trim();
+    }
+
+    const formData = new FormData();
+    formData.append(
+      "review_status",
+      action === "accept" ? "accepted" : action === "reject" ? "rejected" : "needs_info"
+    );
+    formData.append("review_comment", commentToSend);
+    formData.append("old_files", JSON.stringify(reviewOldFilesNeeded));
+    moreInfoFileList.forEach((file) => {
+      formData.append("files", file.originFileObj);
+    });
+
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/plc/plc_step/${stepData.step_id}/submit-review/`,
+        formData,
+        true,
+        true
+      );
+      if (response.status === 200) {
+        message.success(`Review ${action} submitted successfully!`);
+        setReviewStatus(response.data.review_status);
+        setReviewComment(response.data.review_comment || "");
+        setReviewOldFilesNeeded(response.data.documents?.map((doc) => doc.file) || []);
+        setIsNeedsMoreInfoModalVisible(false);
+        setMoreInfoComment("");
+        setMoreInfoFileList([]);
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      } else {
+        message.error(`Failed to submit ${action} review.`);
+      }
+    } catch (error) {
+      console.error(`Error submitting ${action} review:`, error);
+      message.error(error.response?.data?.message || `Failed to submit ${action} review.`);
+    }
+  };
 
   const getFileName = (filePath) => {
     return filePath.split("/").pop();
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
   };
 
   const getViewerUrl = (filePath) => {
@@ -547,72 +451,6 @@ function InquiryPage() {
     return `https://docs.google.com/viewer?url=${encodeURIComponent(
       `${BASE_URL}${filePath}`
     )}&embedded=true`;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
-
-  const handleFileDownload = async (fileUrl, fileName) => {
-    setDownloadingFiles((prev) => [...prev, fileUrl]);
-    try {
-      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}${fileUrl}`;
-      const response = await fetch(fullUrl, { credentials: 'include' });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      message.error('Failed to download file');
-    } finally {
-      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
-    }
-  };
-
-  const checkAssignedUser = async (step_id) => {
-    const isAuthorized = await checkStepAuth(step_id);
-    setIsAssignedUser(isAuthorized);
-  };
-
-  const get_step_id = async () => {
-    try {
-      const response = await getStepId(projectid, 2);
-      if (response) {
-        setStepId(response.plc_step_id);
-        setStepStatus(response.status);
-        setReviewStatus(response.review_status);
-        setReviewComment(response.review_comment || "");
-        setAssociatedIsoClause(response.associated_iso_clause);
-        setProcess(response.process || "core");
-        await get_step_data(response.plc_step_id);
-        await checkAssignedUser(response.plc_step_id);
-        await getTaskAssignment(response.plc_step_id);
-        const reviewData = await apiRequest(
-          "GET",
-          `/api/plc/plc_step/${response.plc_step_id}/review-files/`,
-          null,
-          true
-        );
-        if (reviewData.status === 200 && reviewData.data.documents) {
-          setReviewOldFilesNeeded(reviewData.data.documents.map((doc) => doc.file));
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching step ID:", error);
-      message.error("Failed to load inquiry data.");
-    }
-  };
-
-  const get_step_data = async (step_id) => {
-    const stepData = await getStepData(step_id);
-    setInquiryData(stepData || []);
   };
 
   const getTaskAssignment = async (step_id) => {
@@ -641,6 +479,10 @@ function InquiryPage() {
 
   const handleAssignTaskClose = () => {
     setIsAssignTaskVisible(false);
+    setSelectedTeamMembers([]);
+    setTaskDescription("");
+    setTaskDeadline(null);
+    setTaskReferences("");
   };
 
   const handleSubmitAssignment = async () => {
@@ -665,7 +507,7 @@ function InquiryPage() {
     };
 
     try {
-      const result = await assignStep(stepId, assignmentData);
+      const result = await assignStep(stepData.step_id, assignmentData);
       if (result) {
         message.success("Task assigned successfully!");
         setIsAssignTaskVisible(false);
@@ -673,7 +515,8 @@ function InquiryPage() {
         setTaskDescription("");
         setTaskDeadline(null);
         setTaskReferences("");
-        await getTaskAssignment(stepId);
+        // No longer need to call get_step_id since we have bulk data
+        // The parent component will handle data updates
       } else {
         message.error("Failed to assign task.");
       }
@@ -683,11 +526,51 @@ function InquiryPage() {
     }
   };
 
+  const handleNeedsMoreInfoClose = () => {
+    setIsNeedsMoreInfoModalVisible(false);
+    setMoreInfoComment("");
+    setMoreInfoFileList([]);
+  };
+
+  const handleFileDownload = async (fileUrl, fileName) => {
+    setDownloadingFiles((prev) => [...prev, fileUrl]);
+    try {
+      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${BASE_URL}${fileUrl}`;
+      const response = await fetch(fullUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Failed to download file');
+    } finally {
+      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
+    }
+  };
+
+  const handleUploadChange = (fieldName, { fileList }) => {
+    setFileLists((prev) => ({ ...prev, [fieldName]: fileList }));
+  };
+
+
+
+  // Initialize data when component mounts
+  useEffect(() => {
+    // No longer need to call get_step_id since we have bulk data
+    // The data is initialized from props in the useEffect hooks above
+  }, []);
+
   const updateStepStatus = async (newStatus) => {
     try {
       const response = await apiRequest(
         "PUT",
-        `/api/plc/plc_step/${stepId}/update-status/`,
+        `/api/plc/plc_step/${stepData.step_id}/update-status/`,
         { status: newStatus },
         true
       );
@@ -707,7 +590,7 @@ function InquiryPage() {
     try {
       const response = await apiRequest(
         "PATCH",
-        `/api/plc/plc_step/${stepId}/update/`,
+        `/api/plc/plc_step/${stepData.step_id}/update/`,
         { core_or_noncore: newProcess },
         true
       );
@@ -721,380 +604,95 @@ function InquiryPage() {
     }
   };
 
-  const handleSendForReview = async () => {
-    try {
-      const response = await apiRequest(
-        "PUT",
-        `/api/plc/plc_step/${stepId}/update-status/`,
-        { status: "completed" },
-        true
-      );
-      if (response.status === 200) {
-        message.success("Step sent for review successfully!");
-        setStepStatus("completed");
-        setReviewStatus("under_review");
-        setReviewComment(response.data.review_comment || "");
-      } else {
-        message.error("Failed to send step for review.");
-      }
-    } catch (error) {
-      console.error("Error sending for review:", error);
-      message.error("Failed to send step for review.");
-    }
-  };
-
-  const ReviewModal = () => {
-    const [localComment, setLocalComment] = useState(reviewModalComment);
-    const [localAction, setLocalAction] = useState(reviewAction);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [initialSyncDone, setInitialSyncDone] = useState(false);
-
-    useEffect(() => {
-      if (isReviewModalVisible && !initialSyncDone) {
-        setLocalComment(reviewModalComment);
-        setLocalAction(reviewAction);
-        setInitialSyncDone(true);
-      } else if (!isReviewModalVisible) {
-        setInitialSyncDone(false);
-      }
-    }, [isReviewModalVisible]);
-
-    const handleCommentChange = (e) => {
-      setLocalComment(e.target.value);
-    };
-
-    const handleActionChange = (value) => {
-      setLocalAction(value);
-      setReviewAction(value);
-    };
-
-    const handleReviewFileChange = ({ fileList }) => {
-      setReviewFileList(fileList);
-    };
-
-    const resetModalState = () => {
-      setIsReviewModalVisible(false);
-      setLocalComment("");
-      setReviewModalComment("");
-      setLocalAction("accept");
-      setReviewAction("accept");
-      setReviewFileList([]);
-      setReviewOldFilesNeeded([]);
-      setReviewRemovedOldFiles([]);
-      setIsSubmitting(false);
-      setInitialSyncDone(false);
-    };
-
-    const handleReviewSubmit = async () => {
-      if (isSubmitting) return;
-      if (!localComment.trim() && localAction !== "accept") {
-        message.warning("Please provide a comment for your review.");
-        return;
-      }
-      setReviewModalComment(localComment);
-      setIsSubmitting(true);
-      const formData = new FormData();
-      formData.append(
-        "review_status",
-        localAction === "accept" ? "accepted" : localAction === "reject" ? "rejected" : "needs_info"
-      );
-      formData.append("review_comment", localComment);
-      formData.append("old_files", JSON.stringify(reviewOldFilesNeeded));
-      reviewFileList.forEach((file) => {
-        formData.append("files", file.originFileObj);
-      });
-      try {
-        const response = await apiRequest(
-          "POST",
-          `/api/plc/plc_step/${stepId}/submit-review/`,
-          formData,
-          true,
-          true
-        );
-        if (response.status === 200) {
-          message.success("Review submitted successfully!");
-          setReviewStatus(response.data.review_status);
-          setReviewComment(response.data.review_comment || "");
-          setReviewOldFilesNeeded(response.data.documents?.map((doc) => doc.file) || []);
-          resetModalState();
-        } else {
-          message.error("Failed to submit review.");
-        }
-      } catch (error) {
-        console.error("Error submitting review:", error);
-        message.error(error.response?.data?.message || "Failed to submit review.");
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-
+  // Render form field based on type
+  const renderField = (field) => {
+    switch (field.type) {
+      case "input":
+        return <Input placeholder={`Enter ${field.label.toLowerCase()}`} />;
+      case "textarea":
+        return <TextArea rows={3} placeholder={`Enter ${field.label.toLowerCase()}`} />;
+      case "select":
     return (
-      <Modal
-        title="Submit Review"
-        open={isReviewModalVisible}
-        onCancel={resetModalState}
-        footer={[
-          <Button key="cancel" onClick={resetModalState} disabled={isSubmitting}>
-            Cancel
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            onClick={handleReviewSubmit}
-            className={`${localAction === "accept" ? "bg-green-600 hover:bg-green-700" : localAction === "reject" ? "bg-red-600 hover:bg-red-700" : "bg-orange-600 hover:bg-orange-700"}`}
-            loading={isSubmitting}
-            disabled={isSubmitting}
+          <Select placeholder={`Select ${field.label.toLowerCase()}`}>
+            {field.options?.map(option => (
+              <Option key={option} value={option}>{option}</Option>
+            ))}
+          </Select>
+        );
+      case "multiselect":
+        return (
+          <Select
+            mode="multiple"
+            placeholder={`Select ${field.label.toLowerCase()}`}
+            showSearch
+            filterOption={(input, option) =>
+              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }
           >
-            Submit Review
-          </Button>,
-        ]}
-        width={700}
-        maskClosable={false}
-        destroyOnClose={true}
-      >
-        <div className="p-6">
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-blue-600"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">
-                    Download Review Template
-                  </h3>
-                  <div className="mt-2 text-sm text-blue-600">
-                    <p>
-                      Please download and fill in the review template below to guide
-                      your review process.
-                    </p>
-                  </div>
-                  <div className="mt-3">
-                    <a
-                      href="/templates/Review_template.xlsx"
-                      download="review_template.xlsx"
-                      className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <svg
-                        className="-ml-1 mr-2 h-5 w-5 text-blue-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download Review Template
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Review Action
-              </label>
-              <Select
-                value={localAction}
-                onChange={handleActionChange}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              >
-                <Option value="accept">Accept</Option>
-                <Option value="reject">Reject</Option>
-                <Option value="needs_more_info">Needs More Info</Option>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Comment {localAction !== "accept" && <span className="text-red-500">*</span>}
-              </label>
-              <TextArea
-                rows={6}
-                placeholder="Enter your review comments..."
-                value={localComment}
-                onChange={handleCommentChange}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                autoSize={{ minRows: 6, maxRows: 8 }}
-              />
-            </div>
-            {reviewOldFilesNeeded.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Existing Review Files
-                </h4>
-                <div className="space-y-3">
-                  {reviewOldFilesNeeded.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-blue-600" />
-                        </div>
-                        <span className="text-sm text-gray-700 truncate">
-                          <button
-                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                            title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
-                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                          >
-                            {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                            )}
-                          </button>
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <a
-                          href={getViewerUrl(fileUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
-                        >
-                          View
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {reviewRemovedOldFiles.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Removed Review Files
-                </h4>
-                <div className="space-y-3">
-                  {reviewRemovedOldFiles.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-red-500" />
-                        </div>
-                        <span className="text-sm text-gray-500 truncate">
-                          <button
-                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                            title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
-                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                          >
-                            {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                            )}
-                          </button>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">
-                Upload New Review Files
-              </h4>
+            {field.options?.map(option => (
+              <Option key={option} value={option}>{option}</Option>
+            ))}
+          </Select>
+        );
+      case "upload":
+        return (
               <Upload
-                fileList={reviewFileList}
-                onChange={handleReviewFileChange}
+            fileList={fileLists[field.name] || []}
+            onChange={(info) => handleUploadChange(field.name, info)}
                 beforeUpload={() => false}
                 multiple
-                showUploadList={true}
-                className="upload-list-custom"
-              >
-                <Button
-                  icon={<PaperClipOutlined />}
-                  className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg shadow-sm flex items-center"
-                >
-                  Attach Files
-                </Button>
+          >
+            <Button icon={<PaperClipOutlined />}>Upload Files</Button>
               </Upload>
-            </div>
+        );
+      case "number":
+        return <InputNumber placeholder={`Enter ${field.label.toLowerCase()}`} style={{ width: '100%' }} />;
+      case "table":
+        return (
+          <div className="border border-gray-200 rounded p-3">
+            <TextArea 
+              rows={4} 
+              placeholder={`Enter ${field.label.toLowerCase()} as table format (e.g., Column1 | Column2 | Column3\nRow1 | Data1 | Data2)`} 
+            />
+            <Text className="text-xs text-gray-500 mt-1">
+              Use | to separate columns and new lines for rows
+            </Text>
+          </div>
+        );
+      case "date":
+        return <DatePicker placeholder={`Select ${field.label.toLowerCase()}`} style={{ width: '100%' }} />;
+      case "time":
+        return <TimePicker placeholder={`Select ${field.label.toLowerCase()}`} style={{ width: '100%' }} />;
+      case "checkbox":
+        return <Checkbox>{field.label}</Checkbox>;
+      case "radio":
+        return (
+          <Radio.Group>
+            {field.options?.map(option => (
+              <Radio key={option} value={option}>{option}</Radio>
+            ))}
+          </Radio.Group>
+        );
+      case "switch":
+        return <Switch />;
+      default:
+        return <Input placeholder={`Enter ${field.label.toLowerCase()}`} />;
+    }
+  };
+
+  // Show loading state if stepData is not yet available
+  if (!stepData?.step_id) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading step data...</p>
           </div>
         </div>
-      </Modal>
+      </div>
     );
-  };
-
-  useEffect(() => {
-    get_step_id();
-  }, []);
-
-  const groupedData = inquiryData.reduce((acc, item) => {
-    acc[item.field_name] = item;
-    return acc;
-  }, {});
-
-  const getLatestUpdateTime = () => {
-    if (inquiryData.length === 0) return null;
-    const dates = inquiryData.map((item) => new Date(item.saved_at).getTime());
-    const latestTime = Math.max(...dates);
-    return new Date(latestTime);
-  };
-
-  const getLatestUser = () => {
-    if (inquiryData.length === 0) return null;
-    const latestDate = getLatestUpdateTime();
-    const latestItem = inquiryData.find(
-      (item) => new Date(item.saved_at).getTime() === latestDate.getTime()
-    );
-    return latestItem ? latestItem.saved_by : null;
-  };
-
-  const getAllDocuments = () => {
-    if (inquiryData.length === 0) return [];
-    const allDocs = [];
-    inquiryData.forEach((item) => {
-      if (item.documents && item.documents.length > 0) {
-        item.documents.forEach((doc) => {
-          allDocs.push({
-            ...doc,
-            fieldName: item.field_name,
-          });
-        });
-      }
-    });
-    return allDocs;
-  };
-
-  const getFieldDocuments = (fieldName) => {
-    if (inquiryData.length === 0) return [];
-    const fieldItem = inquiryData.find((item) => item.field_name === fieldName);
-    if (!fieldItem || !fieldItem.documents || fieldItem.documents.length === 0) {
-      return [];
-    }
-    return fieldItem.documents.map((doc) => ({
-      ...doc,
-      fieldName: fieldName,
-    }));
-  };
-
-  const latestUpdateTime = getLatestUpdateTime();
-  const latestUser = getLatestUser();
-  const allDocuments = getAllDocuments();
+  }
 
   return (
     <div className="min-h-full p-6">
@@ -1106,19 +704,35 @@ function InquiryPage() {
               <Button
                 type="default"
                 onClick={handleSendForReview}
-                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
               >
                 Send for Review
               </Button>
             )}
             {projectRole === "company" && (
+              <>
               <Button
                 type="default"
-                onClick={() => setIsReviewModalVisible(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                onClick={() => setIsAcceptModalVisible(true)}
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
               >
-                Submit Review
+                Accept
               </Button>
+                <Button
+                  type="default"
+                  onClick={() => setIsRejectModalVisible(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                >
+                  Reject
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => setIsNeedsMoreInfoModalVisible(true)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+                >
+                  Needs More Info
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -1148,7 +762,7 @@ function InquiryPage() {
                       : "Not Submitted"}
             </span>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
@@ -1185,407 +799,207 @@ function InquiryPage() {
                 <Option value="completed">Completed</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
-              <Button
-                type="primary"
-                onClick={() => setIsModalVisible(true)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {inquiryData.length > 0 ? "Update Data" : "Add Data"}
-              </Button>
-            )}
           </div>
         </div>
       </div>
 
-      {Object.keys(groupedData).length > 0 ? (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="p-6">
-            <div className="flex flex-wrap justify-between items-center mb-6">
+          <div className="mb-6">
+            <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">
+                <Title level={3} className="text-gray-800 mb-2">
                   Inquiry Information
-                </h3>
-                {latestUpdateTime && (
-                  <div className="flex items-center mt-1">
-                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3 text-blue-600"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      Last updated {formatDate(latestUpdateTime)}
-                    </span>
-                  </div>
-                )}
+                </Title>
+                <Text type="secondary">
+                  Complete the form below to define inquiry details and requirements.
+                </Text>
               </div>
-              {latestUser && (
-                <div className="flex items-center bg-gray-50 px-3 py-1 rounded-lg">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
-                      {latestUser.name.charAt(0).toUpperCase()}
+              <div className="flex space-x-2">
+                <Button
+                  type="default"
+                  icon={<DownloadOutlined />}
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = '/templates/Inquiry_template.xlsx';
+                    link.download = 'inquiry_template.xlsx';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  Download Template
+                </Button>
                     </div>
                   </div>
-                  <div className="ml-2">
-                    <p className="text-sm font-medium text-gray-800">
-                      {latestUser.name}
-                    </p>
-                    <p className="text-xs text-gray-500">{latestUser.email}</p>
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="space-y-4 mb-6">
-              {groupedData["Scope"] && (
-                <div className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">
-                      SCOPE
-                    </h4>
-                  </div>
-                  <div className="flex flex-col md:flex-row">
-                    <div className="px-4 py-3 flex-grow">
-                      <p className="text-gray-700">
-                        {groupedData["Scope"].text_data}
-                      </p>
-                    </div>
-                    {getFieldDocuments("Scope").length > 0 && (
-                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">
-                          ATTACHED FILES
-                        </h5>
-                        <div className="space-y-2">
-                          {getFieldDocuments("Scope").map((doc) => (
-                            <div key={doc.id} className="flex items-center">
-                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                                <FileTextOutlined className="text-blue-600 text-xs" />
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleFormSubmit}
+            initialValues={inquiryData || {}}
+          >
+            <Collapse
+              defaultActiveKey={['1']}
+              expandIconPosition="end"
+              className="mb-6"
+              items={[
+                {
+                  key: '1',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Location Information</span>
+                      <span className="ml-2 text-sm text-gray-500">(Country, city, infrastructure details)</span>
                               </div>
-                              <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">
-                                  <button
-                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                                    title={getFileName(doc.file)}
-                                    disabled={downloadingFiles.includes(doc.file)}
-                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                                  >
-                                    {getFileName(doc.file)}
-                                    {downloadingFiles.includes(doc.file) && (
-                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                                    )}
-                                  </button>
-                                </p>
-                                <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
-                                >
-                                  View
-                                </a>
-                              </div>
-                            </div>
-                          ))}
+                  ),
+                  children: (
+                    <Row gutter={16}>
+                      {scopeFields.filter(field => 
+                        ['country', 'city', 'headcount', 'servers', 'desktops', 'laptops', 'network_devices', 
+                         'cloud_services', 'departments', 'vendors_suppliers', 'iso_standards', 
+                         'statutory_requirements', 'regulatory_requirements'].includes(field.name)
+                      ).map((field, index) => (
+                        <Col span={field.type === "textarea" || field.type === "table" ? 24 : 12} key={field.name}>
+                          <Form.Item
+                            name={field.name}
+                            label={field.label}
+                            rules={field.required ? [{ required: true, message: `Please enter ${field.label.toLowerCase()}` }] : []}
+                          >
+                            {renderField(field)}
+                          </Form.Item>
+                        </Col>
+                      ))}
+                    </Row>
+                  ),
+                },
+                {
+                  key: '2',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Company Documents</span>
+                      <span className="ml-2 text-sm text-gray-500">(Legal status, documents, billing info)</span>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {groupedData["Timeline"] && (
-                <div className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">
-                      TIMELINE
-                    </h4>
-                  </div>
-                  <div className="flex flex-col md:flex-row">
-                    <div className="px-4 py-3 flex-grow">
-                      <p className="text-gray-700">
-                        {groupedData["Timeline"].text_data}
-                      </p>
-                    </div>
-                    {getFieldDocuments("Timeline").length > 0 && (
-                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">
-                          ATTACHED FILES
-                        </h5>
-                        <div className="space-y-2">
-                          {getFieldDocuments("Timeline").map((doc) => (
-                            <div key={doc.id} className="flex items-center">
-                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                                <FileTextOutlined className="text-blue-600 text-xs" />
-                              </div>
-                              <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">
-                                  <button
-                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                                    title={getFileName(doc.file)}
-                                    disabled={downloadingFiles.includes(doc.file)}
-                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                                  >
-                                    {getFileName(doc.file)}
-                                    {downloadingFiles.includes(doc.file) && (
-                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                                    )}
-                                  </button>
-                                </p>
-                                <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
+                  ),
+                  children: (
+                          <Row gutter={16}>
+                      {scopeFields.filter(field => 
+                        ['legal_status', 'pan', 'gst', 'uan', 'cin', 'document_incorporation',
+                         'document_establishment', 'membership_ids', 'billing_address', 
+                         'bill_to_person', 'bill_to_department', 'company_logo', 'company_color_pallet'].includes(field.name)
+                      ).map((field, index) => (
+                        <Col span={field.type === "textarea" || field.type === "table" ? 24 : 12} key={field.name}>
+                                <Form.Item
+                            name={field.name}
+                                  label={field.label}
+                            rules={field.required ? [{ required: true, message: `Please enter ${field.label.toLowerCase()}` }] : []}
                                 >
-                                  View
-                                </a>
-                              </div>
+                                  {renderField(field)}
+                                </Form.Item>
+                              </Col>
+                            ))}
+                          </Row>
+                  ),
+                },
+                {
+                  key: '3',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Scope of Services</span>
+                      <span className="ml-2 text-sm text-gray-500">(Services, duration, phases, deliverables)</span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {groupedData["Budget"] && (
-                <div className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">
-                      BUDGET
-                    </h4>
-                  </div>
-                  <div className="flex flex-col md:flex-row">
-                    <div className="px-4 py-3 flex-grow">
-                      <p className="text-gray-700">
-                        {groupedData["Budget"].text_data}
-                      </p>
-                    </div>
-                    {getFieldDocuments("Budget").length > 0 && (
-                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">
-                          ATTACHED FILES
-                        </h5>
-                        <div className="space-y-2">
-                          {getFieldDocuments("Budget").map((doc) => (
-                            <div key={doc.id} className="flex items-center">
-                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                                <FileTextOutlined className="text-blue-600 text-xs" />
-                              </div>
-                              <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">
-                                  <button
-                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                                    title={getFileName(doc.file)}
-                                    disabled={downloadingFiles.includes(doc.file)}
-                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                                  >
-                                    {getFileName(doc.file)}
-                                    {downloadingFiles.includes(doc.file) && (
-                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                                    )}
-                                  </button>
-                                </p>
-                                <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
-                                >
-                                  View
-                                </a>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {groupedData["Availability"] && (
-                <div className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">
-                      AVAILABILITY
-                    </h4>
-                  </div>
-                  <div className="flex flex-col md:flex-row">
-                    <div className="px-4 py-3 flex-grow">
-                      <p className="text-gray-700">
-                        {groupedData["Availability"].text_data}
-                      </p>
-                    </div>
-                    {getFieldDocuments("Availability").length > 0 && (
-                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">
-                          ATTACHED FILES
-                        </h5>
-                        <div className="space-y-2">
-                          {getFieldDocuments("Availability").map((doc) => (
-                            <div key={doc.id} className="flex items-center">
-                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                                <FileTextOutlined className="text-blue-600 text-xs" />
-                              </div>
-                              <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">
-                                  <button
-                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                                    title={getFileName(doc.file)}
-                                    disabled={downloadingFiles.includes(doc.file)}
-                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                                  >
-                                    {getFileName(doc.file)}
-                                    {downloadingFiles.includes(doc.file) && (
-                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                                    )}
-                                  </button>
-                                </p>
-                                <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
-                                >
-                                  View
-                                </a>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {groupedData["Draft Proposal"] && (
-                <div className="border-l-4 border-blue-400 bg-gray-50 rounded-r-lg overflow-hidden">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-500 uppercase">
-                      DRAFT PROPOSAL
-                    </h4>
-                  </div>
-                  <div className="flex flex-col md:flex-row">
-                    <div className="px-4 py-3 flex-grow">
-                      <p className="text-gray-700">
-                        {groupedData["Draft Proposal"].text_data}
-                      </p>
-                    </div>
-                    {getFieldDocuments("Draft Proposal").length > 0 && (
-                      <div className="border-t md:border-t-0 md:border-l border-gray-200 px-4 py-3 md:w-64">
-                        <h5 className="text-xs font-medium text-gray-500 mb-2">
-                          ATTACHED FILES
-                        </h5>
-                        <div className="space-y-2">
-                          {getFieldDocuments("Draft Proposal").map((doc) => (
-                            <div key={doc.id} className="flex items-center">
-                              <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                                <FileTextOutlined className="text-blue-600 text-xs" />
-                              </div>
-                              <div className="overflow-hidden flex-grow">
-                                <p className="text-xs font-medium text-gray-700 truncate">
-                                  <button
-                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                                    className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                                    title={getFileName(doc.file)}
-                                    disabled={downloadingFiles.includes(doc.file)}
-                                    style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                                  >
-                                    {getFileName(doc.file)}
-                                    {downloadingFiles.includes(doc.file) && (
-                                      <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                                    )}
-                                  </button>
-                                </p>
-                                <a
-                                  href={getViewerUrl(doc.file)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
-                                >
-                                  View
-                                </a>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            {reviewComment && (
-              <div className="p-6">
-                <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
-                  Review Comment
-                </h3>
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-                  <p className="text-sm text-gray-800">{reviewComment}</p>
-                </div>
+                  ),
+                  children: (
+                    <Row gutter={16}>
+                      {scopeFields.filter(field => 
+                        ['services', 'duration', 'applicable_phases', 'resource_deployment',
+                         'gannt_chart', 'expected_deliverable', 'budget', 'currency_transaction', 'dependencies'].includes(field.name)
+                      ).map((field, index) => (
+                        <Col span={field.type === "textarea" || field.type === "table" ? 24 : 12} key={field.name}>
+                          <Form.Item
+                            name={field.name}
+                            label={field.label}
+                            rules={field.required ? [{ required: true, message: `Please enter ${field.label.toLowerCase()}` }] : []}
+                          >
+                            {renderField(field)}
+                          </Form.Item>
+                        </Col>
+                      ))}
+                    </Row>
+                  ),
+                },
+              ]}
+            />
+            
+            <div className="flex justify-end space-x-4">
+            <Button
+                type="default" 
+                onClick={() => form.resetFields()} 
+                className="border-gray-300 text-gray-700"
+              >
+                Reset Form
+              </Button>
+              <Button 
+              type="primary"
+                htmlType="submit" 
+              className="bg-blue-600 hover:bg-blue-700"
+                loading={loading}
+                icon={<SaveOutlined />}
+              >
+                {inquiryData ? "Update Inquiry" : "Save Inquiry"}
+            </Button>
+          </div>
+          </Form>
+        </div>
+      </div>
+
+      {/* Review Comment Display */}
+      {reviewComment && (
+        <div className="mt-6 p-6 bg-white rounded-xl shadow-md">
+          <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
+            Review Comment
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-orange-500">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
               </div>
-            )}
+              <div className="flex-1">
+                <p className="text-sm text-gray-800 whitespace-pre-wrap">{reviewComment}</p>
+              </div>
+            </div>
           </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-md p-10 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-10 w-10 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              No Inquiry Data
-            </h3>
-            <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-              The inquiry section helps gather important project details like
-              scope, timeline, and budget. Add your first inquiry to get
-              started.
-            </p>
-            <Button
-              onClick={() => setIsModalVisible(true)}
-              type="primary"
-              size="large"
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Add Inquiry Data
-            </Button>
+      )}
+
+      {/* Review Files Display */}
+      {reviewOldFilesNeeded && reviewOldFilesNeeded.length > 0 && (
+        <div className="mt-6 p-6 bg-white rounded-xl shadow-md">
+          <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
+            Additional Files Requested
+          </h3>
+          <div className="space-y-3">
+            {reviewOldFilesNeeded.map((file, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  <span className="text-sm text-gray-700">{getFileName(file)}</span>
+                </div>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => handleFileDownload(file, getFileName(file))}
+                  className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                >
+                  Download
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1605,7 +1019,6 @@ function InquiryPage() {
                   {formatDate(taskAssignment.assigned_at)}
                 </p>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700">
@@ -1626,7 +1039,6 @@ function InquiryPage() {
                   </p>
                 </div>
               </div>
-
               <div className="mt-4">
                 <p className="text-sm font-medium text-gray-700">
                   Description:
@@ -1635,7 +1047,6 @@ function InquiryPage() {
                   {taskAssignment.description}
                 </p>
               </div>
-
               {taskAssignment.references && (
                 <div className="mt-4">
                   <p className="text-sm font-medium text-gray-700">
@@ -1647,7 +1058,6 @@ function InquiryPage() {
                 </div>
               )}
             </div>
-
             <div className="text-xs text-gray-500 mt-2">
               <p>
                 <b>Status:</b> {taskAssignment.status}
@@ -1656,11 +1066,6 @@ function InquiryPage() {
           </div>
         </div>
       )}
-
-      <InquirySection
-        isVisible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-      />
 
       <Modal
         title="Assign Task"
@@ -1726,9 +1131,173 @@ function InquiryPage() {
         </div>
       </Modal>
 
-      <ReviewModal />
+      <Modal
+        title="Accept Inquiry"
+        open={isAcceptModalVisible}
+        onCancel={() => setIsAcceptModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsAcceptModalVisible(false)}>Cancel</Button>,
+          <Button key="ok" type="primary" onClick={() => { setIsAcceptModalVisible(false); handleReviewAction("accept"); }} className="bg-green-600 hover:bg-green-700">Confirm Accept</Button>,
+        ]}
+      >
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Comment (optional)</label>
+          <TextArea rows={3} placeholder="Optional acceptance note" value={acceptComment} onChange={(e) => setAcceptComment(e.target.value)} />
+        </div>
+      </Modal>
+
+      <Modal
+        title="Reject Inquiry"
+        open={isRejectModalVisible}
+        onCancel={() => setIsRejectModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsRejectModalVisible(false)}>Cancel</Button>,
+          <Button key="ok" type="primary" danger onClick={() => { setIsRejectModalVisible(false); handleReviewAction("reject"); }}>Submit Rejection</Button>,
+        ]}
+      >
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Comment <span className="text-red-500">*</span></label>
+          <TextArea rows={4} placeholder="Provide reason for rejection" value={rejectComment} onChange={(e) => setRejectComment(e.target.value)} />
+        </div>
+      </Modal>
+
+      <Modal
+        title="Request More Information"
+        open={isNeedsMoreInfoModalVisible}
+        onCancel={handleNeedsMoreInfoClose}
+        footer={[
+          <Button key="cancel" onClick={handleNeedsMoreInfoClose}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={() => handleReviewAction("needs_info")}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            Submit Request
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-blue-600"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Download Review Template
+                </h3>
+                <div className="mt-2 text-sm text-blue-600">
+                  <p>
+                    Please download and fill in the review template to guide your
+                    review process.
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <a
+                    href="/templates/Review_template.xlsx"
+                    download="review_template.xlsx"
+                    className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <svg
+                      className="-ml-1 mr-2 h-5 w-5 text-blue-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                    Download Review Template
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comment <span className="text-red-500">*</span>
+            </label>
+            <TextArea
+              rows={4}
+              placeholder="Please provide details about what additional information is needed..."
+              value={moreInfoComment}
+              onChange={(e) => setMoreInfoComment(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          {reviewOldFilesNeeded.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">
+                Existing Review Files
+              </h4>
+              <div className="space-y-3">
+                {reviewOldFilesNeeded.map((fileUrl) => (
+                  <div
+                    key={fileUrl}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
+                  >
+                    <div className="flex items-center overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+                        <FileTextOutlined className="text-blue-600" />
+                      </div>
+                      <button
+                        onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
+                        className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
+                        title={getFileName(fileUrl)}
+                        disabled={downloadingFiles.includes(fileUrl)}
+                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                      >
+                        {getFileName(fileUrl)}
+                        {downloadingFiles.includes(fileUrl) && (
+                          <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attach Files (Optional)
+            </label>
+            <Upload
+              fileList={moreInfoFileList}
+              onChange={({ fileList: newFileList }) => setMoreInfoFileList(newFileList)}
+              beforeUpload={() => false}
+              multiple
+              showUploadList={true}
+            >
+              <Button icon={<PaperClipOutlined />}>
+                Attach Files
+              </Button>
+            </Upload>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
-export default InquiryPage;
+export default InquirySection;

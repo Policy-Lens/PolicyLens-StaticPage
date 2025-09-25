@@ -1,7 +1,13 @@
+// import ReportsTable from "./ReportsTable";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Plus, X, FileText, Info } from 'lucide-react';
+// const MyReports = () => {
+//   return <ReportsTable />;
+// };
+
+// src/Components/ProjectTabs/MyReports/MyReports.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { apiRequest } from '../../../../utils/api';
 
@@ -10,7 +16,6 @@ import ReportsTable from "./ReportsTable";
 import Vapt from "./Vapt";
 import RiskTreatment from "./RiskTreatment";
 import ASISReport from "./ASISReport";
-import RiskAssessment from "./RiskAssessment";
 import LegendsModal from './LegendsModal';
 import PDFTronViewer from '../../../FileViewer/PDFTronViewer';
 
@@ -62,79 +67,10 @@ const groupColors = {
   black: 'bg-black text-white',
 };
 
-// Global Scroll Container Component
-const GlobalScrollContainer = ({ children }) => {
-  const scrollRef = useRef(null);
-  
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    
-    let isDown = false;
-    let startX, startY, scrollLeft, scrollTop;
-    
-    const onMouseDown = (e) => {
-      isDown = true;
-      el.classList.add('cursor-grabbing');
-      startX = e.pageX - el.offsetLeft;
-      startY = e.pageY - el.offsetTop;
-      scrollLeft = el.scrollLeft;
-      scrollTop = el.scrollTop;
-    };
-    
-    const onMouseLeave = () => { 
-      isDown = false; 
-      el.classList.remove('cursor-grabbing'); 
-    };
-    
-    const onMouseUp = () => { 
-      isDown = false; 
-      el.classList.remove('cursor-grabbing'); 
-    };
-    
-    const onMouseMove = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - el.offsetLeft;
-      const y = e.pageY - el.offsetTop;
-      el.scrollLeft = scrollLeft - (x - startX);
-      el.scrollTop = scrollTop - (y - startY);
-    };
-    
-    el.addEventListener('mousedown', onMouseDown);
-    el.addEventListener('mouseleave', onMouseLeave);
-    el.addEventListener('mouseup', onMouseUp);
-    el.addEventListener('mousemove', onMouseMove);
-    
-    return () => {
-      el.removeEventListener('mousedown', onMouseDown);
-      el.removeEventListener('mouseleave', onMouseLeave);
-      el.removeEventListener('mouseup', onMouseUp);
-      el.removeEventListener('mousemove', onMouseMove);
-    };
-  }, []);
-  
-  return (
-    <div
-      ref={scrollRef}
-      className="overflow-x-auto overflow-y-scroll h-full max-h-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 cursor-grab active:cursor-grabbing custom-scrollbar hover:shadow-inner transition-shadow duration-200"
-      style={{ 
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'thin',
-        scrollbarColor: '#d1d5db #f3f4f6',
-        minHeight: '600px',
-        maxHeight: 'calc(100vh - 200px)'
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-
 // Create Report Modal Component
 const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
   const [activeTab, setActiveTab] = useState("form"); // "form" or "excel"
-  const [reportType, setReportType] = useState("");
+  const [reportType, setReportType] = useState("Risk Assessment");
   const [reportName, setReportName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -146,7 +82,7 @@ const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
   useEffect(() => {
     if (isOpen) {
       setActiveTab("form");
-      setReportType("");
+      setReportType("Risk Assessment");
       setReportName("");
       setFile(null);
       setError(null);
@@ -164,11 +100,6 @@ const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
 
   // Create report based on type
   const handleCreateReport = async () => {
-    if (!reportType) {
-      setError("Please select a report type");
-      return;
-    }
-    
     if (!reportName.trim()) {
       setError("Please enter a report name");
       return;
@@ -383,9 +314,7 @@ const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
               >
-                <option value="">Select report type</option>
                 <option value="Risk Assessment">Risk Assessment</option>
                 <option value="Risk Treatment">Risk Treatment</option>
                 <option value="VAPT">VAPT</option>
@@ -469,7 +398,7 @@ const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
                       onClick={() => setActiveTab("form")}
                     >
                       <div className="flex items-center justify-center">
-                        <FileText className="mr-2" size={18} />
+                        <FilePlus className="mr-2" size={18} />
                         <span>Manual Form</span>
                       </div>
                     </button>
@@ -481,7 +410,7 @@ const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
                       onClick={() => setActiveTab("excel")}
                     >
                       <div className="flex items-center justify-center">
-                        <FileText className="mr-2" size={18} />
+                        <FileUp className="mr-2" size={18} />
                         <span>Upload Excel</span>
                       </div>
                     </button>
@@ -619,538 +548,66 @@ const CreateReportModal = ({ isOpen, onClose, projectid, onSuccess }) => {
   );
 };
 
+
+
 const MyReports = () => {
   const { projectid, reportType, reportId } = useParams();
-  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Helper function to get localStorage key for this project
-  const getStorageKey = () => `myreports_tabs_${projectid}`;
-
-  // Helper function to save tabs to localStorage
-  const saveTabsToStorage = (tabs, activeTabId) => {
-    try {
-      // Only save if we have valid data
-      if (!tabs || !Array.isArray(tabs) || tabs.length === 0) {
-        return;
-      }
-
-      const tabsData = {
-        tabs: tabs,
-        activeTabId: activeTabId,
-        timestamp: Date.now()
-      };
-
-      localStorage.setItem(getStorageKey(), JSON.stringify(tabsData));
-    } catch (error) {
-      console.warn('Failed to save tabs to localStorage:', error);
-    }
-  };
-
-  // Helper function to load tabs from localStorage
-  const loadTabsFromStorage = () => {
-    try {
-      const storageKey = getStorageKey();
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const tabsData = JSON.parse(stored);
-
-        // Validate the structure
-        if (!tabsData.tabs || !Array.isArray(tabsData.tabs) || !tabsData.activeTabId) {
-          console.warn('Invalid tabs data structure in localStorage');
-          return null;
-        }
-
-        // Check if the stored data is not too old (24 hours)
-        const isRecent = Date.now() - tabsData.timestamp < 24 * 60 * 60 * 1000;
-        if (isRecent) {
-          return {
-            tabs: tabsData.tabs,
-            activeTabId: tabsData.activeTabId
-          };
-        } else {
-          // Remove expired data
-          localStorage.removeItem(storageKey);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load tabs from localStorage:', error);
-      // Remove corrupted data
-      try {
-        localStorage.removeItem(getStorageKey());
-      } catch (removeError) {
-        console.warn('Failed to remove corrupted localStorage data:', removeError);
-      }
-    }
-    return null;
-  };
-
-  // Initialize tabs from localStorage or default
-  const initializeTabs = () => {
-    const storedData = loadTabsFromStorage();
-    if (storedData) {
-      return storedData;
-    }
-    return {
-      tabs: [{ id: 'reports-table', title: 'Reports Table', type: 'table', isActive: true, canClose: false }],
-      activeTabId: 'reports-table'
-    };
-  };
-
-  // State for managing tabs
-  const initialTabsData = initializeTabs();
-  const [tabs, setTabs] = useState(initialTabsData.tabs);
-  const [activeTabId, setActiveTabId] = useState(initialTabsData.activeTabId);
+  // State for managing which view is active (the main table or a specific report tab)
+  const [activeView, setActiveView] = useState({ type: 'table', report: null });
+  
+  // State to trigger a refresh of the reports table
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  // Restore tabs on mount if they were loaded from localStorage
-  useEffect(() => {
-    const restoreTabsOnMount = async () => {
-      const storedData = loadTabsFromStorage();
-      if (storedData && storedData.tabs.length > 1) { // More than just the default table tab
-
-        // Immediately restore tabs without validation to avoid authentication issues
-        const restoredTabs = storedData.tabs.map(tab => ({
-          ...tab,
-          isActive: tab.id === storedData.activeTabId
-        }));
-
-        setTabs(restoredTabs);
-        setActiveTabId(storedData.activeTabId);
-
-        // Optionally validate in background (non-blocking)
-        setTimeout(async () => {
-          try {
-            const validatedTabs = await validateAndRefreshReportData(storedData.tabs);
-
-            // Only update if validation was successful and found differences
-            if (validatedTabs.length === storedData.tabs.length) {
-              setTabs(validatedTabs.map(tab => ({
-                ...tab,
-                isActive: tab.id === storedData.activeTabId
-              })));
-            }
-          } catch (error) {
-            console.warn('Background validation failed, keeping original tabs:', error);
-          }
-        }, 2000); // Wait 2 seconds before background validation
-      }
-    };
-
-    restoreTabsOnMount();
-  }, [projectid]); // Add projectid as dependency
-
-  // Save tabs to localStorage whenever they change
-  useEffect(() => {
-    saveTabsToStorage(tabs, activeTabId);
-  }, [tabs, activeTabId]);
-
-  // Clear localStorage when project changes
-  useEffect(() => {
-    return () => {
-      // This cleanup function runs when the component unmounts or projectid changes
-      // We don't clear localStorage here as we want to persist tabs across navigation
-      // The cleanup of old data is handled by the cleanup effect
-    };
-  }, [projectid]);
-
-  // Cleanup old localStorage data on component mount
-  useEffect(() => {
-    const cleanupOldStorage = () => {
-      try {
-        const keys = Object.keys(localStorage);
-        const myreportsKeys = keys.filter(key => key.startsWith('myreports_tabs_'));
-
-        myreportsKeys.forEach(key => {
-          try {
-            const stored = localStorage.getItem(key);
-            if (stored) {
-              const tabsData = JSON.parse(stored);
-              // Remove data older than 24 hours
-              if (Date.now() - tabsData.timestamp > 24 * 60 * 60 * 1000) {
-                localStorage.removeItem(key);
-              }
-            }
-          } catch (error) {
-            // Remove corrupted data
-            localStorage.removeItem(key);
-          }
-        });
-      } catch (error) {
-        console.warn('Failed to cleanup localStorage:', error);
-      }
-    };
-
-    cleanupOldStorage();
-  }, []);
-
-  // Validate and refresh report data when restoring from localStorage
-  const validateAndRefreshReportData = async (tabs) => {
-    const validatedTabs = [];
-
-    for (const tab of tabs) {
-      if (tab.type === 'table') {
-        // Table tabs are always valid
-        validatedTabs.push(tab);
-      } else if (tab.report && tab.report.id) {
-        // For report tabs, validate that the report still exists
-        try {
-          // Map report types to API endpoints
-          const reportTypeMap = {
-            'riskAssessment': 'riskassessment',
-            'riskTreatment': 'risktreatment',
-            'vapt': 'vapt',
-            'asisReport': 'asis'
-          };
-
-          const reportType = reportTypeMap[tab.type];
-          if (!reportType) {
-            console.warn(`Unknown report type: ${tab.type}, skipping tab`);
-            continue;
-          }
-
-          const response = await apiRequest('GET', `/api/rarpt/project/${projectid}/reports/${reportType}/${tab.report.id}/`, null, true);
-          if (response && response.data) {
-            // Report exists, update with fresh data
-            validatedTabs.push({
-              ...tab,
-              report: response.data
-            });
-          }
-          // If report doesn't exist, skip this tab
-        } catch (error) {
-          // Check if it's an authentication error (401)
-          if (error.response && error.response.status === 401) {
-            console.warn(`Authentication failed for report ${tab.report.id}, keeping tab but not refreshing data`);
-            // Keep the tab but don't refresh the data - user can still see the cached data
-            validatedTabs.push(tab);
-          } else {
-            // For other errors (404, 500, etc.), skip the tab
-            console.warn(`Report ${tab.report.id} validation failed, skipping tab:`, error);
-          }
-        }
-      }
-    }
-
-    return validatedTabs;
+  // New: When a report row is clicked, navigate to the extracted data route
+  const handleViewReportData = (report) => {
+    const typeSlug = report.type.replace(/\s/g, '').toLowerCase();
+    navigate(`/project/${projectid}/myreports/${typeSlug}/${report.id}/extracted`);
   };
 
-  // Handle report row click to open in new tab
-  const handleOpenReportInTab = (report) => {
-    const tabId = `report-${report.id}`;
-    const tabTitle = `${report.name} (${report.type})`;
-
-    // Check if tab already exists
-    const existingTabIndex = tabs.findIndex(tab => tab.id === tabId);
-
-    if (existingTabIndex !== -1) {
-      // Tab exists, just activate it
-      setActiveTabId(tabId);
-      setTabs(tabs.map(tab => ({
-        ...tab,
-        isActive: tab.id === tabId
-      })));
-    } else {
-      // Create new tab
-      const newTab = {
-        id: tabId,
-        title: tabTitle,
-        type: report.report_tab,
-        report: report,
-        isActive: true,
-        canClose: true
-      };
-
-      setTabs(prevTabs =>
-        prevTabs.map(tab => ({ ...tab, isActive: false })).concat(newTab)
-      );
-      setActiveTabId(tabId);
-    }
+  /**
+   * Opens a full-page view for a specific report type (e.g., RiskTreatment, ASISReport).
+   * This is separate from the data modal and is used for more complex, interactive views.
+   * @param {object} report - The report object to open.
+   */
+  const openReportTabView = (report) => {
+    // The 'report_tab' property should correspond to a view type.
+    setActiveView({ type: report.report_tab, report: report });
   };
 
-  // Handle tab click
-  const handleTabClick = (tabId) => {
-    setActiveTabId(tabId);
-    setTabs(tabs.map(tab => ({
-      ...tab,
-      isActive: tab.id === tabId
-    })));
-  };
-
-  // Handle tab close
-  const handleTabClose = (e, tabId) => {
-    e.stopPropagation();
-
-    const tabIndex = tabs.findIndex(tab => tab.id === tabId);
-    if (tabIndex === -1) return;
-
-    const newTabs = tabs.filter(tab => tab.id !== tabId);
-
-    // If we're closing the active tab, activate the previous tab or the reports table
-    if (activeTabId === tabId) {
-      const newActiveTab = newTabs[tabIndex - 1] || newTabs[0];
-      setActiveTabId(newActiveTab.id);
-      setTabs(newTabs.map(tab => ({
-        ...tab,
-        isActive: tab.id === newActiveTab.id
-      })));
-    } else {
-      setTabs(newTabs);
-    }
-  };
-
-  // Handle refresh trigger
-  const handleRefreshTrigger = () => {
-    setRefreshCounter(prev => prev + 1);
-  };
-
-  // Handle report deletion and close corresponding tab
-  const handleReportDelete = (deletedReport) => {
-    const tabId = `report-${deletedReport.id}`;
-
-    // Check if the deleted report's tab is open
-    const tabIndex = tabs.findIndex(tab => tab.id === tabId);
-    if (tabIndex !== -1) {
-      // Close the tab for the deleted report
-      const newTabs = tabs.filter(tab => tab.id !== tabId);
-
-      // If we're closing the active tab, activate the previous tab or the reports table
-      if (activeTabId === tabId) {
-        const newActiveTab = newTabs[tabIndex - 1] || newTabs[0];
-        setActiveTabId(newActiveTab.id);
-        setTabs(newTabs.map(tab => ({
-          ...tab,
-          isActive: tab.id === newActiveTab.id
-        })));
-      } else {
-        setTabs(newTabs);
-      }
-    }
-  };
-
-  // Handle opening reports table in new tab
-  const handleOpenReportsTable = () => {
-    const tabId = 'reports-table-new';
-    const tabTitle = 'Reports Table';
-
-    // Check if tab already exists
-    const existingTabIndex = tabs.findIndex(tab => tab.id === tabId);
-
-    if (existingTabIndex !== -1) {
-      // Tab exists, just activate it
-      setActiveTabId(tabId);
-      setTabs(tabs.map(tab => ({
-        ...tab,
-        isActive: tab.id === tabId
-      })));
-    } else {
-      // Create new tab
-      const newTab = {
-        id: tabId,
-        title: tabTitle,
-        type: 'table',
-        isActive: true,
-        canClose: true
-      };
-
-      setTabs(prevTabs =>
-        prevTabs.map(tab => ({ ...tab, isActive: false })).concat(newTab)
-      );
-      setActiveTabId(tabId);
-    }
-  };
-
-
-
-  // Get current active tab
-  const activeTab = tabs.find(tab => tab.id === activeTabId);
-
-  // Render tab content
-  const renderTabContent = () => {
-    if (!activeTab) return null;
-
-    // Handle case where report data might be missing
-    if (activeTab.type !== 'table' && !activeTab.report) {
-      return (
-        <div className="h-full">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-500">{activeTab.title}</h2>
-            <button
-              onClick={() => handleTabClose({ stopPropagation: () => { } }, activeTab.id)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <p className="text-gray-600 mb-4">Report data not available</p>
-              <p className="text-sm text-gray-500">This tab will be removed when you close it</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    switch (activeTab.type) {
-      case 'table':
-        return (
-          <div className="p-4">
-            <ReportsTable
-              onRowClick={handleOpenReportInTab}
-              refreshTrigger={refreshCounter}
-              onReportDelete={handleReportDelete}
-            />
-          </div>
-        );
+  /**
+   * Renders the currently active view based on the state.
+   */
+  const renderActiveView = () => {
+    const { type, report } = activeView;
+    
+    switch (type) {
       case 'riskAssessment':
-        return (
-          <div className="h-full">
-            <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-              <h2 className="text-xl font-semibold">{activeTab.report?.name}</h2>
-              <button
-                onClick={() => handleTabClose({ stopPropagation: () => { } }, activeTab.id)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4">
-              <RiskAssessment
-                reportId={activeTab.report?.id}
-                projectId={projectid}
-                specificReportMode={true}
-              />
-            </div>
-          </div>
-        );
+        // Risk Assessment might use the same detailed table view.
+        // If it has its own component, you would render it here.
+        // For now, we assume it's handled by the modal.
+        return <ReportsTable onRowClick={handleViewReportData} onReportOpen={openReportTabView} refreshTrigger={refreshCounter} />;
+      
       case 'riskTreatment':
-        return (
-          <div className="h-full">
-            <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-              <h2 className="text-xl font-semibold">{activeTab.report?.name}</h2>
-              <button
-                onClick={() => handleTabClose({ stopPropagation: () => { } }, activeTab.id)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4">
-              <RiskTreatment
-                reportId={activeTab.report?.id}
-                projectId={projectid}
-                specificReportMode={true}
-              />
-            </div>
-          </div>
-        );
+        return <RiskTreatment report={report} onBack={() => setActiveView({ type: 'table', report: null })} />;
+      
       case 'vapt':
-        return (
-          <div className="h-full">
-            <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-              <h2 className="text-xl font-semibold">{activeTab.report?.name}</h2>
-              <button
-                onClick={() => handleTabClose({ stopPropagation: () => { } }, activeTab.id)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4">
-              <Vapt
-                reportId={activeTab.report?.id}
-                projectId={projectid}
-                specificReportMode={true}
-              />
-            </div>
-          </div>
-        );
+        return <Vapt report={report} onBack={() => setActiveView({ type: 'table', report: null })} />;
+        
       case 'asisReport':
-        return (
-          <div className="h-full">
-            <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-              <h2 className="text-xl font-semibold">{activeTab.report?.name}</h2>
-              <button
-                onClick={() => handleTabClose({ stopPropagation: () => { } }, activeTab.id)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4">
-              <ASISReport
-                reportId={activeTab.report?.id}
-                projectId={projectid}
-                specificReportMode={true}
-              />
-            </div>
-          </div>
-        );
+        return <ASISReport report={report} onBack={() => setActiveView({ type: 'table', report: null })} />;
+        
+      case 'table':
       default:
-        return null;
+        return <ReportsTable onRowClick={handleViewReportData} onReportOpen={openReportTabView} refreshTrigger={refreshCounter} />;
     }
   };
 
-  return (
-    <div className="w-full h-full flex flex-col">
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-1">
-            <div className="flex items-center min-w-full bg-gray-50">
-              {tabs.map((tab) => (
-                <div
-                  key={tab.id}
-                  className={`flex items-center min-w-0 flex-shrink-0 cursor-pointer transition-all duration-200 border-r border-gray-200 last:border-r-0 relative ${tab.isActive
-                      ? 'bg-white border-b-2 border-indigo-500 text-indigo-600 shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                    }`}
-                  onClick={() => handleTabClick(tab.id)}
-                >
-                  <div className="px-4 py-3 flex items-center space-x-2 max-w-xs min-w-0">
-                    <span className="truncate text-sm font-medium">
-                      {tab.title}
-                    </span>
-                    {tab.canClose && (
-                      <button
-                        onClick={(e) => handleTabClose(e, tab.id)}
-                        className="ml-2 p-1 rounded-full hover:bg-gray-200 transition-colors flex-shrink-0 group"
-                        title="Close tab"
-                      >
-                        <X size={14} className="group-hover:text-red-500" />
-                      </button>
-                    )}
-                  </div>
-                  {tab.isActive && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center px-3 py-2 bg-gray-50 border-l border-gray-200">
-            <span className="text-xs text-gray-500 mr-2">
-              {tabs.length} tab{tabs.length !== 1 ? 's' : ''}
-            </span>
-            <button
-              onClick={handleOpenReportsTable}
-              className="p-1 rounded hover:bg-gray-200 transition-colors"
-              title="Open new Reports Table tab"
-            >
-              <Plus size={16} className="text-gray-600" />
-            </button>
-
-          </div>
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div className="flex-1 overflow-hidden bg-gray-50" style={{ height: 'calc(100vh - 120px)' }}>
-        <GlobalScrollContainer>
-          {renderTabContent()}
-        </GlobalScrollContainer>
-      </div>
-    </div>
+      return (
+        <>
+      {renderActiveView()}
+    </>
   );
 };
 

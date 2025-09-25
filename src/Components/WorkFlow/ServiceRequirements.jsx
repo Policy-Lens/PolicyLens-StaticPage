@@ -1,53 +1,65 @@
 import React, { useState, useContext, useEffect } from "react";
 import {
   Button,
-  Modal,
   Input,
-  Upload,
+  Form,
+  Row,
+  Col,
+  Card,
+  Divider,
+  Space,
+  Typography,
+  Tooltip,
+  Collapse,
   message,
-  Spin,
+  Modal,
   Select,
   DatePicker,
+  Upload,
+  Radio,
+  Checkbox,
+  AutoComplete,
 } from "antd";
-import {
-  PaperClipOutlined,
-  FileTextOutlined,
+import { 
+  PaperClipOutlined, 
+  FileTextOutlined, 
   LoadingOutlined,
+  SaveOutlined,
+  SendOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  QuestionCircleOutlined,
+  UserOutlined,
+  GlobalOutlined,
+  LinkedinOutlined,
+  BankOutlined,
+  TeamOutlined,
+  CalendarOutlined,
+  FileProtectOutlined,
+  CheckSquareOutlined,
+  ClockCircleOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  SearchOutlined,
+  SyncOutlined
 } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import { BASE_URL, apiRequest } from "../../utils/api";
 import InteractiveIsoClause from "../Common/InteractiveIsoClause";
+
 const { TextArea } = Input;
 const { Option } = Select;
-import { apiRequest, BASE_URL } from "../../utils/api";
+const { Title, Text } = Typography;
 
-function ServiceRequirements() {
-  const [fileList, setFileList] = useState([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isAssignTaskVisible, setIsAssignTaskVisible] = useState(false);
-  const [description, setDescription] = useState("");
+function ServiceRequirements({ stepData, plcStepData, projectPlcData, projectId, refreshProjectData }) {
+  const [form] = Form.useForm();
+  const [serviceRequirementsData, setServiceRequirementsData] = useState(null);
   const [isAssignedUser, setIsAssignedUser] = useState(false);
-  const { projectid } = useParams();
-  const {
-    addStepData,
-    getStepData,
-    getStepId,
-    projectRole,
-    checkStepAuth,
-    assignStep,
-    getStepAssignment,
-    getMembers,
-  } = useContext(ProjectContext);
-  const [serviceRequirementsData, setServiceRequirementsData] = useState([]);
-  const [stepId, setStepId] = useState(null);
-  const [oldFilesNeeded, setOldFilesNeeded] = useState([]);
-  const [removedOldFiles, setRemovedOldFiles] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [stepStatus, setStepStatus] = useState("pending");
   const [reviewStatus, setReviewStatus] = useState("not_submitted");
   const [reviewComment, setReviewComment] = useState("");
-  const [companyAdmins, setCompanyAdmins] = useState([]);
+  const [isAssignTaskVisible, setIsAssignTaskVisible] = useState(false);
   const [taskAssignment, setTaskAssignment] = useState(null);
   const [members, setMembers] = useState([]);
   const [selectedTeamMembers, setSelectedTeamMembers] = useState([]);
@@ -56,46 +68,195 @@ function ServiceRequirements() {
   const [taskReferences, setTaskReferences] = useState("");
   const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
   const [process, setProcess] = useState("core");
-
-  // Needs More Info Modal states
   const [isNeedsMoreInfoModalVisible, setIsNeedsMoreInfoModalVisible] = useState(false);
   const [moreInfoComment, setMoreInfoComment] = useState("");
+  const [isAcceptModalVisible, setIsAcceptModalVisible] = useState(false);
+  const [acceptComment, setAcceptComment] = useState("");
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [rejectComment, setRejectComment] = useState("");
   const [moreInfoFileList, setMoreInfoFileList] = useState([]);
-
-  // Review Modal states
-  const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
-  const [reviewAction, setReviewAction] = useState("accept");
-  const [reviewModalComment, setReviewModalComment] = useState("");
-  const [reviewFileList, setReviewFileList] = useState([]);
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
-
   const [downloadingFiles, setDownloadingFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fileLists, setFileLists] = useState({});
+  const [gicsData, setGicsData] = useState({ sectors: [], industries: [], subsectors: [] });
+  const [autoFetchLoading, setAutoFetchLoading] = useState(false);
+  const [enrichmentStatus, setEnrichmentStatus] = useState("NOT_STARTED");
+  const [isFormReset, setIsFormReset] = useState(false);
 
-  const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
+  const { projectid } = useParams();
+  const {
+    checkStepAuth,
+    projectRole,
+    assignStep,
+    getStepAssignment,
+    getMembers,
+    addStepData,
+    getStepData,
+  } = useContext(ProjectContext);
 
-  const handleUploadChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
-  };
+  // Service requirement options as per template
+  const serviceRequirementOptions = [
+    "Implementation",
+    "Independent Assessment", 
+    "Independent Testing",
+    "Internal Audit",
+    "Subject Matter Consulting",
+    "End-to-End ISO certification",
+    "Continuous compliance support",
+    "Acting CISO / DPO"
+  ];
 
-  const handleRemoveFile = (fileUrl) => {
-    setOldFilesNeeded((prev) => prev.filter((file) => file !== fileUrl));
-    setRemovedOldFiles((prev) => [...prev, fileUrl]);
-  };
+  const complianceOptions = [
+    "ISO 27001",
+    "ISO 27701", 
+    "PCI"
+  ];
 
-  const handleRestoreFile = (fileUrl) => {
-    setRemovedOldFiles((prev) => prev.filter((file) => file !== fileUrl));
-    setOldFilesNeeded((prev) => [...prev, fileUrl]);
-  };
+  const timelineOptions = [
+    "1-2 weeks",
+    "1 month",
+    "2-3 months", 
+    "3-6 months",
+    "6-12 months",
+    "1+ year"
+  ];
 
-  const handleReviewRemoveFile = (fileUrl) => {
-    setReviewOldFilesNeeded((prev) => prev.filter((file) => file !== fileUrl));
-    setReviewRemovedOldFiles((prev) => [...prev, fileUrl]);
-  };
+  // Initialize data from bulk props instead of API calls
+  useEffect(() => {
+    if (stepData) {
+      setStepStatus(stepData.status || "pending");
+      setProcess(stepData.process || "core");
+      setAssociatedIsoClause(stepData.associated_iso_clause);
+      setReviewStatus(stepData.review_status || "not_submitted");
+      setReviewComment(stepData.review_comment || "");
+    }
+  }, [stepData]);
 
-  const handleReviewRestoreFile = (fileUrl) => {
-    setReviewRemovedOldFiles((prev) => prev.filter((file) => file !== fileUrl));
-    setReviewOldFilesNeeded((prev) => [...prev, fileUrl]);
+  // Initialize Service Requirements data from bulk props (overview payload)
+  useEffect(() => {
+    if (plcStepData && !isFormReset) {
+      console.log("ServiceRequirements: Received plcStepData:", plcStepData);
+      
+      // Check if we have service_requirements_data in the bulk response
+      if (plcStepData.service_requirements_data) {
+        console.log("ServiceRequirements: Found service_requirements_data:", plcStepData.service_requirements_data);
+        setServiceRequirementsData(plcStepData.service_requirements_data);
+        // Set enrichment status
+        setEnrichmentStatus(plcStepData.service_requirements_data.enrichment_status || "NOT_STARTED");
+        // Transform the data to match form field names
+        const formData = {};
+        const currentFormValues = form.getFieldsValue(); // Get current form values to preserve non-auto-fetchable fields
+        
+        Object.keys(plcStepData.service_requirements_data).forEach(key => {
+          if (key !== 'id' && key !== 'step' && key !== 'created_by' && key !== 'updated_by' && key !== 'created_at' && key !== 'updated_at') {
+            const value = plcStepData.service_requirements_data[key];
+            
+            // Only update auto-fetchable fields, preserve other fields like legal_name, contact_name, etc.
+            const autoFetchableFields = [
+              'hq_city', 'hq_country', 'hq_zip_code', 'about_company',
+              'company_revenue', 'company_headcount', 'company_year_inception',
+              'company_lines_business', 'company_brands', 'products_services',
+              'company_locations', 'company_existing_compliances'
+            ];
+            
+            if (autoFetchableFields.includes(key)) {
+              // This is an auto-fetchable field, update it
+              if (value && typeof value === 'string' && value.includes(';')) {
+                // Handle multiselect fields - split by semicolon
+                formData[key] = value.split(';');
+              } else {
+                formData[key] = value;
+              }
+            } else {
+              // This is not an auto-fetchable field, preserve current value
+              formData[key] = currentFormValues[key] || value;
+            }
+          }
+        });
+        console.log("ServiceRequirements: Setting form data:", formData);
+        form.setFieldsValue(formData);
+        // Reset the form reset flag after setting data
+        setIsFormReset(false);
+      } else {
+        console.log("ServiceRequirements: No service_requirements_data found, using fallback");
+        // Fallback: use plcStepData directly (for backward compatibility)
+        setServiceRequirementsData(plcStepData);
+        setEnrichmentStatus(plcStepData.enrichment_status || "NOT_STARTED");
+        const formData = {};
+        const currentFormValues = form.getFieldsValue(); // Get current form values to preserve non-auto-fetchable fields
+        
+        Object.keys(plcStepData).forEach(key => {
+          if (key !== 'id' && key !== 'step' && key !== 'created_by' && key !== 'updated_by' && key !== 'created_at' && key !== 'updated_at') {
+            const value = plcStepData[key];
+            
+            // Only update auto-fetchable fields, preserve other fields like legal_name, contact_name, etc.
+            const autoFetchableFields = [
+              'hq_city', 'hq_country', 'hq_zip_code', 'about_company',
+              'company_revenue', 'company_headcount', 'company_year_inception',
+              'company_lines_business', 'company_brands', 'products_services',
+              'company_locations', 'company_existing_compliances'
+            ];
+            
+            if (autoFetchableFields.includes(key)) {
+              // This is an auto-fetchable field, update it
+              if (value && typeof value === 'string' && value.includes(';')) {
+                formData[key] = value.split(';');
+              } else {
+                formData[key] = value;
+              }
+            } else {
+              // This is not an auto-fetchable field, preserve current value
+              formData[key] = currentFormValues[key] || value;
+            }
+          }
+        });
+        form.setFieldsValue(formData);
+        // Reset the form reset flag after setting data
+        setIsFormReset(false);
+      }
+    } else if (plcStepData && isFormReset) {
+      // If we're in reset mode and new data comes in, check if it's empty/null
+      // If the data is empty/null, we can reset the flag
+      if (!plcStepData.service_requirements_data || 
+          (plcStepData.service_requirements_data && 
+           Object.keys(plcStepData.service_requirements_data).length === 0)) {
+        console.log("ServiceRequirements: Reset mode - data is empty, resetting flag");
+        setIsFormReset(false);
+      }
+    }
+  }, [plcStepData, form, isFormReset]);
+
+  // Check if user is assigned to this step
+  useEffect(() => {
+    if (stepData?.step_id) {
+      checkAssignedUser(stepData.step_id);
+    }
+  }, [stepData]);
+
+  // Fetch GICS data for industry/subsector dropdowns
+  useEffect(() => {
+    fetchGicsData();
+  }, []);
+
+  const fetchGicsData = async () => {
+    try {
+      const response = await apiRequest("GET", "/api/policylens/gics/", null, true);
+      if (response.data?.results) {
+        const sectors = [...new Set(response.data.results.map(item => item.sector))];
+        const industries = [...new Set(response.data.results.map(item => item.industry))];
+        const subsectors = [...new Set(response.data.results.map(item => item.sub_industry))];
+        
+        setGicsData({
+          sectors: sectors.sort(),
+          industries: industries.sort(),
+          subsectors: subsectors.sort()
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching GICS data:", error);
+    }
   };
 
   const checkAssignedUser = async (step_id) => {
@@ -103,40 +264,515 @@ function ServiceRequirements() {
     setIsAssignedUser(isAuthorized);
   };
 
-  const handleSubmit = async () => {
-    if (!description.trim()) {
-      message.warning("Please provide a description.");
+  // Reset form function that clears all fields
+  const handleResetForm = () => {
+    // Set reset flag to prevent repopulation
+    setIsFormReset(true);
+    
+    // Clear all form fields immediately
+    form.resetFields();
+    
+    // Clear file lists
+    setFileLists({});
+    
+    // Reset enrichment status
+    setEnrichmentStatus("NOT_STARTED");
+    
+    // Clear service requirements data
+    setServiceRequirementsData(null);
+    
+    // Clear the database by calling the backend to reset the service requirements
+    if (stepData?.step_id) {
+      apiRequest(
+        "DELETE",
+        `/api/plc/service-requirements/${stepData.step_id}/`,
+        null,
+        true
+      ).then(() => {
+        // After successful deletion, refresh project data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      }).catch(error => {
+        console.log("Reset: No existing data to delete or error occurred:", error);
+        // Even if deletion fails, still refresh to ensure clean state
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      });
+    }
+    
+    // Set a timeout to clear the reset flag after 3 seconds as a fallback
+    setTimeout(() => {
+      setIsFormReset(false);
+    }, 3000);
+    
+    message.success("Form has been reset successfully");
+  };
+
+  // Auto-fetch company information from website/LinkedIn
+  const handleAutoFetch = async () => {
+    const website = form.getFieldValue('website');
+    const linkedin = form.getFieldValue('linkedin');
+    
+    if (!website && !linkedin) {
+      message.warning("Please enter either website or LinkedIn URL to auto-fetch company information");
       return;
     }
 
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("field_name", "Service Requirements");
-    formData.append("text_data", description);
-    formData.append("old_files", JSON.stringify(oldFilesNeeded));
+    setAutoFetchLoading(true);
+    try {
+      // Call the backend auto-fetch API
+      const response = await apiRequest(
+        "POST",
+        `/api/plc/service-requirements/${stepData.step_id}/auto-fetch/`,
+        {
+          website: website,
+          linkedin: linkedin
+        },
+        true
+      );
 
-    fileList.forEach((file) => {
-      formData.append("files", file.originFileObj || file);
+      if (response.status === 202) {
+        message.success("Auto-fetch process started! This may take a few minutes.");
+        
+        // Start polling for status updates
+        pollEnrichmentStatus(response.data.task_id);
+      } else {
+        message.error("Failed to start auto-fetch process");
+      }
+      
+    } catch (error) {
+      console.error("Error auto-fetching data:", error);
+      message.error("Failed to auto-fetch company information");
+    } finally {
+      setAutoFetchLoading(false);
+    }
+  };
+
+  // Poll for enrichment status updates
+  const pollEnrichmentStatus = async (taskId) => {
+    const maxAttempts = 30; // 5 minutes with 10-second intervals
+    let attempts = 0;
+    
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        const response = await apiRequest(
+          "GET",
+          `/api/plc/service-requirements/${stepData.step_id}/enrichment-status/`,
+          null,
+          true
+        );
+
+        if (response.status === 200) {
+          const { enrichment_status } = response.data;
+          console.log("ServiceRequirements: Enrichment status update:", response.data);
+          
+          // Update local state
+          setEnrichmentStatus(enrichment_status);
+          
+          if (enrichment_status === "COMPLETED") {
+            clearInterval(pollInterval);
+            message.success("Company information auto-fetched successfully!");
+            
+            // Refresh the form data to show the enriched information
+            if (refreshProjectData) {
+              console.log("ServiceRequirements: Calling refreshProjectData to get updated data");
+              refreshProjectData();
+            }
+            
+            // Also fetch the latest service requirements data to populate the form
+            try {
+              const serviceReqResponse = await apiRequest(
+                "GET",
+                `/api/plc/service-requirements/${stepData.step_id}/`,
+                null,
+                true
+              );
+              
+              if (serviceReqResponse.status === 200) {
+                const enrichedData = serviceReqResponse.data;
+                console.log("ServiceRequirements: Fetched enriched data:", enrichedData);
+                
+                // Populate the form fields with enriched data
+                const formData = {};
+                const autoFetchableFields = [
+                  'hq_city', 'hq_country', 'hq_zip_code', 'about_company',
+                  'company_revenue', 'company_headcount', 'company_year_inception',
+                  'company_lines_business', 'company_brands', 'products_services',
+                  'company_locations', 'company_existing_compliances'
+                ];
+                
+                autoFetchableFields.forEach(field => {
+                  if (enrichedData[field]) {
+                    // Handle multiselect fields that are stored as semicolon-separated strings
+                    if (field === 'company_lines_business' || field === 'company_brands' || 
+                        field === 'products_services' || field === 'company_locations' || 
+                        field === 'company_existing_compliances') {
+                      if (typeof enrichedData[field] === 'string' && enrichedData[field].includes(';')) {
+                        formData[field] = enrichedData[field].split(';');
+                      } else {
+                        formData[field] = enrichedData[field];
+                      }
+                    } else {
+                      formData[field] = enrichedData[field];
+                    }
+                  }
+                });
+                
+                console.log("ServiceRequirements: Setting form data:", formData);
+                form.setFieldsValue(formData);
+                
+                // Update local state
+                setServiceRequirementsData(enrichedData);
+              }
+            } catch (error) {
+              console.error("Error fetching enriched data:", error);
+            }
+          } else if (enrichment_status === "FAILED") {
+            clearInterval(pollInterval);
+            message.error("Auto-fetch failed. Please try again or fill in manually.");
+          }
+        }
+        
+        // Stop polling after max attempts
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          message.warning("Auto-fetch is taking longer than expected. Please check back later.");
+        }
+        
+      } catch (error) {
+        console.error("Error polling enrichment status:", error);
+        attempts++;
+        
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          message.error("Failed to check auto-fetch status");
+        }
+      }
+    }, 10000); // Poll every 10 seconds
+  };
+
+  const handleFormSubmit = async (values) => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Prepare form data for the ServiceRequirements API
+      const formData = new FormData();
+      
+      // Add all field values to form data
+      Object.keys(values).forEach(key => {
+        if (values[key] !== undefined && values[key] !== null && values[key] !== '') {
+          if (Array.isArray(values[key])) {
+            // Handle multiselect fields - join with semicolon
+            formData.append(key, values[key].join(';'));
+          } else {
+            formData.append(key, values[key]);
+          }
+        }
+      });
+      
+      // Add files for upload fields
+      Object.keys(fileLists).forEach(fieldName => {
+        if (fileLists[fieldName] && fileLists[fieldName].length > 0) {
+          fileLists[fieldName].forEach((file) => {
+            formData.append(fieldName, file.originFileObj || file);
+          });
+        }
+      });
+
+      // Determine if this is a create or update operation
+      let method = serviceRequirementsData?.id ? "PUT" : "POST";
+      let response;
+      let success = false;
+      
+      try {
+        response = await apiRequest(
+          method,
+          `/api/plc/service-requirements/${stepData.step_id}/`,
+          formData,
+          true,
+          true
+        );
+        success = true;
+      } catch (error) {
+        if (method === "PUT" && error?.status === 404) {
+          try {
+            method = "POST";
+            response = await apiRequest(
+              method,
+              `/api/plc/service-requirements/${stepData.step_id}/`,
+              formData,
+              true,
+              true
+            );
+            success = true;
+          } catch (retryError) {
+            console.error("Retry as POST also failed:", retryError);
+            throw retryError;
+          }
+        } else {
+          throw error;
+        }
+      }
+      
+      if (success && (response.status === 200 || response.status === 201)) {
+        message.success(
+          method === "PUT" 
+            ? "Service requirements updated successfully!" 
+            : "Service requirements saved successfully!"
+        );
+        setServiceRequirementsData(response.data);
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      } else {
+        message.error("Failed to save service requirements.");
+      }
+      
+    } catch (error) {
+      console.error("Error saving service requirements:", error);
+      message.error("Failed to save service requirements.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendForReview = async () => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    try {
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepData.step_id}/update-status/`,
+        { status: "completed" },
+        true
+      );
+      if (response.status === 200) {
+        message.success("Step sent for review successfully!");
+        setStepStatus("completed");
+        setReviewStatus("under_review");
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      } else {
+        message.error("Failed to send step for review.");
+      }
+    } catch (error) {
+      console.error("Error sending for review:", error);
+      message.error("Failed to send step for review.");
+    }
+  };
+
+  const handleReviewAction = async (action) => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    let commentToSend = "";
+    if (action === "accept") {
+      commentToSend = acceptComment.trim();
+    } else if (action === "reject") {
+      if (!rejectComment.trim()) {
+        message.warning("Please provide a rejection comment.");
+        return;
+      }
+      commentToSend = rejectComment.trim();
+    } else if (action === "needs_info") {
+      if (!moreInfoComment.trim()) {
+        message.warning("Please provide details for your request.");
+        return;
+      }
+      commentToSend = moreInfoComment.trim();
+    }
+
+    const formData = new FormData();
+    formData.append(
+      "review_status",
+      action === "accept" ? "accepted" : action === "reject" ? "rejected" : "needs_info"
+    );
+    formData.append("review_comment", commentToSend);
+    formData.append("old_files", JSON.stringify(reviewOldFilesNeeded));
+    moreInfoFileList.forEach((file) => {
+      formData.append("files", file.originFileObj);
     });
 
     try {
-      const response = await addStepData(stepId, formData);
-      if (response.status === 201) {
-        message.success("Service requirements submitted successfully!");
-        setIsModalVisible(false);
-        setDescription("");
-        setFileList([]);
-        setOldFilesNeeded([]);
-        setRemovedOldFiles([]);
-        await get_step_data(stepId);
+      const response = await apiRequest(
+        "PUT",
+        `/api/plc/plc_step/${stepData.step_id}/submit-review/`,
+        formData,
+        true,
+        true
+      );
+      if (response.status === 200) {
+        message.success(
+          action === "accept"
+            ? "Step accepted successfully!"
+            : action === "reject"
+            ? "Step rejected successfully!"
+            : "More information requested successfully!"
+        );
+        setReviewStatus(
+          action === "accept" ? "accepted" : action === "reject" ? "rejected" : "needs_info"
+        );
+        setReviewComment(commentToSend);
+        
+        // Close modals
+        setIsAcceptModalVisible(false);
+        setIsRejectModalVisible(false);
+        setIsNeedsMoreInfoModalVisible(false);
+        setAcceptComment("");
+        setRejectComment("");
+        setMoreInfoComment("");
+        setMoreInfoFileList([]);
+        
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
       } else {
-        message.error("Failed to submit service requirements.");
+        message.error("Failed to submit review.");
       }
     } catch (error) {
-      message.error("Failed to submit service requirements.");
-      console.error(error);
+      console.error("Error submitting review:", error);
+      message.error("Failed to submit review.");
+    }
+  };
+
+  const handleAssignTask = async () => {
+    if (!stepData?.step_id) {
+      message.error("Step data not loaded yet. Please wait and try again.");
+      return;
+    }
+    
+    if (!selectedTeamMembers.length) {
+      message.error("Please select at least one team member.");
+      return;
+    }
+    
+    if (!taskDescription.trim()) {
+      message.error("Please provide a task description.");
+      return;
+    }
+    
+    if (!taskDeadline) {
+      message.error("Please set a task deadline.");
+      return;
+    }
+
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/plc/step-assignment/${stepData.step_id}/create/`,
+        {
+          assigned_to: selectedTeamMembers,
+          task_description: taskDescription,
+          deadline: taskDeadline.toISOString(),
+          references: taskReferences,
+        },
+        true
+      );
+      if (response.status === 201) {
+        message.success("Task assigned successfully!");
+        setIsAssignTaskVisible(false);
+        setSelectedTeamMembers([]);
+        setTaskDescription("");
+        setTaskDeadline(null);
+        setTaskReferences("");
+        // Refresh parent data to update the bulk endpoint
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
+      } else {
+        message.error("Failed to assign task.");
+      }
+    } catch (error) {
+      console.error("Error assigning task:", error);
+      message.error("Failed to assign task.");
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const response = await getMembers(projectid);
+      setMembers(response);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+    }
+  };
+
+  const handleFileUpload = (fieldName, fileList) => {
+    setFileLists(prev => ({
+      ...prev,
+      [fieldName]: fileList
+    }));
+  };
+
+  const handleFileDownload = async (fileUrl, fileName) => {
+    try {
+      setDownloadingFiles(prev => [...prev, fileName]);
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      message.error("Failed to download file.");
     } finally {
-      setLoading(false);
+      setDownloadingFiles(prev => prev.filter(name => name !== fileName));
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "completed":
+        return "green";
+      case "in_progress":
+        return "blue";
+      case "pending":
+        return "orange";
+      case "accepted":
+        return "green";
+      case "rejected":
+        return "red";
+      case "needs_info":
+        return "orange";
+      default:
+        return "default";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircleOutlined />;
+      case "accepted":
+        return <CheckCircleOutlined />;
+      case "rejected":
+        return <CloseCircleOutlined />;
+      case "needs_info":
+        return <QuestionCircleOutlined />;
+      default:
+        return <ClockCircleOutlined />;
     }
   };
 
@@ -149,160 +785,20 @@ function ServiceRequirements() {
     return date.toLocaleString();
   };
 
-  const getViewerUrl = (filePath) => {
-    const extension = filePath.split(".").pop().toLowerCase();
-    if (extension === "pdf") {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(
-        `${BASE_URL}${filePath}`
-      )}&embedded=true`;
-    }
-    if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(extension)) {
-      return `${BASE_URL}${filePath}`;
-    }
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(
-      `${BASE_URL}${filePath}`
-    )}&embedded=true`;
-  };
-
-  const getTaskAssignment = async (step_id) => {
-    try {
-      const assignmentData = await getStepAssignment(step_id);
-      if (assignmentData.status === 200 && assignmentData.data.length > 0) {
-        setTaskAssignment(assignmentData.data[0]);
-      } else {
-        setTaskAssignment(null);
-      }
-    } catch (error) {
-      console.error("Error fetching task assignment:", error);
-      setTaskAssignment(null);
-    }
-  };
-
-  const get_step_id = async () => {
-    setLoading(true);
-    try {
-      const response = await getStepId(projectid, 1);
-      if (response) {
-        setStepId(response.plc_step_id);
-        setStepStatus(response.status);
-        setReviewStatus(response.review_status);
-        setReviewComment(response.review_comment || "");
-        setCompanyAdmins(response.company_admins || []);
-        setAssociatedIsoClause(response.associated_iso_clause);
-        setProcess(response.process || "core");
-        await get_step_data(response.plc_step_id);
-        await checkAssignedUser(response.plc_step_id);
-        await getTaskAssignment(response.plc_step_id);
-        const reviewData = await apiRequest(
-          "GET",
-          `/api/plc/plc_step/${response.plc_step_id}/review-files/`,
-          null,
-          true
-        );
-        if (reviewData.status === 200 && reviewData.data.documents) {
-          const existingReviewFiles = reviewData.data.documents.map((doc) => doc.file);
-          setReviewOldFilesNeeded(existingReviewFiles);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching step ID:", error);
-      message.error("Failed to load service requirements data.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const get_members = async () => {
-    const res = await getMembers(projectid);
-    setMembers(res);
-  };
-
-  const handleAssignTask = async () => {
-    await get_members();
-    setIsAssignTaskVisible(true);
-  };
-
-  const handleAssignTaskClose = () => {
-    setIsAssignTaskVisible(false);
-  };
-
-  const handleNeedsMoreInfoSubmit = async () => {
-    if (!moreInfoComment.trim()) {
-      message.warning("Please provide a comment.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("review_status", "needs_info");
-    formData.append("review_comment", moreInfoComment);
-    moreInfoFileList.forEach((file) => {
-      formData.append("files", file.originFileObj);
-    });
-
-    try {
-      const response = await apiRequest(
-        "POST",
-        `/api/plc/plc_step/${stepId}/submit-review/`,
-        formData,
-        true,
-        true
-      );
-      if (response.status === 200) {
-        message.success("More information request submitted successfully!");
-        setIsNeedsMoreInfoModalVisible(false);
-        setMoreInfoComment("");
-        setMoreInfoFileList([]);
-        setReviewStatus("needs_info");
-        setReviewComment(moreInfoComment);
-        await get_step_id();
-      } else {
-        message.error("Failed to submit more information request.");
-      }
-    } catch (error) {
-      console.error("Error submitting more info:", error);
-      message.error("Failed to submit more information request.");
-    }
-  };
-
-  const handleMoreInfoFileChange = ({ fileList: newFileList }) => {
-    setMoreInfoFileList(newFileList);
-  };
-
-  const handleNeedsMoreInfoClose = () => {
-    setIsNeedsMoreInfoModalVisible(false);
-    setMoreInfoComment("");
-    setMoreInfoFileList([]);
-  };
-
-  const get_step_data = async (step_id) => {
-    try {
-      const stepData = await getStepData(step_id);
-      setServiceRequirementsData(stepData || []);
-      if (stepData && stepData.length > 0) {
-        const latestData = stepData[0];
-        setDescription(latestData.text_data);
-        const existingFiles = latestData.documents.map((doc) => doc.file);
-        setOldFilesNeeded(existingFiles);
-        setRemovedOldFiles([]);
-      }
-    } catch (error) {
-      console.error("Error fetching step data:", error);
-    }
-  };
-
   const updateStepStatus = async (newStatus) => {
     try {
       const response = await apiRequest(
         "PUT",
-        `/api/plc/plc_step/${stepId}/update-status/`,
+        `/api/plc/plc_step/${stepData.step_id}/update-status/`,
         { status: newStatus },
         true
       );
       if (response.status === 200) {
         setStepStatus(newStatus);
-        setReviewStatus(response.data.review_status);
-        setReviewComment(response.data.review_comment || "");
         message.success("Status updated successfully");
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -314,13 +810,16 @@ function ServiceRequirements() {
     try {
       const response = await apiRequest(
         "PATCH",
-        `/api/plc/plc_step/${stepId}/update/`,
+        `/api/plc/plc_step/${stepData.step_id}/update/`,
         { core_or_noncore: newProcess },
         true
       );
       if (response.status === 200) {
         setProcess(newProcess);
         message.success("Process updated successfully");
+        if (refreshProjectData) {
+          refreshProjectData();
+        }
       }
     } catch (error) {
       console.error("Error updating process:", error);
@@ -328,1175 +827,704 @@ function ServiceRequirements() {
     }
   };
 
-  const handleSubmitAssignment = async () => {
-    if (selectedTeamMembers.length === 0) {
-      message.warning("Please select at least one team member.");
-      return;
-    }
-    if (!taskDescription.trim()) {
-      message.warning("Please provide a task description.");
-      return;
-    }
-    if (!taskDeadline) {
-      message.warning("Please select a deadline.");
-      return;
-    }
-
-    const assignmentData = {
-      assigned_to: selectedTeamMembers,
-      description: taskDescription,
-      deadline: taskDeadline.format("YYYY-MM-DD"),
-      references: taskReferences,
-    };
-
-    try {
-      const result = await assignStep(stepId, assignmentData);
-      if (result) {
-        message.success("Task assigned successfully!");
-        setIsAssignTaskVisible(false);
-        setSelectedTeamMembers([]);
-        setTaskDescription("");
-        setTaskDeadline(null);
-        setTaskReferences("");
-        await getTaskAssignment(stepId);
-      } else {
-        message.error("Failed to assign task.");
-      }
-    } catch (error) {
-      message.error("Failed to assign task.");
-      console.error(error);
-    }
-  };
-
-  const handleSendForReview = async () => {
-    try {
-      const response = await apiRequest(
-        "PUT",
-        `/api/plc/plc_step/${stepId}/update-status/`,
-        { status: "completed" },
-        true
-      );
-      if (response.status === 200) {
-        message.success("Step sent for review successfully!");
-        setStepStatus("completed");
-        setReviewStatus("under_review");
-        setReviewComment(response.data.review_comment || "");
-      } else {
-        message.error("Failed to send step for review.");
-      }
-    } catch (error) {
-      console.error("Error sending for review:", error);
-      message.error("Failed to send step for review.");
-    }
-  };
-
-  const handleReviewSubmit = async () => {
-    if (!reviewModalComment.trim() && reviewAction !== "accept") {
-      message.warning("Please provide a comment for your review.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append(
-      "review_status",
-      reviewAction === "accept"
-        ? "accepted"
-        : reviewAction === "reject"
-          ? "rejected"
-          : "needs_info"
-    );
-    formData.append("review_comment", reviewModalComment);
-    formData.append("old_files", JSON.stringify(reviewOldFilesNeeded));
-    reviewFileList.forEach((file) => {
-      formData.append("files", file.originFileObj);
-    });
-
-    try {
-      const response = await apiRequest(
-        "POST",
-        `/api/plc/plc_step/${stepId}/submit-review/`,
-        formData,
-        true,
-        true
-      );
-      if (response.status === 200) {
-        message.success("Review submitted successfully!");
-        setIsReviewModalVisible(false);
-        setReviewModalComment("");
-        setReviewFileList([]);
-        setReviewOldFilesNeeded(response.data.documents?.map((doc) => doc.file) || []);
-        setReviewRemovedOldFiles([]);
-        setReviewStatus(response.data.review_status);
-        setReviewComment(response.data.review_comment || "");
-      } else {
-        message.error("Failed to submit review.");
-      }
-    } catch (error) {
-      console.error("Error submitting review:", error);
-      message.error("Failed to submit review.");
-    }
-  };
-
-  // Download handler for a single file
-  const handleFileDownload = async (fileUrl, fileName) => {
-    setDownloadingFiles((prev) => [...prev, fileUrl]);
-    try {
-      const response = await fetch(fileUrl, { credentials: 'include' });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      message.error('Failed to download file');
-    } finally {
-      setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
-    }
-  };
-
-  useEffect(() => {
-    get_step_id();
-  }, []);
-
-  const ServiceRequirementsCard = ({ data, onUpdateClick, assignedUser, taskAssignment }) => {
-    if (!data || data.length === 0) {
-      return (
-        <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-md border border-gray-100 p-6 flex flex-col items-center justify-center min-h-[300px]">
-          <div className="text-center max-w-md mx-auto">
-            <div className="relative w-20 h-20 mx-auto mb-6">
-              <div className="absolute inset-0 bg-blue-100 rounded-full animate pulse"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <FileTextOutlined style={{ fontSize: '32px', color: '#3b82f6' }} />
-              </div>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">No Service Requirements Yet</h3>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              Service requirements help define project scope and deliverables. Add your first requirement to begin.
-            </p>
-            {assignedUser && (
+  return (
+    <div className="min-h-full p-6">
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-800">Service Requirements</h2>
+          <div className="flex space-x-3">
+            {projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
               <Button
-                type="primary"
-                className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all duration-200 font-medium h-10 px-6"
-                onClick={onUpdateClick}
+                type="default"
+                onClick={handleSendForReview}
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
               >
-                <span className="flex items-center space-x-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                  </svg>
-                  <span>Add Requirements</span>
-                </span>
+                Send for Review
               </Button>
+            )}
+            {projectRole === "company" && reviewStatus === "under_review" && (
+              <>
+                <Button
+                  type="default"
+                  onClick={() => setIsAcceptModalVisible(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                >
+                  Accept
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => setIsRejectModalVisible(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                >
+                  Reject
+                </Button>
+                <Button
+                  type="default"
+                  onClick={() => setIsNeedsMoreInfoModalVisible(true)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+                >
+                  Needs More Info
+                </Button>
+              </>
             )}
           </div>
         </div>
-      );
-    }
-
-    const latestData = data[0];
-
-    return (
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
-        <div className="grid md:grid-cols-3 divide-x divide-gray-100">
-          <div className="md:col-span-2 p-6">
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">Service Requirements</h2>
-                <p className="text-sm text-gray-500 mt-1 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Last updated: {formatDate(latestData.saved_at)}
-                </p>
-              </div>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${reviewStatus === "accepted"
-                ? "bg-green-100 text-green-800"
-                : reviewStatus === "rejected"
-                  ? "bg-red-100 text-red-800"
-                  : reviewStatus === "needs_info"
-                    ? "bg-orange-100 text-orange-800"
-                    : reviewStatus === "under_review"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-yellow-100 text-yellow-800"
-                }`}>
-                {reviewStatus === "accepted"
-                  ? "Accepted"
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium
+                ${reviewStatus === "accepted"
+                  ? "bg-green-100 text-green-800"
                   : reviewStatus === "rejected"
-                    ? "Rejected"
+                    ? "bg-red-100 text-red-800"
                     : reviewStatus === "needs_info"
-                      ? "Needs More Info"
+                      ? "bg-orange-100 text-orange-800"
                       : reviewStatus === "under_review"
-                        ? "Under Review"
-                        : "Not Submitted"}
-              </span>
-            </div>
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 uppercase mb-3">Description</h3>
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[120px] border border-gray-100">
-                <p className="text-gray-700 whitespace-pre-wrap">{latestData.text_data}</p>
-              </div>
-            </div>
-            <div className="mb-6 space-y-4">
-              <div className="border-l-2 border-blue-200 pl-4 space-y-3 mb-4 relative">
-                <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[7px] top-0"></div>
-                <div className="flex items-start">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">Created by</p>
-                    <p className="text-sm font-medium">{latestData.saved_by?.name || "System"}</p>
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {formatDate(latestData.saved_at)}
-                  </span>
-                </div>
-              </div>
-            </div>
-            {assignedUser && (
-              <div className="mt-auto">
-                <Button
-                  type="primary"
-                  onClick={onUpdateClick}
-                  className="bg-blue-600 hover:bg-blue-700 px-5 py-2 h-auto font-medium text-sm"
-                >
-                  Update Requirements
-                </Button>
-              </div>
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-yellow-100 text-yellow-800"
+                }`}
+            >
+              {reviewStatus === "accepted"
+                ? "Accepted"
+                : reviewStatus === "rejected"
+                  ? "Rejected"
+                  : reviewStatus === "needs_info"
+                    ? "Needs More Info"
+                    : reviewStatus === "under_review"
+                      ? "Under Review"
+                      : "Not Submitted"}
+            </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
+            </span>
+          </div>
+          <div className="flex space-x-3">
+            {projectRole.includes("consultant admin") && (
+              <Button
+                type="default"
+                onClick={() => {
+                  fetchMembers();
+                  setIsAssignTaskVisible(true);
+                }}
+                className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
+              >
+                Assign Task
+              </Button>
+            )}
+            {projectRole.includes("consultant admin") && (
+              <Select
+                value={process}
+                onChange={updateProcess}
+                style={{ width: 120 }}
+              >
+                <Option value="core">Core</Option>
+                <Option value="non core">Non Core</Option>
+              </Select>
+            )}
+            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+              <Select
+                value={stepStatus}
+                onChange={updateStepStatus}
+                style={{ width: 140 }}
+              >
+                <Option value="pending">Pending</Option>
+                <Option value="in_progress">In Progress</Option>
+                <Option value="completed">Completed</Option>
+              </Select>
             )}
           </div>
-          <div className="md:col-span-1 bg-gray-50">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="p-6">
+          <div className="mb-6">
+            <Title level={3} className="text-gray-800 mb-2">
+              Service Requirements Information
+            </Title>
+            <Text type="secondary">
+              Complete the form below to define service requirements and company information.
+            </Text>
+          </div>
+
+                    <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleFormSubmit}
+            initialValues={serviceRequirementsData || {}}
+          >
+            <Collapse
+              defaultActiveKey={['1']}
+              expandIconPosition="end"
+              className="mb-6"
+              items={[
+                {
+                  key: '1',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Company Information</span>
+                      <span className="ml-2 text-sm text-gray-500">(Contact details and basic info)</span>
+                    </div>
+                  ),
+                  children: (
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item
+                          label="Legal Name of the Company"
+                          name="legal_name"
+                          rules={[{ required: true, message: 'Please enter the legal name' }]}
+                        >
+                          <Input placeholder="Enter legal company name" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="Contact Name"
+                          name="contact_name"
+                          rules={[{ required: true, message: 'Please enter contact name' }]}
+                        >
+                          <Input placeholder="Enter contact person name" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="Contact Number"
+                          name="contact_number"
+                          rules={[{ required: true, message: 'Please enter contact number' }]}
+                        >
+                          <Input placeholder="Enter contact phone number" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="Contact Email"
+                          name="contact_email"
+                          rules={[
+                            { required: true, message: 'Please enter contact email' },
+                            { type: 'email', message: 'Please enter a valid email' }
+                          ]}
+                        >
+                          <Input placeholder="Enter contact email address" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label={
+                            <Space>
+                              <GlobalOutlined />
+                              Website
+                            </Space>
+                          }
+                          name="website"
+                        >
+                          <Input placeholder="Enter company website URL" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label={
+                            <Space>
+                              <LinkedinOutlined />
+                              LinkedIn
+                            </Space>
+                          }
+                          name="linkedin"
+                        >
+                          <Input placeholder="Enter LinkedIn company page URL" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  ),
+                },
+                {
+                  key: '2',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Company Details</span>
+                      <span className="ml-2 text-sm text-gray-500">(Auto-fetch from website/LinkedIn)</span>
+                    </div>
+                  ),
+                  children: (
+                    <Row gutter={16}>
+                                             <Col span={24}>
+                         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                           <div className="flex items-center justify-between">
+                             <div>
+                               <Text strong className="text-blue-800">Auto-Fetch Company Information</Text>
+                               <br />
+                               <Text type="secondary" className="text-sm">
+                                 Enter website or LinkedIn URL above, then click to auto-fetch company details
+                               </Text>
+                               {enrichmentStatus !== "NOT_STARTED" && (
+                                 <div className="mt-2">
+                                   <Text type="secondary" className="text-xs">
+                                     Status: {enrichmentStatus === "PENDING" ? "Processing..." : 
+                                              enrichmentStatus === "COMPLETED" ? "Completed" : 
+                                              enrichmentStatus === "FAILED" ? "Failed" : "Unknown"}
+                                   </Text>
+                                 </div>
+                               )}
+                             </div>
+                             <div className="flex items-center gap-2">
+                               {enrichmentStatus === "COMPLETED" && (
+                                 <span className="text-green-600 text-sm">
+                                   <CheckCircleOutlined /> Enriched
+                                 </span>
+                               )}
+                               {enrichmentStatus === "FAILED" && (
+                                 <span className="text-red-600 text-sm">
+                                   <CloseCircleOutlined /> Failed
+                                 </span>
+                               )}
+                               <Button
+                                 type="primary"
+                                 icon={<SyncOutlined spin={autoFetchLoading || enrichmentStatus === "PENDING"} />}
+                                 onClick={handleAutoFetch}
+                                 loading={autoFetchLoading || enrichmentStatus === "PENDING"}
+                                 disabled={enrichmentStatus === "PENDING"}
+                                 className="bg-blue-600 hover:bg-blue-700"
+                               >
+                                 {autoFetchLoading || enrichmentStatus === "PENDING" ? "Processing..." : "Auto-Fetch"}
+                               </Button>
+                             </div>
+                           </div>
+                         </div>
+                       </Col>
+                      <Col span={8}>
+                        <Form.Item label="HQ City" name="hq_city">
+                          <Input placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item label="HQ Country" name="hq_country">
+                          <Input placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item label="HQ Zip Code" name="hq_zip_code">
+                          <Input placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={24}>
+                        <Form.Item label="About Company" name="about_company">
+                          <TextArea rows={3} placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item label="Company Revenue (mUSD)" name="company_revenue">
+                          <Input placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item label="Company Headcount" name="company_headcount">
+                          <Input placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item label="Company Year of Inception" name="company_year_inception">
+                          <Input placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Company Lines of Business" name="company_lines_business">
+                          <TextArea rows={2} placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Company Brands" name="company_brands">
+                          <TextArea rows={2} placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Products and Services" name="products_services">
+                          <TextArea rows={2} placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Company Locations" name="company_locations">
+                          <TextArea rows={2} placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={24}>
+                        <Form.Item label="Company Existing Compliances" name="company_existing_compliances">
+                          <TextArea rows={2} placeholder="Auto-fetch from website/LinkedIn" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  ),
+                },
+                {
+                  key: '3',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Industry Information</span>
+                      <span className="ml-2 text-sm text-gray-500">(GICS DB - AI Autosuggest)</span>
+                    </div>
+                  ),
+                  children: (
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item label="Company Industry" name="company_industry">
+                          <AutoComplete
+                            placeholder="Select or type industry (GICS DB)"
+                            options={gicsData.sectors.map(sector => ({ value: sector, label: sector }))}
+                            filterOption={(inputValue, option) =>
+                              option?.label?.toLowerCase().includes(inputValue.toLowerCase())
+                            }
+                            showSearch
+                            allowClear
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Company Subsector" name="company_subsector">
+                          <AutoComplete
+                            placeholder="Select or type subsector (GICS DB)"
+                            options={gicsData.subsectors.map(subsector => ({ value: subsector, label: subsector }))}
+                            filterOption={(inputValue, option) =>
+                              option?.label?.toLowerCase().includes(inputValue.toLowerCase())
+                            }
+                            showSearch
+                            allowClear
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  ),
+                },
+                {
+                  key: '4',
+                  label: (
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold text-gray-800">Project Requirements</span>
+                      <span className="ml-2 text-sm text-gray-500">(Service requirements and decisions)</span>
+                    </div>
+                  ),
+                  children: (
+                    <Row gutter={16}>
+                      <Col span={24}>
+                        <Form.Item
+                          label="Requirement for Service"
+                          name="requirement_for_service"
+                          rules={[{ required: true, message: 'Please select the service requirement' }]}
+                        >
+                          <Select mode="multiple" placeholder="Select service requirements">
+                            {serviceRequirementOptions.map(option => (
+                              <Option key={option} value={option}>{option}</Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={24}>
+                        <Form.Item
+                          label="Description of Enquiry"
+                          name="description_of_enquiry"
+                          rules={[{ required: true, message: 'Please provide enquiry description' }]}
+                        >
+                          <TextArea rows={3} placeholder="To be filled in by consultant" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={24}>
+                        <Form.Item label="Compliances in Scope" name="compliances_in_scope">
+                          <Select mode="multiple" placeholder="Select compliances">
+                            {complianceOptions.map(option => (
+                              <Option key={option} value={option}>{option}</Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="Expected Completion Timeline" name="expected_completion_timeline">
+                          <Select placeholder="To be filled in by consultant">
+                            {timelineOptions.map(option => (
+                              <Option key={option} value={option}>{option}</Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                                             <Col span={12}>
+                         <Form.Item label="Go / No-go Decision" name="go_no_go">
+                           <Radio.Group>
+                             <Radio value="go">Go</Radio>
+                             <Radio value="no_go">No-go</Radio>
+                             <Radio value="pending">Pending</Radio>
+                           </Radio.Group>
+                         </Form.Item>
+                       </Col>
+                    </Row>
+                  ),
+                },
+              ]}
+            />
+            
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="default" 
+                onClick={handleResetForm} 
+                className="border-gray-300 text-gray-700"
+              >
+                Reset Form
+              </Button>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                className="bg-blue-600 hover:bg-blue-700" 
+                loading={loading}
+                icon={<SaveOutlined />}
+              >
+                {serviceRequirementsData ? "Update Requirements" : "Save Requirements"}
+              </Button>
+            </div>
+                    </Form>
+        </div>
+      </div>
+
+      {/* Review Comment Display */}
+      {reviewComment && (
+        <div className="mt-6 p-6 bg-white rounded-xl shadow-md">
+          <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
+            Review Comment
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-orange-500">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
-                Documents
-              </h3>
-              {latestData.documents && latestData.documents.length > 0 ? (
-                <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                  {latestData.documents.map((doc, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                      className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                      title={getFileName(doc.file)}
-                      disabled={downloadingFiles.includes(doc.file)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '0',
-                        margin: '0',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {getFileName(doc.file)}
-                      {downloadingFiles.includes(doc.file) && (
-                        <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
-                      )}
-                    </button>
-                  ))}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-800 whitespace-pre-wrap">{reviewComment}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Files Display */}
+      {reviewOldFilesNeeded && reviewOldFilesNeeded.length > 0 && (
+        <div className="mt-6 p-6 bg-white rounded-xl shadow-md">
+          <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
+            Additional Files Requested
+          </h3>
+          <div className="space-y-3">
+            {reviewOldFilesNeeded.map((file, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  <span className="text-sm text-gray-700">{getFileName(file)}</span>
                 </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  No documents attached
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => handleFileDownload(file, getFileName(file))}
+                  className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                >
+                  Download
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {taskAssignment && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Task Assignment
+          </h3>
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="mb-4">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium text-gray-700">
+                  Assignment Details
+                </h4>
+                <p className="text-xs text-gray-500">
+                  {formatDate(taskAssignment.assigned_at)}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Assigned To:
+                  </p>
+                  <ul className="list-disc list-inside mt-2">
+                    {(taskAssignment.assigned_to || []).map((user) => (
+                      <li key={user.id} className="text-sm text-gray-600">
+                        {user.name} - {user.email}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Deadline:</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {formatDate(taskAssignment.deadline)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700">
+                  Description:
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {taskAssignment.description}
+                </p>
+              </div>
+              {taskAssignment.references && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700">
+                    References:
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {taskAssignment.references}
+                  </p>
                 </div>
               )}
             </div>
-            {taskAssignment && (
-              <div className="p-6">
-                <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Assignment
-                </h3>
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 space-y-3">
-                  <div>
-                    <h4 className="text-xs text-gray-500 mb-1">Assigned To</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {taskAssignment.assigned_to_names && Array.isArray(taskAssignment.assigned_to_names) ? (
-                        taskAssignment.assigned_to_names.map((name, i) => (
-                          <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                            {name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-gray-600">Not specified</span>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-xs text-gray-500 mb-1">Deadline</h4>
-                    <p className="text-sm font-medium flex items-center text-gray-800">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {formatDate(taskAssignment.deadline)}
-                    </p>
-                  </div>
-                  {taskAssignment.description && (
-                    <div>
-                      <h4 className="text-xs text-gray-500 mb-1">Description</h4>
-                      <p className="text-sm text-gray-800">{taskAssignment.description}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {reviewComment && (
-              <div className="p-6">
-                <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
-                  Review Comment
-                </h3>
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-                  <p className="text-sm text-gray-800">{reviewComment}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ReviewModal = () => {
-    // These states are local to ReviewModal but are synced with parent states
-    // when the modal opens or parent states change.
-    const [localComment, setLocalComment] = useState(reviewModalComment);
-    const [localAction, setLocalAction] = useState(reviewAction);
-    const [isSubmitting, setIsSubmitting] = useState(false); // Use a distinct submitting state for clarity and control
-    const [initialSyncDone, setInitialSyncDone] = useState(false);
-
-    // Sync local state with parent state ONLY when modal first opens
-    useEffect(() => {
-      if (isReviewModalVisible && !initialSyncDone) {
-        setLocalComment(reviewModalComment);
-        setLocalAction(reviewAction);
-        setInitialSyncDone(true);
-      } else if (!isReviewModalVisible) {
-        setInitialSyncDone(false);
-      }
-    }, [isReviewModalVisible]); // Remove reviewModalComment and reviewAction from dependencies
-
-    // Handle comment changes with local state only - sync parent state only on submit
-    const handleCommentChange = (e) => {
-      const newValue = e.target.value;
-      setLocalComment(newValue);
-      // Don't sync parent state immediately to prevent re-renders
-    };
-
-    // Handle action changes with local state and update parent state
-    const handleActionChange = (value) => {
-      setLocalAction(value);
-      setReviewAction(value); // Sync parent state immediately for action (this won't cause focus loss)
-    };
-
-    // Handle file upload changes
-    const handleReviewFileChange = ({ fileList }) => {
-      setReviewFileList(fileList);
-    };
-
-    // Reset modal state
-    const resetModalState = () => {
-      setIsReviewModalVisible(false);
-      setLocalComment("");
-      setReviewModalComment(""); // Reset parent comment state
-      setLocalAction("accept");
-      setReviewAction("accept"); // Reset parent action state
-      setReviewFileList([]);
-      setReviewOldFilesNeeded([]);
-      setReviewRemovedOldFiles([]);
-      setIsSubmitting(false); // Ensure submitting state is false on close
-      setInitialSyncDone(false); // Reset sync flag
-    };
-
-    // Optimized submit handler
-    const handleReviewSubmit = async () => {
-      // Crucial: Prevent new submissions if one is already in progress
-      if (isSubmitting) {
-        return;
-      }
-
-      // Validate comment for non-accept actions
-      if (!localComment.trim() && localAction !== "accept") {
-        message.warning("Please provide a comment for your review.");
-        return;
-      }
-
-      // Sync comment with parent state before submission
-      setReviewModalComment(localComment);
-
-      setIsSubmitting(true); // Set submitting to true at the very start
-
-      const formData = new FormData();
-      formData.append(
-        "review_status",
-        localAction === "accept"
-          ? "accepted"
-          : localAction === "reject"
-            ? "rejected"
-            : "needs_info"
-      );
-      formData.append("review_comment", localComment);
-      formData.append("old_files", JSON.stringify(reviewOldFilesNeeded));
-      reviewFileList.forEach((file) => {
-        formData.append("files", file.originFileObj);
-      });
-
-      try {
-        const response = await apiRequest(
-          "POST",
-          `/api/plc/plc_step/${stepId}/submit-review/`,
-          formData,
-          true,
-          true
-        );
-
-        if (response.status === 200) {
-          message.success("Review submitted successfully!");
-          // Update parent states after successful submission
-          setReviewStatus(response.data.review_status);
-          setReviewComment(response.data.review_comment || "");
-          setReviewOldFilesNeeded(response.data.documents?.map((doc) => doc.file) || []);
-          resetModalState(); // Close modal and reset local states
-        } else {
-          message.error("Failed to submit review.");
-        }
-      } catch (error) {
-        console.error("Error submitting review:", error);
-        message.error(error.response?.data?.message || "Failed to submit review.");
-      } finally {
-        setIsSubmitting(false); // Always reset submitting to false when the process ends
-      }
-    };
-
-    return (
-      <Modal
-        title="Submit Review"
-        open={isReviewModalVisible}
-        onCancel={resetModalState}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={resetModalState}
-            className="border-gray-300 text-gray-700"
-            disabled={isSubmitting} // Disable cancel button when submitting
-          >
-            Cancel
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            onClick={handleReviewSubmit}
-            className={`${localAction === "accept"
-              ? "bg-green-600 hover:bg-green-700"
-              : localAction === "reject"
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-orange-600 hover:bg-orange-700"
-              }`}
-            loading={isSubmitting} // Use the distinct submitting state for Ant Design's loading prop
-            disabled={isSubmitting} // Explicitly disable the button to prevent multiple clicks
-          >
-            Submit Review
-          </Button>,
-        ]}
-        width={700}
-        maskClosable={false}
-        destroyOnClose={true}
-      >
-        <div className="p-6">
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-blue-600"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">
-                    Download Review Template
-                  </h3>
-                  <div className="mt-2 text-sm text-blue-600">
-                    <p>
-                      Please download and fill in the review template below to guide
-                      your review process.
-                    </p>
-                  </div>
-                  <div className="mt-3">
-                    <a
-                      href="/templates/Review_template.xlsx"
-                      download="review_template.xlsx"
-                      className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <svg
-                        className="-ml-1 mr-2 h-5 w-5 text-blue-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download Review Template
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Review Action
-              </label>
-              <Select
-                value={localAction}
-                onChange={handleActionChange}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              >
-                <Option value="accept">Accept</Option>
-                <Option value="reject">Reject</Option>
-                <Option value="needs_more_info">Needs More Info</Option>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Comment {localAction !== "accept" && <span className="text-red-500">*</span>}
-              </label>
-              <TextArea
-                rows={6}
-                placeholder="Enter your review comments..."
-                value={localComment}
-                onChange={handleCommentChange}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                autoSize={{ minRows: 6, maxRows: 8 }}
-              />
-            </div>
-            {reviewOldFilesNeeded.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Existing Review Files
-                </h4>
-                <div className="space-y-3">
-                  {reviewOldFilesNeeded.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-blue-600" />
-                        </div>
-                        <span className="text-sm text-gray-700 truncate">
-                          <button
-                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                            title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              margin: '0',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
-                            )}
-                          </button>
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <a
-                          href={`${BASE_URL}${fileUrl}`}
-                          download
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
-                          title={getFileName(fileUrl)}
-                        >
-                          {getFileName(fileUrl)}
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {reviewRemovedOldFiles.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Removed Review Files
-                </h4>
-                <div className="space-y-3">
-                  {reviewRemovedOldFiles.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-red-500" />
-                        </div>
-                        <span className="text-sm text-gray-500 truncate">
-                          <button
-                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                            className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                            title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              margin: '0',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
-                            )}
-                          </button>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">
-                Upload New Review Files
-              </h4>
-              <Upload
-                fileList={reviewFileList}
-                onChange={handleReviewFileChange}
-                beforeUpload={() => false}
-                multiple
-                showUploadList={true}
-                className="upload-list-custom"
-              >
-                <Button
-                  icon={<PaperClipOutlined />}
-                  className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg shadow-sm flex items-center"
-                >
-                  Attach Files
-                </Button>
-              </Upload>
+            <div className="text-xs text-gray-500 mt-2">
+              <p>
+                <b>Status:</b> {taskAssignment.status}
+              </p>
             </div>
           </div>
         </div>
-      </Modal>
-    );
-  };
-
-  return (
-    <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Service Requirements</h1>
-        <div className="flex space-x-3">
-          {projectRole === "consultant admin" && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
-            <Button
-              type="default"
-              onClick={handleSendForReview}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            >
-              Send for Review
-            </Button>
-          )}
-          {projectRole === "company" && (
-            <Button
-              type="default"
-              onClick={() => setIsReviewModalVisible(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            >
-              Submit Review
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="mb-4 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${reviewStatus === "accepted"
-            ? "bg-green-100 text-green-800"
-            : reviewStatus === "rejected"
-              ? "bg-red-100 text-red-800"
-              : reviewStatus === "needs_info"
-                ? "bg-orange-100 text-orange-800"
-                : reviewStatus === "under_review"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-yellow-100 text-yellow-800"
-            }`}>
-            {reviewStatus === "accepted"
-              ? "Accepted"
-              : reviewStatus === "rejected"
-                ? "Rejected"
-                : reviewStatus === "needs_info"
-                  ? "Needs More Info"
-                  : reviewStatus === "under_review"
-                    ? "Under Review"
-                    : "Not Submitted"}
-          </span>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
-          </span>
-        </div>
-        <div className="flex items-center space-x-3">
-          {projectRole === "consultant admin" && (
-            <Button
-              type="default"
-              onClick={handleAssignTask}
-              className="flex items-center"
-            >
-              Assign Task
-            </Button>
-          )}
-          {projectRole === "consultant admin" && (
-            <Select
-              value={process}
-              onChange={updateProcess}
-              style={{ width: 120 }}
-            >
-              <Option value="core">Core</Option>
-              <Option value="non core">Non Core</Option>
-            </Select>
-          )}
-          {projectRole === "consultant admin" && (
-            <Select
-              value={stepStatus}
-              onChange={updateStepStatus}
-              style={{ width: 140 }}
-            >
-              <Option value="pending">Pending</Option>
-              <Option value="in_progress">In Progress</Option>
-              <Option value="completed">Completed</Option>
-            </Select>
-          )}
-          {isAssignedUser && (
-            <Button
-              type="primary"
-              onClick={() => setIsModalVisible(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {serviceRequirementsData.length > 0
-                ? "Update Requirements"
-                : "Add Requirements"}
-            </Button>
-          )}
-        </div>
-      </div>
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Spin indicator={antIcon} />
-        </div>
-      ) : (
-        <ServiceRequirementsCard
-          data={serviceRequirementsData}
-          onUpdateClick={() => setIsModalVisible(true)}
-          assignedUser={isAssignedUser}
-          taskAssignment={taskAssignment}
-        />
       )}
-      <Modal
-        title={
-          serviceRequirementsData.length > 0
-            ? "Update Service Requirements"
-            : "Add Service Requirements"
-        }
-        open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          setDescription("");
-          setFileList([]);
-          setOldFilesNeeded([]);
-          setRemovedOldFiles([]);
-        }}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              setIsModalVisible(false);
-              setDescription("");
-              setFileList([]);
-              setOldFilesNeeded([]);
-              setRemovedOldFiles([]);
-            }}
-            className="border-gray-300 text-gray-700"
-            disabled={loading}
-          >
-            Cancel
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            onClick={handleSubmit}
-            className="bg-blue-600 hover:bg-blue-700"
-            loading={loading}
-          >
-            {serviceRequirementsData.length > 0 ? "Update" : "Save"}
-          </Button>,
-        ]}
-        width={700}
-      >
-        <div className="p-6">
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-blue-600"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">
-                    Download Template
-                  </h3>
-                  <div className="mt-2 text-sm text-blue-600">
-                    <p>
-                      Please download and fill in the template below before
-                      submitting your service requirements.
-                    </p>
-                  </div>
-                  <div className="mt-3">
-                    <a
-                      href="/templates/Service_Req_template.xlsx"
-                      download="service_requirements_template.xlsx"
-                      className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <svg
-                        className="-ml-1 mr-2 h-5 w-5 text-blue-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download Service Requirements Template
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Description
-              </label>
-              <TextArea
-                id="description"
-                rows={6}
-                placeholder="Enter the service requirements"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            {oldFilesNeeded.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Existing Files
-                </h4>
-                <div className="space-y-3">
-                  {oldFilesNeeded.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-blue-600" />
-                        </div>
-                        <span className="text-sm text-gray-700 truncate">
-                          <button
-                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                            className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                            title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              margin: '0',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
-                            )}
-                          </button>
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <a
-                          href={`${BASE_URL}${fileUrl}`}
-                          download
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4"
-                          title={getFileName(fileUrl)}
-                        >
-                          {getFileName(fileUrl)}
-                        </a>
-                        <Button
-                          type="text"
-                          danger
-                          onClick={() => handleRemoveFile(fileUrl)}
-                          className="flex items-center"
-                          icon={
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {removedOldFiles.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Removed Files
-                </h4>
-                <div className="space-y-3">
-                  {removedOldFiles.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-red-500" />
-                        </div>
-                        <span className="text-sm text-gray-500 truncate">
-                          <button
-                            onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                            className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                            title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              margin: '0',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
-                              <LoadingOutlined style={{ fontSize: '16px', marginLeft: '6px' }} spin />
-                            )}
-                          </button>
-                        </span>
-                      </div>
-                      <Button
-                        type="text"
-                        onClick={() => handleRestoreFile(fileUrl)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center"
-                        icon={
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 mr-1"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        }
-                      >
-                        Restore
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">
-                Upload New Files
-              </h4>
-              <Upload
-                fileList={fileList}
-                onChange={handleUploadChange}
-                beforeUpload={() => false}
-                multiple
-                showUploadList={true}
-                className="upload-list-custom"
-              >
-                <Button
-                  icon={<PaperClipOutlined />}
-                  className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg shadow-sm flex items-center"
-                >
-                  Attach Files
-                </Button>
-              </Upload>
-            </div>
-          </div>
-        </div>
-      </Modal>
+
+      {/* Assign Task Modal */}
       <Modal
         title="Assign Task"
         open={isAssignTaskVisible}
-        onCancel={handleAssignTaskClose}
-        footer={[
-          <Button
-            key="assign"
-            type="primary"
-            onClick={handleSubmitAssignment}
-            className="bg-blue-500"
-          >
-            Assign
-          </Button>,
-        ]}
+        onOk={handleAssignTask}
+        onCancel={() => setIsAssignTaskVisible(false)}
+        width={600}
       >
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Team Members</label>
-          <Select
-            mode="multiple"
-            placeholder="Select team members"
-            value={selectedTeamMembers}
-            onChange={setSelectedTeamMembers}
-            style={{ width: "100%" }}
-          >
-            {members &&
-              members.map((member) => (
+        <Form layout="vertical">
+          <Form.Item label="Team Members" required>
+            <Select
+              mode="multiple"
+              placeholder="Select team members"
+              value={selectedTeamMembers}
+              onChange={setSelectedTeamMembers}
+            >
+              {members.map((member) => (
                 <Option key={member.id} value={member.id}>
-                  {member.name}
+                  {member.username}
                 </Option>
               ))}
-          </Select>
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
-            Team Deadline
-          </label>
-          <DatePicker
-            style={{ width: "100%" }}
-            value={taskDeadline}
-            onChange={setTaskDeadline}
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
-            Task Description
-          </label>
-          <Input
-            placeholder="Enter task description"
-            value={taskDescription}
-            onChange={(e) => setTaskDescription(e.target.value)}
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">
-            Task References
-          </label>
-          <Input
-            placeholder="Add reference URLs"
-            value={taskReferences}
-            onChange={(e) => setTaskReferences(e.target.value)}
-          />
-        </div>
+            </Select>
+          </Form.Item>
+          <Form.Item label="Task Description" required>
+            <TextArea
+              rows={3}
+              value={taskDescription}
+              onChange={(e) => setTaskDescription(e.target.value)}
+              placeholder="Describe the task to be completed"
+            />
+          </Form.Item>
+          <Form.Item label="Deadline" required>
+            <DatePicker
+              showTime
+              value={taskDeadline}
+              onChange={setTaskDeadline}
+              placeholder="Select deadline"
+              style={{ width: "100%" }}
+            />
+          </Form.Item>
+          <Form.Item label="References">
+            <TextArea
+              rows={2}
+              value={taskReferences}
+              onChange={(e) => setTaskReferences(e.target.value)}
+              placeholder="Additional references or notes"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
+
+      {/* Accept Modal */}
+      <Modal
+        title="Accept Step"
+        open={isAcceptModalVisible}
+        onOk={() => handleReviewAction("accept")}
+        onCancel={() => {
+          setIsAcceptModalVisible(false);
+          setAcceptComment("");
+        }}
+        width={500}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Acceptance Comment">
+            <TextArea
+              rows={3}
+              value={acceptComment}
+              onChange={(e) => setAcceptComment(e.target.value)}
+              placeholder="Optional comment for acceptance"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        title="Reject Step"
+        open={isRejectModalVisible}
+        onOk={() => handleReviewAction("reject")}
+        onCancel={() => {
+          setIsRejectModalVisible(false);
+          setRejectComment("");
+        }}
+        width={500}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Rejection Comment" required>
+            <TextArea
+              rows={3}
+              value={rejectComment}
+              onChange={(e) => setRejectComment(e.target.value)}
+              placeholder="Please provide a reason for rejection"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Needs More Info Modal */}
       <Modal
         title="Request More Information"
         open={isNeedsMoreInfoModalVisible}
-        onCancel={handleNeedsMoreInfoClose}
-        footer={[
-          <Button key="cancel" onClick={handleNeedsMoreInfoClose}>
-            Cancel
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            onClick={handleNeedsMoreInfoSubmit}
-            className="bg-orange-600 hover:bg-orange-700"
-          >
-            Submit Request
-          </Button>,
-        ]}
+        onOk={() => handleReviewAction("needs_info")}
+        onCancel={() => {
+          setIsNeedsMoreInfoModalVisible(false);
+          setMoreInfoComment("");
+          setMoreInfoFileList([]);
+        }}
         width={600}
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Comment <span className="text-red-500">*</span>
-            </label>
+        <Form layout="vertical">
+          <Form.Item label="Information Request" required>
             <TextArea
-              rows={4}
-              placeholder="Please provide details about what additional information is needed..."
+              rows={3}
               value={moreInfoComment}
               onChange={(e) => setMoreInfoComment(e.target.value)}
-              className="w-full"
+              placeholder="Please specify what additional information is needed"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Attach Files (Optional)
-            </label>
+          </Form.Item>
+          <Form.Item label="Supporting Files">
             <Upload
               fileList={moreInfoFileList}
-              onChange={handleMoreInfoFileChange}
+              onChange={({ fileList }) => setMoreInfoFileList(fileList)}
               beforeUpload={() => false}
               multiple
-              showUploadList={true}
             >
-              <Button icon={<PaperClipOutlined />}>
-                Attach Files
-              </Button>
+              <Button icon={<PaperClipOutlined />}>Upload Files</Button>
             </Upload>
-          </div>
-        </div>
+          </Form.Item>
+        </Form>
       </Modal>
-      <ReviewModal />
     </div>
   );
 }
