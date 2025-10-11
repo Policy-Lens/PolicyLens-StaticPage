@@ -22,6 +22,7 @@ import FileViewerModal from "../../FileViewer/FileViewerModal";
 import { apiRequest } from "../../../utils/api";
 import { AuthContext } from "../../../AuthContext";
 import { ProjectContext } from "../../../Context/ProjectContext";
+import EditorView from "../../EditorView/EditorView";
 import { Button, message } from "antd";
 
 // Control name options for filtering
@@ -1436,6 +1437,20 @@ const PolicyLibrary = () => {
           )}
         </button>
 
+        <button
+          className={`py-3 px-6 font-medium relative transition-all ${
+            activeTab === "aiWorkshop"
+              ? "text-blue-600 font-semibold"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
+          onClick={() => setActiveTab("aiWorkshop")}
+        >
+          Ai Document Workshop
+          {activeTab === "aiWorkshop" && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
+          )}
+        </button>
+
         {/* Upload Template button in the top tab area if admin */}
         {activeTab === "templates" && user?.role === "admin" && (
           <button
@@ -1762,10 +1777,18 @@ const PolicyLibrary = () => {
           </div>
         )}
 
+        {/* AI Document Workshop View */}
+        {activeTab === "aiWorkshop" && (
+          <div className="mt-4 border-t border-slate-200">
+            <EditorView templatesData={templatesData} />
+          </div>
+        )}
+
         {/* Empty state */}
-        {!isLoading &&
+        {!isLoading && activeTab !== "aiWorkshop" &&
           ((activeTab === "templates" && templatesData.length === 0) ||
-            (activeTab === "myFiles" && projectFilesData.length === 0)) && (
+            (activeTab === "myFiles" && projectFilesData.length === 0)) &&
+          !((activeTab === "templates" && templatesData.length > 0) || (activeTab === "myFiles" && projectFilesData.length > 0)) && (
             <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 rounded-lg bg-white shadow min-h-[300px]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1787,13 +1810,11 @@ const PolicyLibrary = () => {
               <p className="text-gray-500 mb-6">
                 {activeTab === "templates"
                   ? "No templates are available at the moment."
-                  : activeTab === "myFiles"
-                    ? projectRole === "consultant admin"
-                      ? "You have not assigned any files yet."
-                      : projectRole === "consultant"
-                        ? "You have no files assigned to you yet."
-                        : "No files are available for you in this project."
-                    : "No files have been added to this project yet."}
+                  : projectRole === "consultant admin"
+                    ? "You have not assigned any files yet."
+                    : projectRole === "consultant"
+                      ? "You have no files assigned to you yet."
+                      : "No files are available for you in this project."}
               </p>
               {(searchTerm || controlNameFilter) && (
                 <button
