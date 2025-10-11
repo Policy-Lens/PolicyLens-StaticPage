@@ -150,7 +150,7 @@ const router = createBrowserRouter([
         element: <CarouselHorizontalStepper />,
       },
       {
-        path: "admindashboard/*",
+        path: "projectdashboard/*",
         element: <AdminDashboardRouter />,
       },
       {
