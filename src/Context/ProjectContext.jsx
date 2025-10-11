@@ -40,16 +40,16 @@ export const ProjectProvider = ({ children }) => {
         setAuthChecked(true);
       }
     };
-
+    getProjectRole();
     checkAuth();
   }, []);
 
   const getProjectRole = async (projectid) => {
     // Check cache first
-    if (projectRoleCache[projectid]) {
-      setProjectRole(projectRoleCache[projectid]);
-      return projectRoleCache[projectid];
-    }
+    // if (projectRoleCache[projectid]) {
+    //   setProjectRole(projectRoleCache[projectid]);
+    //   return projectRoleCache[projectid];
+    // }
 
     try {
       const res = await apiRequest(
@@ -62,12 +62,12 @@ export const ProjectProvider = ({ children }) => {
       if (res.status === 200) {
         const role = res.data.project_role;
         setProjectRole(role);
-        
+        console.log(role)
         // Cache the result
-        setProjectRoleCache(prev => ({
-          ...prev,
-          [projectid]: role
-        }));
+        // setProjectRoleCache(prev => ({
+        //   ...prev,
+        //   [projectid]: role
+        // }));
         
         return role;
       }
