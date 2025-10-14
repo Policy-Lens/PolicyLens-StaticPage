@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { X, BarChart3, LineChart, PieChart } from "lucide-react";
 import { message } from "antd";
 import { apiRequest } from "../../../utils/api";
-import { Bar, Line, Pie, Doughnut } from "react-chartjs-2";
+import { Bar, Line, Pie, Doughnut, Radar, PolarArea } from "react-chartjs-2";
 
 const CreateChartModal = ({
   isOpen,
@@ -17,11 +17,88 @@ const CreateChartModal = ({
   const [xField, setXField] = useState("");
   const [aggregation, setAggregation] = useState("count");
   const [previewData, setPreviewData] = useState(null);
+  const [previewError, setPreviewError] = useState("");
+  const [isPreviewValid, setIsPreviewValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [chartConfigs, setChartConfigs] = useState([]);
   const [availableChartTypes, setAvailableChartTypes] = useState([]);
   const [fieldOptions, setFieldOptions] = useState([]);
   const [availableAggregations, setAvailableAggregations] = useState([]);
+  const [groupBy, setGroupBy] = useState("");
+  const [stacked, setStacked] = useState(false);
+
+  // Fallback configuration used when API is unavailable or returns no configs
+  const DEFAULT_CHART_CONFIGS = [
+    {
+      model_name: "ProjectQuestion",
+      allowed_charts: [
+        {
+          x_field: { field_name: "status", related_name: "Status" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "line", "pie", "doughnut"] },
+          ],
+        },
+        {
+          x_field: { field_name: "type", related_name: "Type" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut"] },
+          ],
+        },
+        {
+          x_field: { field_name: "control_theme", related_name: "Control Theme" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut"] },
+          ],
+        },
+        {
+          x_field: { field_name: "standard", related_name: "Standard" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut"] },
+          ],
+        },
+      ],
+    },
+    {
+      model_name: "ProjectReport",
+      allowed_charts: [
+        {
+          x_field: { field_name: "category", related_name: "Category" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut"] },
+          ],
+        },
+        {
+          x_field: { field_name: "status", related_name: "Status" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut", "line"] },
+          ],
+        },
+        {
+          x_field: { field_name: "report_type", related_name: "Report Type" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut"] },
+          ],
+        },
+      ],
+    },
+    {
+      model_name: "PlcStep",
+      allowed_charts: [
+        {
+          x_field: { field_name: "status", related_name: "PLC Status" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "line", "pie", "doughnut"] },
+          ],
+        },
+        {
+          x_field: { field_name: "process", related_name: "PLC Process" },
+          allowed: [
+            { aggregation: "count", charts: ["bar", "pie", "doughnut"] },
+          ],
+        },
+      ],
+    },
+  ];
 
   // Fetch chart configurations on component mount
   useEffect(() => {
@@ -34,12 +111,16 @@ const CreateChartModal = ({
           true
         );
 
-        if (response.status === 200) {
+        if (response.status === 200 && Array.isArray(response.data) && response.data.length > 0) {
           setChartConfigs(response.data);
+        } else {
+          setChartConfigs(DEFAULT_CHART_CONFIGS);
         }
       } catch (error) {
         console.error("Error fetching chart configurations:", error);
-        message.error("Failed to fetch chart configurations");
+        // Use fallback configs so users can still build charts
+        setChartConfigs(DEFAULT_CHART_CONFIGS);
+        message.warning("Using default chart configurations");
       }
     };
 
@@ -69,6 +150,8 @@ const CreateChartModal = ({
       setAvailableAggregations([]);
       setFieldOptions([]);
       setPreviewData(null);
+      setGroupBy("");
+      setStacked(false);
     }
   }, [modelName, chartConfigs]);
 
@@ -120,6 +203,13 @@ const CreateChartModal = ({
     return Boolean(modelName && xField && aggregation && chartType);
   };
 
+  const isGrouped = Boolean(groupBy);
+  const isChartTypeSupported = () => {
+    // Disallow grouping for pie/doughnut
+    if (isGrouped && (chartType === "pie" || chartType === "doughnut")) return false;
+    return true;
+  };
+
   // Helper function to check if all required fields are selected for saving
   const areAllFieldsSelected = () => {
     return Boolean(
@@ -145,7 +235,11 @@ const CreateChartModal = ({
     const filters = {};
     if (modelName === "ProjectQuestion") {
       filters["project__id"] = parseInt(projectId);
+    } else if (modelName === "PLCStep" || modelName === "PlcStep") {
+      filters["project__id"] = parseInt(projectId);
     }
+    if (groupBy) filters["__group_by"] = groupBy;
+    if (groupBy && stacked) filters["__stacked"] = true;
     return filters;
   };
 
@@ -171,10 +265,16 @@ const CreateChartModal = ({
 
       if (response.status === 200) {
         setPreviewData(response.data);
+        setPreviewError("");
+        setIsPreviewValid(true);
       }
     } catch (error) {
-      console.error("Error fetching preview data:", error);
-      message.error("Failed to fetch preview data");
+      const errMsg = error?.response?.data?.error || "Failed to fetch preview data";
+      console.error("Error fetching preview data:", errMsg);
+      message.error(errMsg);
+      setPreviewData(null);
+      setPreviewError(errMsg);
+      setIsPreviewValid(false);
     } finally {
       setIsLoading(false);
     }
@@ -199,6 +299,8 @@ const CreateChartModal = ({
     setAggregation("");
     setChartType("");
     setPreviewData(null);
+    // Reset grouping if same as xField
+    if (groupBy === newField) setGroupBy("");
   };
 
   // Handle aggregation change
@@ -236,6 +338,14 @@ const CreateChartModal = ({
     }
 
     try {
+      if (!isChartTypeSupported()) {
+        message.error("Selected chart type does not support Group By. Choose bar/line/radar.");
+        return;
+      }
+      if (!isPreviewValid) {
+        message.error(previewError || "Chart configuration is not valid.");
+        return;
+      }
       setIsLoading(true);
       const response = await apiRequest(
         "POST",
@@ -258,8 +368,9 @@ const CreateChartModal = ({
         onClose();
       }
     } catch (error) {
-      console.error("Error creating chart:", error);
-      message.error("Failed to create chart");
+      const errMsg = error?.response?.data?.error || "Failed to create chart";
+      console.error("Error creating chart:", errMsg);
+      message.error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -269,24 +380,25 @@ const CreateChartModal = ({
   const renderPreviewChart = () => {
     if (!previewData) return null;
 
-    const chartData = {
-      labels: previewData.labels,
-      datasets: [
-        {
-          label: chartTitle || "Preview", // Use empty title or "Preview" for preview
-          data: previewData.values,
-          backgroundColor: [
-            "#3b82f6", // blue
-            "#10b981", // green
-            "#f59e0b", // amber
-            "#ef4444", // red
-            "#8b5cf6", // purple
-            "#06b6d4", // cyan
-          ].slice(0, previewData.labels.length),
+    const baseColors = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#14b8a6","#f97316","#22c55e","#84cc16"];
+    const labels = previewData.labels || [];
+    const datasets = Array.isArray(previewData.datasets) && previewData.datasets.length
+      ? previewData.datasets.map((ds, idx) => ({
+          label: ds.label || (chartTitle || "Preview"),
+          data: ds.data || [],
+          backgroundColor: baseColors[idx % baseColors.length],
+          borderColor: baseColors[idx % baseColors.length],
           borderWidth: 1,
-        },
-      ],
-    };
+        }))
+      : [
+          {
+            label: chartTitle || "Preview",
+            data: previewData.values || [],
+            backgroundColor: baseColors.slice(0, labels.length),
+            borderWidth: 1,
+          },
+        ];
+    const chartData = { labels, datasets };
 
     const chartOptions = {
       responsive: true,
@@ -303,6 +415,7 @@ const CreateChartModal = ({
           display: false,
         },
       },
+      scales: previewData.stacked ? { x: { stacked: true }, y: { stacked: true } } : undefined,
     };
 
     switch (chartType) {
@@ -314,6 +427,11 @@ const CreateChartModal = ({
         return <Pie data={chartData} options={chartOptions} />;
       case "doughnut":
         return <Doughnut data={chartData} options={chartOptions} />;
+      case "radar":
+        return <Radar data={chartData} options={chartOptions} />;
+      case "polarArea":
+      case "polar_area":
+        return <PolarArea data={chartData} options={chartOptions} />;
       default:
         return null;
     }
@@ -417,6 +535,47 @@ const CreateChartModal = ({
             </div>
           )}
 
+          {/* Group By (optional) */}
+          {modelName && xField && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Group By (optional)
+                </label>
+                <select
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">None</option>
+                  {fieldOptions
+                    .filter((f) => f.value !== xField)
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </select>
+                {groupBy && (chartType === "pie" || chartType === "doughnut") && (
+                  <div className="mt-1 text-xs text-amber-600">Group by is not supported for pie/doughnut. Choose bar/line/radar.</div>
+                )}
+              </div>
+              <div className="flex items-end">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    checked={stacked}
+                    onChange={(e) => setStacked(e.target.checked)}
+                    disabled={!groupBy || isLoading}
+                  />
+                  Stacked Series
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* Chart Type Selection */}
           {modelName &&
             xField &&
@@ -427,7 +586,7 @@ const CreateChartModal = ({
                   Chart Type
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {availableChartTypes.map((type) => {
+                  {(isGrouped ? availableChartTypes.filter((t) => t !== "pie" && t !== "doughnut") : availableChartTypes).map((type) => {
                     const icon =
                       type === "bar" ? (
                         <BarChart3 size={18} />
