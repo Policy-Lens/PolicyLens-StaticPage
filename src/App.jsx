@@ -24,6 +24,7 @@ import Support from "./Components/AdminView/ProjectTabs/Support";
 import MyReports from "./Components/AdminView/ProjectTabs/MyReports/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
+import { WorkflowProvider } from "./Context/WorkflowContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
@@ -221,12 +222,14 @@ const AppLayout = () => {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <ProjectProvider>
-          <div className="font-sans"> {/* Add this wrapper */}
-            <RouterProvider router={router} />
-            <NotificationToast />
-          </div>
-        </ProjectProvider>
+        <WorkflowProvider>
+          <ProjectProvider>
+            <div className="font-sans"> {/* Add this wrapper */}
+              <RouterProvider router={router} />
+              <NotificationToast />
+            </div>
+          </ProjectProvider>
+        </WorkflowProvider>
       </NotificationProvider>
     </AuthProvider>
   );

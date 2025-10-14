@@ -1,19 +1,17 @@
 import { useState, useRef, useEffect, createContext, useContext } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
-import ServiceRequirements from "./ServiceRequirements";
-import GapAnalysis from "./GapAnalysis";
-import StakeholderInterviews from "./StakeholderInterviews";
-import DataAnalysis from "./DataAnalysis";
-import RART from "./RART";
-import InquirySection from "./InquirySection";
-import FinalizeContract from "./FinalizeContract";
-import Planning from "./Planning";
-import DiscussingPolicies from "./DiscussingPolicies";
-import DiscussImplementation from "./DiscussImplementation";
-import ImplementPolicies from "./ImplementPolicies";
-import InternalAuditProcess from "./InternalAuditProcess";
-import AuditDecision from "./AuditDecision";
-import Sustenance from "./Sustenance";
+import ServiceRequirements from "./ServiceRequirements/SRbody";
+import InquirySection from "./InquirySection/ISbody";
+import FinalizeContract from "./FinalizeContract/FCbody";
+import GapAnalysis from "./GapAnalysis/GAbody";
+import DataAnalysis from "./DataAnalysis/DAbody";
+import RART from "./RART/RARTbody";
+import PlanningAndDiscussingPolicies from "./PlanningAndDiscussingPolicies/PDPbody";
+import ImplementationOfPolicies from "./ImplementationOfPolicies/IPbody";
+import InternalAuditProcess from "./InternalAuditProcess/IAPbody";
+import AuditDecision from "./AuditDecision/ADbody";
+import Sustenance from "./Sustenance/Sbody";
+import Tableview from "./Tableview";
 import { ChevronLeft, ChevronRight, List, LayoutGrid } from "lucide-react";
 import {
   Calendar,
@@ -23,22 +21,24 @@ import {
   CheckCircle,
   Database,
 } from "lucide-react";
-import { Spin } from "antd";
+import { Button, Spin, Tooltip, Typography } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { ProjectContext } from "../../Context/ProjectContext";
+import { WorkflowContext } from "../../Context/WorkflowContext";
 import InteractiveIsoClause from "../Common/InteractiveIsoClause";
 import React from "react"; // Added missing import for React
 
+const { Title } = Typography;
 // Create a context for loading state
 export const LoadingContext = createContext({
   isLoading: false,
-  setIsLoading: () => { },
+  setIsLoading: () => {},
 });
 
 // Create a context for workflow data
 export const WorkflowDataContext = createContext({
   workflowData: {},
-  setWorkflowData: () => { },
+  setWorkflowData: () => {},
 });
 
 const antIcon = <LoadingOutlined style={{ fontSize: 40 }} spin />;
@@ -55,12 +55,16 @@ const LoadingIndicator = () => (
 
 const CarouselHorizontalStepper = () => {
   const { projectid } = useParams();
-  const { getWorkflowStepsOverview, getProjectPlcOverview } = useContext(ProjectContext);
+  const { getAllProjectSteps } = useContext(WorkflowContext);
   const [currentStep, setCurrentStep] = useState(() => {
     // Load from project-step mapping in localStorage
     try {
-      const projectSteps = JSON.parse(localStorage.getItem('workflow-steps') || '{}');
-      return projectid && projectSteps[projectid] ? parseInt(projectSteps[projectid], 10) : 0;
+      const projectSteps = JSON.parse(
+        localStorage.getItem("workflow-steps") || "{}"
+      );
+      return projectid && projectSteps[projectid]
+        ? parseInt(projectSteps[projectid], 10)
+        : 0;
     } catch (e) {
       console.error("Error loading saved step:", e);
       return 0;
@@ -75,16 +79,18 @@ const CarouselHorizontalStepper = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState("carousel"); // "carousel" or "table"
   const [workflowStepsData, setWorkflowStepsData] = useState({}); // Store all workflow step data
-  const [projectPlcData, setProjectPlcData] = useState(null); // Store complete PLC data
+  const [showStepIndicator, setShowStepIndicator] = useState(false); // Control step indicator animation
 
   // Save current step to localStorage whenever it changes or projectid changes
   useEffect(() => {
     if (!projectid) return;
 
     try {
-      const projectSteps = JSON.parse(localStorage.getItem('workflow-steps') || '{}');
+      const projectSteps = JSON.parse(
+        localStorage.getItem("workflow-steps") || "{}"
+      );
       projectSteps[projectid] = currentStep;
-      localStorage.setItem('workflow-steps', JSON.stringify(projectSteps));
+      localStorage.setItem("workflow-steps", JSON.stringify(projectSteps));
     } catch (e) {
       console.error("Error saving step:", e);
     }
@@ -95,7 +101,9 @@ const CarouselHorizontalStepper = () => {
     if (!projectid) return;
 
     try {
-      const projectSteps = JSON.parse(localStorage.getItem('workflow-steps') || '{}');
+      const projectSteps = JSON.parse(
+        localStorage.getItem("workflow-steps") || "{}"
+      );
       if (projectSteps[projectid] !== undefined) {
         setCurrentStep(parseInt(projectSteps[projectid], 10));
       }
@@ -104,68 +112,36 @@ const CarouselHorizontalStepper = () => {
     }
   }, [projectid]);
 
-  // Single bulk data fetch - eliminates N+1 pattern
-  const fetchAllProjectData = async () => {
-    if (!projectid || !getWorkflowStepsOverview || !getProjectPlcOverview) return;
+  // Fetch workflow data for the stepper view
+  const fetchWorkflowData = async () => {
+    if (!projectid || !getAllProjectSteps) return;
 
     try {
       setIsLoading(true);
+      const response = await getAllProjectSteps(projectid);
       
-      // Fetch both workflow overview and complete PLC data in parallel
-      const [workflowResponse, plcResponse] = await Promise.all([
-        getWorkflowStepsOverview(projectid),
-        getProjectPlcOverview(projectid)
-      ]);
-      
-      if (workflowResponse) {
-        console.log("Bulk workflow data:", workflowResponse);
-        
+      if (response && response.steps) {
         // Transform the workflow data to match the expected format
         const stepDataMap = {};
-        const stepApiMapping = {
-          0: 1, // Service Requirements
-          1: 2, // Inquiry Section  
-          2: 3, // Finalize Contract
-          3: 4, // Gap Analysis
-          4: 5, // Data Analysis
-          5: 6, // RART
-          6: 7, // Planning and Discussing Policies
-          7: 8, // Implementation of Policies
-          8: 9, // Internal Audit Process
-          9: 10, // Audit Decision
-          10: 11, // Sustenance
-        };
-
-        // Create reverse mapping from API step_no to component index
-        const reverseMapping = {};
-        Object.entries(stepApiMapping).forEach(([componentIndex, apiStepNo]) => {
-          reverseMapping[apiStepNo] = parseInt(componentIndex);
-        });
-
-        // Map the API response to component indices
-        workflowResponse.workflow_steps.forEach(step => {
-          const componentIndex = reverseMapping[step.step_no];
-          if (componentIndex !== undefined) {
-            stepDataMap[componentIndex] = {
-              process: step.process || "core",
-              associatedIsoClause: step.associated_iso_clause,
-              status: step.status || "pending",
-              step_id: step.step_id,
-              review_status: step.review_status,
-              review_comment: step.review_comment
-            };
-          }
+        
+        response.steps.forEach((step) => {
+          // Convert step_no to 0-based index for component mapping
+          const componentIndex = step.step_no - 1;
+          stepDataMap[componentIndex] = {
+            process: step.process || "non core",
+            associatedIsoClause: null, // Will be populated later if needed
+            status: step.status || "not_started",
+            step_id: step.step_id,
+            has_data: step.has_data,
+            assigned_to: step.assigned_to,
+            reviewer: step.reviewer
+          };
         });
 
         setWorkflowStepsData(stepDataMap);
       }
-
-      if (plcResponse) {
-        console.log("Complete PLC data:", plcResponse);
-        setProjectPlcData(plcResponse);
-      }
     } catch (error) {
-      console.error("Error fetching project data:", error);
+      console.error("Error fetching workflow data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -173,17 +149,26 @@ const CarouselHorizontalStepper = () => {
 
   // Load all data when component mounts or project changes
   useEffect(() => {
-    fetchAllProjectData();
+    fetchWorkflowData();
   }, [projectid]);
 
   // Function to refresh data from child components
   const refreshProjectData = () => {
-    fetchAllProjectData();
+    fetchWorkflowData();
   };
 
   useEffect(() => {
     scrollToStep(currentStep);
     adjustVisibleRange(currentStep);
+  }, [currentStep]);
+
+  // Trigger step indicator animation on step change
+  useEffect(() => {
+    setShowStepIndicator(true);
+    const timer = setTimeout(() => {
+      setShowStepIndicator(false);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, [currentStep]);
 
   // const getCurrentPhase = () => {
@@ -283,20 +268,22 @@ const CarouselHorizontalStepper = () => {
     <div className="flex items-center space-x-3 bg-gray-100 rounded-lg p-1">
       <button
         onClick={() => setViewMode("carousel")}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all duration-200 ${viewMode === "carousel"
-          ? "bg-white text-blue-600 shadow-sm"
-          : "text-gray-600 hover:text-gray-800"
-          }`}
+        className={`flex items-center space-x-2 px-4 py-1 rounded-md transition-all duration-200 ${
+          viewMode === "carousel"
+            ? "bg-white text-blue-600 shadow-sm"
+            : "text-gray-600 hover:text-gray-800"
+        }`}
       >
         <LayoutGrid size={18} />
         <span className="font-medium">Carousel</span>
       </button>
       <button
         onClick={() => setViewMode("table")}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all duration-200 ${viewMode === "table"
-          ? "bg-white text-blue-600 shadow-sm"
-          : "text-gray-600 hover:text-gray-800"
-          }`}
+        className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all duration-200 ${
+          viewMode === "table"
+            ? "bg-white text-blue-600 shadow-sm"
+            : "text-gray-600 hover:text-gray-800"
+        }`}
       >
         <List size={18} />
         <span className="font-medium">Table</span>
@@ -304,151 +291,15 @@ const CarouselHorizontalStepper = () => {
     </div>
   );
 
-  // Table View Component
-  const TableView = () => (
-    <div className="flex-grow overflow-hidden bg-white rounded-lg shadow-md">
-      <div className="h-full overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Workflow Steps</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse bg-white">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Step</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Title</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Process</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Standard</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">ISO Clause</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Progress</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {steps.map((step, index) => {
-                  const status = getStepStatus(index);
-                  const isAccessible = canNavigateToStep(index);
-                  const currentStepData = workflowStepsData[index] || {};
-                  const process = currentStepData.process || "core";
-                  const associatedIsoClause = currentStepData.associatedIsoClause;
-
-                  return (
-                    <tr
-                      key={index}
-                      className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index === currentStep ? "bg-blue-50" : ""
-                        } ${!isAccessible ? "opacity-60" : ""}`}
-                    >
-                      <td className="py-4 px-6">
-                        <div
-                          className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium ${status === "completed"
-                            ? "bg-green-500 text-white"
-                            : status === "current"
-                              ? "bg-blue-500 text-white"
-                              : "bg-gray-300 text-gray-600"
-                            }`}
-                        >
-                          {index + 1}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="font-medium text-gray-800">{step.title}</span>
-                        {!isAccessible && (
-                          <span className="ml-2 text-xs text-gray-500">(Locked)</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : status === "current"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                            }`}
-                        >
-                          {status === "completed"
-                            ? "Completed"
-                            : status === "current"
-                              ? "In Progress"
-                              : "Pending"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${process === "core"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-orange-100 text-orange-800"
-                            }`}
-                        >
-                          {process === "core" ? "Core" : "Non Core"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          ISO27001
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${status === "completed"
-                              ? "bg-green-500"
-                              : status === "current"
-                                ? "bg-blue-500"
-                                : "bg-gray-300"
-                              }`}
-                            style={{
-                              width:
-                                status === "completed"
-                                  ? "100%"
-                                  : status === "current"
-                                    ? "50%"
-                                    : "0%",
-                            }}
-                          ></div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <button
-                          onClick={() => {
-                            if (isAccessible) {
-                              setCurrentStep(index);
-                              setViewMode("carousel");
-                            }
-                          }}
-                          disabled={!isAccessible}
-                          className={`font-medium text-sm transition-colors ${isAccessible
-                            ? "text-blue-600 hover:text-blue-800 cursor-pointer"
-                            : "text-gray-400 cursor-not-allowed"
-                            }`}
-                        >
-                          {index === currentStep
-                            ? "Current"
-                            : isAccessible
-                              ? "Go to Step"
-                              : "Locked"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  // Handle step click from table view
+  const handleTableStepClick = (stepIndex) => {
+    if (!isTransitioning && canNavigateToStep(stepIndex)) {
+      setIsTransitioning(true);
+      setCurrentStep(stepIndex);
+      setViewMode("carousel");
+      setTimeout(() => setIsTransitioning(false), 500);
+    }
+  };
 
   // Create dynamic steps array with bulk data passed to components
   const createStepsWithData = () => {
@@ -459,8 +310,8 @@ const CarouselHorizontalStepper = () => {
       { component: GapAnalysis, stepNo: 4 },
       { component: DataAnalysis, stepNo: 5 },
       { component: RART, stepNo: 6 },
-      { component: Planning, stepNo: 7 },
-      { component: DiscussingPolicies, stepNo: 8 },
+      { component: PlanningAndDiscussingPolicies, stepNo: 7 },
+      { component: ImplementationOfPolicies, stepNo: 8 },
       { component: InternalAuditProcess, stepNo: 9 },
       { component: AuditDecision, stepNo: 10 },
       { component: Sustenance, stepNo: 11 },
@@ -468,7 +319,7 @@ const CarouselHorizontalStepper = () => {
 
     const stepTitles = [
       "Service Requirements",
-      "Inquiry Section", 
+      "Inquiry Section",
       "Finalize Contract",
       "Gap Analysis",
       "Data Analysis",
@@ -482,18 +333,15 @@ const CarouselHorizontalStepper = () => {
 
     return stepComponents.map((stepInfo, index) => {
       const stepData = workflowStepsData[index] || {};
-      const plcStepData = projectPlcData?.steps?.find(s => s.step_no === stepInfo.stepNo);
-      
+
       return {
         title: stepTitles[index],
         content: React.createElement(stepInfo.component, {
           key: index,
           stepData: stepData,
-          plcStepData: plcStepData,
-          projectPlcData: projectPlcData,
           projectId: projectid,
-          refreshProjectData: refreshProjectData
-        })
+          refreshProjectData: refreshProjectData,
+        }),
       };
     });
   };
@@ -502,17 +350,17 @@ const CarouselHorizontalStepper = () => {
 
   return (
     <LoadingContext.Provider value={{ isLoading, setIsLoading }}>
-      <WorkflowDataContext.Provider value={{ 
-        workflowData: workflowStepsData, 
-        setWorkflowData: setWorkflowStepsData,
-        projectPlcData: projectPlcData,
-        setProjectPlcData: setProjectPlcData
-      }}>
+      <WorkflowDataContext.Provider
+        value={{
+          workflowData: workflowStepsData,
+          setWorkflowData: setWorkflowStepsData,
+        }}
+      >
         <div className="flex h-[calc(100vh-65px)] overflow-hidden">
           {/* Main Content */}
-          <div className="flex-1 w-full px-6 pt-6 pb-4 flex flex-col overflow-hidden">
+          <div className="flex-1 w-full px-3 pb-2 flex flex-col overflow-hidden">
             {/* Header with Toggle */}
-            <div className="flex justify-between items-center mb-4 flex-shrink-0">
+            <div className="flex justify-between items-center mb-1 flex-shrink-0 ">
               <div></div> {/* Empty div for spacing */}
               <ViewToggle />
             </div>
@@ -521,118 +369,154 @@ const CarouselHorizontalStepper = () => {
             {viewMode === "carousel" ? (
               <>
                 {/* Scrollable Navigation with Arrow Controls */}
-                <div className="relative mb-4 flex-shrink-0">
-                  <button
+                <div className="relative flex-shrink-0 overflow-x-auto">
+                  {/* <button
                     onClick={() => handleScroll("left")}
                     className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     disabled={visibleRange.start === 0}
                   >
                     <ChevronLeft size={20} />
-                  </button>
+                  </button> */}
 
-                  <div className="overflow-hidden mx-12">
-                    <div
-                      ref={containerRef}
-                      className="flex flex-col items-center pt-[2px]"
-                    >
-                      <div className="flex items-center justify-between space-x-4 px-4 transition-transform duration-300">
+                  <div className=" mb-2">
+                    <div ref={containerRef} className="flex flex-col pt-[2px]">
+                      <div className="flex items-start justify-between transition-transform duration-300">
                         {steps
                           .slice(visibleRange.start, visibleRange.end + 1)
                           .map((step, visibleIndex) => {
-                            const actualIndex = visibleIndex + visibleRange.start;
+                            const actualIndex =
+                              visibleIndex + visibleRange.start;
                             const status = getStepStatus(actualIndex);
                             const isAccessible = canNavigateToStep(actualIndex);
 
                             return (
-                              <div
-                                key={actualIndex}
-                                className={`flex flex-col items-center relative group ${status === "current"
-                                  ? "text-blue-600 font-semibold"
-                                  : "text-gray-500"
-                                  } ${isAccessible ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                                  }`}
+                              <Tooltip placement="top" title={step.title} key={actualIndex}>
+                                <div
+                                  key={actualIndex}
+                                  ref={visibleIndex}
+                                  className={`flex flex-col items-center  relative group ${
+                                  status === "current"
+                                    ? "text-blue-600"
+                                    : "text-gray-500"
+                                } ${
+                                  isAccessible
+                                    ? "cursor-pointer"
+                                    : "cursor-not-allowed opacity-50"
+                                }`}
+                                style={{height:"80px"}}
                                 onClick={() => handleStepClick(actualIndex)}
-                                title={isAccessible ? step.title : `${step.title} (Locked)`}
                               >
                                 <div
-                                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 
-                              ${status === "completed"
-                                      ? "bg-green-500 text-white"
-                                      : status === "current"
-                                        ? "bg-blue-500 text-white transform scale-110 translate-y-[1px]"
-                                        : "bg-gray-300"
-                                    } 
-                                  ${isAccessible ? "group-hover:scale-110 group-hover:shadow-md" : ""}`}
+                                  className={`w-8 h-8 min-h-8 flex items-center justify-center rounded-full transition-all duration-300 
+                              ${
+                                status === "completed"
+                                  ? "bg-green-500 text-white"
+                                  : status === "current"
+                                  ? "bg-blue-500 text-white transform scale-110 translate-y-[1px]"
+                                  : "bg-gray-300"
+                              } 
+                                  ${
+                                    isAccessible
+                                      ? "group-hover:scale-110 group-hover:shadow-md"
+                                      : ""
+                                  }`}
                                 >
                                   {actualIndex + 1}
                                 </div>
-                                <span className="mt-2 text-sm text-center w-20 truncate">
+                                <span className=" text-sm text-center text-ellipsis" style={{ width: "115px" }}>
                                   {step.title}
                                 </span>
                               </div>
+                              </Tooltip>
                             );
                           })}
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="w-full h-2 bg-gray-200 rounded-full mt-4">
+                      <div className="h-1 bg-gray-200 rounded-full mt-2">
                         <div
                           className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
                           style={{
-                            width: `${((currentStep + 1) / steps.length) * 100}%`,
+                            width: `${
+                              ((currentStep + 1) / steps.length) * 100
+                            }%`,
                           }}
                         ></div>
                       </div>
                     </div>
                   </div>
 
-                  <button
+                  {/* <button
                     onClick={() => handleScroll("right")}
                     className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     disabled={visibleRange.end >= steps.length - 1}
                   >
                     <ChevronRight size={20} />
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Step Content - Dynamic Sizing */}
                 <div className="flex-grow relative overflow-hidden bg-white rounded-lg shadow-md">
                   {/* Previous button - gray background */}
-                  <button
+                  {/* <button
                     onClick={handlePrev}
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-gray-200 rounded-full shadow-md p-3 text-blue-600 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
                     disabled={currentStep === 0 || isTransitioning}
                     aria-label="Previous step"
                   >
                     <ChevronLeft size={24} strokeWidth={2.5} />
-                  </button>
+                  </button> */}
 
                   {/* Next button - gray background */}
-                  <button
+                  {/* <button
                     onClick={handleNext}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-gray-200 rounded-full shadow-md p-3 text-blue-600 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
-                    disabled={currentStep === steps.length - 1 || isTransitioning}
+                    disabled={
+                      currentStep === steps.length - 1 || isTransitioning
+                    }
                     aria-label="Next step"
                   >
                     <ChevronRight size={24} strokeWidth={2.5} />
-                  </button>
+                  </button> */}
 
                   <div
-                    className={`flex transition-transform duration-500 h-full ${isTransitioning ? "opacity-50" : "opacity-100"
-                      }`}
+                    className={`flex transition-transform duration-500 h-full ${
+                      isTransitioning ? "opacity-50" : "opacity-100"
+                    }`}
                     style={{ transform: `translateX(-${currentStep * 100}%)` }}
                   >
                     {steps.map((step, index) => (
-                      <div key={index} className="min-w-full h-full overflow-y-auto">
-                        <div className="px-6 py-4 mx-auto max-w-5xl">
-                          {step.content}
+                      <div
+                        key={index}
+                        className="min-w-full h-full overflow-y-auto"
+                      >
+                        <div className="flex justify-between items-center px-6 py-2">
+                          {/* Button at right for prev and next */}
+                          <div>
+                            <Title level={3}>{step.title}</Title>
+                          </div>
+                          <div>
+                            <Button disabled={currentStep === 0} onClick={handlePrev} className="mr-2">Previous</Button>
+                            <Button disabled={currentStep === steps.length - 1} color="primary" variant="solid" onClick={handleNext}>
+                              Next
+                            </Button>
+                          </div>
                         </div>
+                        <div className="px-2">{step.content}</div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Step indicator at bottom */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-80 px-4 py-1.5 rounded-full shadow-sm text-sm text-gray-600 flex items-center">
+                  {/* Step indicator at bottom comes up when page changed and goes down after 1 second*/}
+                  <div 
+                    className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-90 px-4 py-1.5 rounded-full shadow-lg text-sm text-gray-600 flex items-center transition-all duration-300 ease-in-out"
+                    style={{
+                      transform: showStepIndicator 
+                        ? 'translateX(-50%) translateY(0)' 
+                        : 'translateX(-50%) translateY(100px)',
+                      opacity: showStepIndicator ? 1 : 0,
+                    }}
+                  >
                     <span className="font-medium text-blue-600">
                       {currentStep + 1}
                     </span>
@@ -642,7 +526,10 @@ const CarouselHorizontalStepper = () => {
                 </div>
               </>
             ) : (
-              <TableView />
+              <Tableview 
+                projectId={projectid} 
+                onStepClick={handleTableStepClick}
+              />
             )}
 
             {/* Add keyboard event listener effect */}
