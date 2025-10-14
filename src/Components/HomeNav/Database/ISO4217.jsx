@@ -1,55 +1,11 @@
 import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
-import { message, Popconfirm, Spin } from "antd";
-import { Search, Plus, Upload, X, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { message, Popconfirm, Spin, Table, Button, Input, Select, Modal, Form, Space, Tooltip } from "antd";
+import { Search, Plus, Upload, X, Edit, Trash2 } from "lucide-react";
 import { apiRequest } from "../../../utils/api";
 import { AuthContext } from "../../../AuthContext";
 import { LoadingOutlined } from '@ant-design/icons';
 
-const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
-  const { currentPage, totalPages, totalCount, pageSize } = pagination;
-
-  if (!totalCount || totalCount === 0) return null;
-
-  return (
-    <div className="flex items-center justify-between p-4 bg-white border-t border-slate-200">
-      <div className="flex items-center gap-2">
-        <label htmlFor="pageSize" className="text-sm text-slate-600">
-          Rows per page:
-        </label>
-        <select
-          id="pageSize"
-          value={pageSize}
-          onChange={(e) => onPageSizeChange(e.target.value)}
-          className="border border-slate-300 rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value="all">All</option>
-        </select>
-      </div>
-      <div className="text-sm text-slate-600">
-        Page {currentPage} of {totalPages} ({totalCount} items)
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
-    </div>
-  );
-};
+const { Option } = Select;
 
 const ISO4217 = () => {
   const { user } = useContext(AuthContext);
@@ -60,11 +16,13 @@ const ISO4217 = () => {
   const [selectedAlphabeticCode, setSelectedAlphabeticCode] = useState("");
   const [selectedNumericCode, setSelectedNumericCode] = useState("");
   const [pagination, setPagination] = useState({
-    currentPage: 1,
+    current: 1,
     pageSize: 10,
-    totalCount: 0,
-    totalPages: 1,
+    total: 0,
+    showSizeChanger: true,
+    pageSizeOptions: ['10', '25', '50'],
   });
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -79,6 +37,7 @@ const ISO4217 = () => {
     numeric_code: "",
     minor_unit: "",
   });
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -100,12 +59,8 @@ const ISO4217 = () => {
       if (selectedNumericCode) {
         params.append("numeric_code", selectedNumericCode);
       }
-      if (pagination.pageSize !== "all") {
-        params.append("page", pagination.currentPage);
-        params.append("page_size", pagination.pageSize);
-      } else {
-        params.append("page_size", "all");
-      }
+      params.append("page", pagination.current);
+      params.append("page_size", pagination.pageSize);
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
@@ -114,20 +69,16 @@ const ISO4217 = () => {
 
       let results = [];
       let totalCount = 0;
-      let totalPages = 1;
 
       if (Array.isArray(response.data)) {
         results = response.data;
         totalCount = results.length;
-        totalPages = 1;
       } else if (response.data?.results) {
         results = response.data.results;
         totalCount = response.data.count || results.length;
-        totalPages = Math.ceil(totalCount / (pagination.pageSize !== "all" ? pagination.pageSize : totalCount)) || 1;
       } else if (Array.isArray(response.data?.data)) {
         results = response.data.data;
         totalCount = results.length;
-        totalPages = 1;
       } else {
         console.warn("Unexpected response structure:", response.data);
         message.warning("Unexpected response format from server");
@@ -136,8 +87,7 @@ const ISO4217 = () => {
       setCurrencies(results);
       setPagination((prev) => ({
         ...prev,
-        totalCount,
-        totalPages,
+        total: totalCount,
       }));
     } catch (error) {
       console.error("Error fetching currencies:", {
@@ -151,49 +101,41 @@ const ISO4217 = () => {
       setCurrencies([]);
       setPagination((prev) => ({
         ...prev,
-        totalCount: 0,
-        totalPages: 1,
+        total: 0,
       }));
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedAlphabeticCode, selectedNumericCode, pagination.currentPage, pagination.pageSize]);
+  }, [searchQuery, selectedAlphabeticCode, selectedNumericCode, pagination.current, pagination.pageSize]);
 
   useEffect(() => {
     fetchCurrencies();
   }, [fetchCurrencies]);
 
-  const handlePageChange = useCallback((newPage) => {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-      setPagination((prev) => ({ ...prev, currentPage: newPage }));
-    }
-  }, [pagination.totalPages]);
-
-  const handlePageSizeChange = useCallback((newPageSize) => {
-    setPagination({
-      currentPage: 1,
-      pageSize: newPageSize === "all" ? "all" : parseInt(newPageSize, 10),
-      totalCount: pagination.totalCount,
-      totalPages: Math.ceil(pagination.totalCount / (newPageSize !== "all" ? parseInt(newPageSize, 10) : pagination.totalCount)) || 1,
-    });
-  }, [pagination.totalCount]);
+  const handleTableChange = (paginationConfig) => {
+    setPagination(prev => ({
+      ...prev,
+      current: paginationConfig.current,
+      pageSize: paginationConfig.pageSize,
+    }));
+  };
 
   const handleSearchChange = useCallback((e) => {
     setSearchQuery(e.target.value);
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleFilterChange = useCallback((filterType, value) => {
     if (filterType === "alphabetic_code") setSelectedAlphabeticCode(value);
     if (filterType === "numeric_code") setSelectedNumericCode(value);
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleClearFilters = useCallback(() => {
     setSelectedAlphabeticCode("");
     setSelectedNumericCode("");
     setSearchQuery("");
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleInputChange = useCallback((e) => {
@@ -214,6 +156,7 @@ const ISO4217 = () => {
       numeric_code: "",
       minor_unit: "",
     });
+    form.resetFields();
   }, []);
 
   const openEditModal = useCallback((currency) => {
@@ -226,8 +169,15 @@ const ISO4217 = () => {
       numeric_code: currency.numeric_code,
       minor_unit: currency.minor_unit,
     });
+    form.setFieldsValue({
+      entity: currency.entity,
+      currency: currency.currency,
+      alphabetic_code: currency.alphabetic_code,
+      numeric_code: currency.numeric_code,
+      minor_unit: currency.minor_unit,
+    });
     setShowModal(true);
-  }, []);
+  }, [form]);
 
   const closeModal = useCallback(() => {
     setShowModal(false);
@@ -242,7 +192,8 @@ const ISO4217 = () => {
     });
     setSelectedFile(null);
     setPartialErrors([]);
-  }, []);
+    form.resetFields();
+  }, [form]);
 
   const handleFileChange = useCallback((e) => {
     const file = e.target.files[0];
@@ -251,22 +202,21 @@ const ISO4217 = () => {
     }
   }, []);
 
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (values) => {
     try {
       let response;
       if (modalType === "edit" && activeCurrency) {
         response = await apiRequest(
           "PUT",
           `/api/policylens/iso4217/${activeCurrency.id}/update/`,
-          currencyForm,
+          values,
           true
         );
       } else {
         response = await apiRequest(
           "POST",
           `/api/policylens/iso4217/create/`,
-          currencyForm,
+          values,
           true
         );
       }
@@ -283,7 +233,7 @@ const ISO4217 = () => {
       const errorMessage = error.response?.data?.error || "Failed to save currency";
       message.error(`Failed to ${modalType} currency: ${errorMessage}`);
     }
-  }, [modalType, activeCurrency, currencyForm, fetchCurrencies, closeModal]);
+  }, [modalType, activeCurrency, fetchCurrencies, closeModal]);
 
   const handleFileUpload = useCallback(async () => {
     if (!selectedFile) return;
@@ -343,288 +293,167 @@ const ISO4217 = () => {
     }
   }, [fetchCurrencies]);
 
+  const columns = [
+    { title: 'Entity', dataIndex: 'entity', key: 'entity' },
+    { title: 'Currency', dataIndex: 'currency', key: 'currency' },
+    { title: 'Alphabetic Code', dataIndex: 'alphabetic_code', key: 'alphabetic_code' },
+    { title: 'Numeric Code', dataIndex: 'numeric_code', key: 'numeric_code' },
+    { title: 'Minor Unit', dataIndex: 'minor_unit', key: 'minor_unit' },
+    ...(isAdmin ? [{
+      title: 'Actions',
+      key: 'actions',
+      align: 'right',
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Edit Currency">
+            <Button type="text" icon={<Edit size={18} />} onClick={() => openEditModal(record)} />
+          </Tooltip>
+          <Popconfirm
+            title="Delete this currency?"
+            description="This action cannot be undone."
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Delete Currency">
+              <Button type="text" danger icon={<Trash2 size={18} />} />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    }] : []),
+  ];
+
   return (
     <div className="h-full flex flex-col">
       <div className="bg-white p-6 shadow-sm flex-none">
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-[200px] relative">
-            <input
-              type="text"
+            <Input
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search currencies..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              prefix={<Search size={20} />}
+              allowClear
             />
           </div>
-          <select
+          <Select
             value={selectedAlphabeticCode}
-            onChange={(e) => handleFilterChange("alphabetic_code", e.target.value)}
-            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            onChange={(value) => handleFilterChange("alphabetic_code", value || "")}
+            style={{ width: 200 }}
+            placeholder="All Alphabetic Codes"
+            allowClear
           >
-            <option value="">All Alphabetic Codes</option>
             {[...new Set(currencies.map((c) => c.alphabetic_code))].sort().map((code) => (
-              <option key={code} value={code}>
+              <Option key={code} value={code}>
                 {code}
-              </option>
+              </Option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={selectedNumericCode}
-            onChange={(e) => handleFilterChange("numeric_code", e.target.value)}
-            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            onChange={(value) => handleFilterChange("numeric_code", value || "")}
+            style={{ width: 200 }}
+            placeholder="All Numeric Codes"
+            allowClear
           >
-            <option value="">All Numeric Codes</option>
             {[...new Set(currencies.map((c) => c.numeric_code))].sort().map((code) => (
-              <option key={code} value={code}>
+              <Option key={code} value={code}>
                 {code}
-              </option>
+              </Option>
             ))}
-          </select>
+          </Select>
           {(selectedAlphabeticCode || selectedNumericCode || searchQuery) && (
-            <button
+            <Button
+              type="link"
               onClick={handleClearFilters}
-              className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
             >
               Clear Filters
-            </button>
+            </Button>
           )}
           {isAdmin && (
-            <>
-              <button
+            <Space>
+              <Button
+                type="primary"
+                icon={<Upload size={18} />}
                 onClick={() => {
                   setModalType("excel");
                   setShowModal(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                style={{ backgroundColor: '#059669' }}
               >
-                <Upload size={18} />
                 Upload Excel
-              </button>
-              <button
-                onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Plus size={18} />
+              </Button>
+              <Button type="primary" icon={<Plus size={18} />} onClick={openAddModal}>
                 Add Currency
-              </button>
-            </>
+              </Button>
+            </Space>
           )}
         </div>
       </div>
-      <div className="flex-1 mx-3 mb-3 bg-white rounded-lg shadow overflow-y-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Spin indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />} />
-          </div>
-        ) : (
-          <>
-            <div className="sticky top-0 z-20 bg-white border-b border-slate-200">
-              <PaginationControls
-                pagination={pagination}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </div>
-            <div className="relative">
-              <table className="w-full border-collapse">
-                <thead className="bg-slate-200 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Entity
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Currency
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Alphabetic Code
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Numeric Code
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Minor Unit
-                    </th>
-                    {isAdmin && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {currencies.map((currency) => (
-                    <tr key={currency.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[200px]">
-                        {currency.entity}
-                      </td>
-                      <td className="px-6 py-4 align-top text-sm text-slate-600 min-w-[200px]">
-                        {currency.currency}
-                      </td>
-                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-blue-600">
-                        {currency.alphabetic_code}
-                      </td>
-                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
-                        {currency.numeric_code}
-                      </td>
-                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm text-slate-600">
-                        {currency.minor_unit}
-                      </td>
-                      {isAdmin && (
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => openEditModal(currency)}
-                              className="text-blue-600 hover:text-blue-800 transition-colors"
-                              aria-label="Edit currency"
-                              title="Edit Currency"
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <Popconfirm
-                              title="Delete this currency?"
-                              description="This action cannot be undone."
-                              onConfirm={() => handleDelete(currency.id)}
-                              okText="Yes"
-                              cancelText="No"
-                              okButtonProps={{ className: 'bg-red-500' }}
-                            >
-                              <button
-                                className="text-red-600 hover:text-red-800 transition-colors"
-                                aria-label="Delete currency"
-                                title="Delete Currency"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </Popconfirm>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t border-slate-200">
-              <PaginationControls
-                pagination={pagination}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </div>
-          </>
-        )}
+      <div className="flex-1 p-4 bg-white overflow-x-auto">
+        <Table
+          columns={columns}
+          dataSource={currencies}
+          rowKey="id"
+          loading={isLoading}
+          pagination={pagination}
+          onChange={handleTableChange}
+          scroll={{ x: 800 }}
+          size="middle"
+        />
       </div>
       {showModal && modalType !== "excel" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-slate-900">
-                {modalType === "add" ? "Add New Currency" : "Edit Currency"}
-              </h3>
-              <button onClick={closeModal}>
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
+        <Modal
+          title={modalType === "add" ? "Add New Currency" : "Edit Currency"}
+          open={showModal && modalType !== "excel"}
+          onCancel={closeModal}
+          footer={null}
+          width={800}
+        >
+          <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={currencyForm}>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Entity
-                  </label>
-                  <input
-                    type="text"
-                    name="entity"
-                    value={currencyForm.entity}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Currency
-                  </label>
-                  <input
-                    type="text"
-                    name="currency"
-                    value={currencyForm.currency}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Alphabetic Code
-                  </label>
-                  <input
-                    type="text"
-                    name="alphabetic_code"
-                    value={currencyForm.alphabetic_code}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Numeric Code
-                  </label>
-                  <input
-                    type="text"
-                    name="numeric_code"
-                    value={currencyForm.numeric_code}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Minor Unit
-                  </label>
-                  <input
-                    type="text"
-                    name="minor_unit"
-                    value={currencyForm.minor_unit}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                <Form.Item name="entity" label="Entity" rules={[{ required: true }]}>
+                  <Input />
+                </Form.Item>
+                <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
+                  <Input />
+                </Form.Item>
+                <Form.Item name="alphabetic_code" label="Alphabetic Code">
+                  <Input />
+                </Form.Item>
+                <Form.Item name="numeric_code" label="Numeric Code">
+                  <Input />
+                </Form.Item>
+                <Form.Item name="minor_unit" label="Minor Unit">
+                  <Input />
+                </Form.Item>
               </div>
               <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
-                >
+                <Button onClick={closeModal}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
+                </Button>
+                <Button type="primary" htmlType="submit">
                   {modalType === "add" ? "Add Currency" : "Save Changes"}
-                </button>
+                </Button>
               </div>
-            </form>
-          </div>
-        </div>
+          </Form>
+        </Modal>
       )}
       {showModal && modalType === "excel" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-slate-900">
-                Upload Currencies Excel File
-              </h3>
-              <button onClick={closeModal}>
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto">
+        <Modal
+          title="Upload Currencies Excel File"
+          open={showModal && modalType === "excel"}
+          onCancel={closeModal}
+          footer={[
+            <Button key="cancel" onClick={closeModal}>Cancel</Button>,
+            <Button key="upload" type="primary" loading={isUploading} disabled={!selectedFile} onClick={handleFileUpload}>
+              {isUploading ? 'Uploading...' : 'Upload File'}
+            </Button>
+          ]}
+          width={600}
+        >
               <div className="space-y-4">
                 <div>
                   <input
@@ -655,35 +484,7 @@ const ISO4217 = () => {
                   </div>
                 )}
               </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleFileUpload}
-                  disabled={!selectedFile || isUploading}
-                  className={`px-4 py-2 rounded-md text-white ${!selectedFile || isUploading
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                >
-                  {isUploading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Uploading...
-                    </div>
-                  ) : (
-                    "Upload File"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

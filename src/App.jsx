@@ -24,6 +24,7 @@ import Support from "./Components/AdminView/ProjectTabs/Support";
 import MyReports from "./Components/AdminView/ProjectTabs/MyReports/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
+import { WorkflowProvider } from "./Context/WorkflowContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
@@ -42,6 +43,7 @@ import NotificationToast from "./Components/Common/NotificationToast";
 import ConsultantTeamPage from "./Components/HomeNav/ConsultantTeamPage";
 import VaptQuestions from "./Components/AdminView/ProjectTabs/VaptQuestions";
 import VaptForm from "./Components/AdminView/ProjectTabs/VaptForm";
+import EditorView from "./Components/EditorView/EditorView";
 
 const router = createBrowserRouter([
   {
@@ -149,7 +151,7 @@ const router = createBrowserRouter([
         element: <CarouselHorizontalStepper />,
       },
       {
-        path: "admindashboard/*",
+        path: "projectdashboard/*",
         element: <AdminDashboardRouter />,
       },
       {
@@ -208,6 +210,10 @@ const router = createBrowserRouter([
         path: "policylibrary",
         element: <PolicyLibrary />,
       },
+      {
+        path: "editor",
+        element: <EditorView />,
+      },
     ],
   },
 ]);
@@ -216,10 +222,14 @@ const AppLayout = () => {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <ProjectProvider>
-          <RouterProvider router={router} />
-          <NotificationToast />
-        </ProjectProvider>
+        <WorkflowProvider>
+          <ProjectProvider>
+            <div className="font-sans"> {/* Add this wrapper */}
+              <RouterProvider router={router} />
+              <NotificationToast />
+            </div>
+          </ProjectProvider>
+        </WorkflowProvider>
       </NotificationProvider>
     </AuthProvider>
   );

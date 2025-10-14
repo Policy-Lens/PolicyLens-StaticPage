@@ -35,7 +35,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
     {
       label: "Project Dashboard",
       icon: <LayoutDashboard size={20} />,
-      path: `/project/${projectid}/admindashboard`,
+      path: `/project/${projectid}/projectdashboard`,
     },
     {
       label: "Project Team",

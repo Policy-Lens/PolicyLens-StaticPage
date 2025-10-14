@@ -200,7 +200,7 @@ const AdminDashboardList = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  Admin Dashboards
+                  Project Dashboards
                 </h1>
                 <p className="text-gray-600">
                   Manage and organize your analytics dashboards
@@ -258,9 +258,9 @@ const AdminDashboardList = () => {
                         Charts
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Created
+                        Created At
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -309,7 +309,14 @@ const AdminDashboardList = () => {
                               size={16}
                               className="mr-2 text-gray-400"
                             />
-                            {new Date(dashboard.createdAt).toLocaleDateString()}
+                            {dashboard.createdAt ?
+                              new Date(dashboard.createdAt).toLocaleDateString() :
+                              dashboard.created_at ?
+                                new Date(dashboard.created_at).toLocaleDateString() :
+                                dashboard.created ?
+                                  new Date(dashboard.created).toLocaleDateString() :
+                                  'No date'
+                            }
                           </div>
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">

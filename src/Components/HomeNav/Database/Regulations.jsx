@@ -1,56 +1,13 @@
 import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
-import { message, Popconfirm, Spin } from "antd";
-import { Search, Plus, Upload, X, Edit, Trash2, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { message, Popconfirm, Spin, Table, Button, Input, Select, Modal, Form, Space, Tooltip } from "antd";
+import { Search, Plus, Upload, X, Edit, Trash2, ExternalLink } from "lucide-react";
 import { apiRequest } from "../../../utils/api";
 import { AuthContext } from "../../../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LoadingOutlined } from '@ant-design/icons';
 
-const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
-  const { currentPage, totalPages, totalCount, pageSize } = pagination;
-
-  if (!totalCount || totalCount === 0) return null;
-
-  return (
-    <div className="flex items-center justify-between p-4 bg-white border-t border-slate-200">
-      <div className="flex items-center gap-2">
-        <label htmlFor="pageSize" className="text-sm text-slate-600">
-          Rows per page:
-        </label>
-        <select
-          id="pageSize"
-          value={pageSize}
-          onChange={(e) => onPageSizeChange(e.target.value)}
-          className="border border-slate-300 rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value="all">All</option>
-        </select>
-      </div>
-      <div className="text-sm text-slate-600">
-        Page {currentPage} of {totalPages} ({totalCount} items)
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
-    </div>
-  );
-};
+const { Option } = Select;
+const { TextArea } = Input;
 
 const Regulations = () => {
   const { user } = useContext(AuthContext);
@@ -61,10 +18,13 @@ const Regulations = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRegName, setSelectedRegName] = useState("");
   const [pagination, setPagination] = useState({
-    currentPage: 1,
+    current: 1,
     pageSize: 10,
-    totalCount: 0,
-    totalPages: 1,
+    total: 0,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+    pageSizeOptions: ['10', '25', '50'],
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -80,6 +40,7 @@ const Regulations = () => {
     redirect_to: "",
   });
   const [expandedCells, setExpandedCells] = useState({});
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -97,7 +58,7 @@ const Regulations = () => {
       if (selectedRegName) params.append("reg_name", selectedRegName);
       params.append("page_size", pagination.pageSize === "all" ? "all" : pagination.pageSize);
       if (pagination.pageSize !== "all") {
-        params.append("page", pagination.currentPage);
+        params.append("page", pagination.current);
       }
       params.append("ordering", "reg_id");
 
@@ -112,11 +73,7 @@ const Regulations = () => {
       setRegulations(results);
       setPagination((prev) => ({
         ...prev,
-        totalCount,
-        totalPages:
-          pagination.pageSize === "all"
-            ? 1
-            : Math.ceil(totalCount / (typeof pagination.pageSize === "string" ? parseInt(pagination.pageSize, 10) : pagination.pageSize)),
+        total: totalCount,
       }));
     } catch (error) {
       console.error("Error fetching regulations:", error);
@@ -124,47 +81,39 @@ const Regulations = () => {
       setRegulations([]);
       setPagination((prev) => ({
         ...prev,
-        totalCount: 0,
-        totalPages: 1,
+        total: 0,
       }));
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedRegName, pagination.pageSize, pagination.currentPage]);
+  }, [searchQuery, selectedRegName, pagination.pageSize, pagination.current]);
 
   useEffect(() => {
     fetchRegulations();
   }, [fetchRegulations]);
 
-  const handlePageChange = useCallback((newPage) => {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-      setPagination((prev) => ({ ...prev, currentPage: newPage }));
-    }
-  }, [pagination.totalPages]);
-
-  const handlePageSizeChange = useCallback((newPageSize) => {
-    setPagination({
-      currentPage: 1,
-      pageSize: newPageSize === "all" ? "all" : parseInt(newPageSize, 10),
-      totalCount: pagination.totalCount,
-      totalPages: 1,
-    });
-  }, [pagination.totalCount]);
+  const handleTableChange = (paginationConfig, filters, sorter) => {
+    setPagination((prev) => ({
+      ...prev,
+      current: paginationConfig.current,
+      pageSize: paginationConfig.pageSize,
+    }));
+  };
 
   const handleSearchChange = useCallback((e) => {
     setSearchQuery(e.target.value);
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleFilterChange = useCallback((filterType, value) => {
     if (filterType === "reg_name") setSelectedRegName(value);
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleClearFilters = useCallback(() => {
     setSelectedRegName("");
     setSearchQuery("");
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleInputChange = useCallback((e) => {
@@ -184,7 +133,8 @@ const Regulations = () => {
       reg_description: "",
       redirect_to: "",
     });
-  }, []);
+    form.resetFields();
+  }, [form]);
 
   const openEditModal = useCallback((regulation) => {
     setModalType("edit");
@@ -195,8 +145,14 @@ const Regulations = () => {
       reg_description: regulation.reg_description,
       redirect_to: regulation.redirect_to || "",
     });
+    form.setFieldsValue({
+      reg_id: regulation.reg_id,
+      reg_name: regulation.reg_name,
+      reg_description: regulation.reg_description,
+      redirect_to: regulation.redirect_to || "",
+    });
     setShowModal(true);
-  }, []);
+  }, [form]);
 
   const closeModal = useCallback(() => {
     setShowModal(false);
@@ -210,7 +166,8 @@ const Regulations = () => {
     });
     setSelectedFile(null);
     setPartialErrors([]);
-  }, []);
+    form.resetFields();
+  }, [form]);
 
   const handleFileChange = useCallback((e) => {
     const file = e.target.files[0];
@@ -251,16 +208,15 @@ const Regulations = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, fetchRegulations]);
+  }, [selectedFile, fetchRegulations, closeModal]);
 
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (values) => {
     try {
       if (modalType === "add") {
         const response = await apiRequest(
           "POST",
           "/api/policylens/regulations/create/",
-          regulationForm,
+          values,
           true
         );
         if (response.status === 201) {
@@ -272,7 +228,7 @@ const Regulations = () => {
         const response = await apiRequest(
           "PATCH",
           `/api/policylens/regulations/${activeRegulation.id}/update/`,
-          regulationForm,
+          values,
           true
         );
         if (response.status === 200) {
@@ -285,7 +241,7 @@ const Regulations = () => {
       console.error("Error submitting regulation:", error);
       message.error(error.response?.data?.error || "Failed to save regulation");
     }
-  }, [modalType, activeRegulation, regulationForm, fetchRegulations, closeModal]);
+  }, [modalType, activeRegulation, fetchRegulations, closeModal]);
 
   const handleDelete = useCallback(async (id) => {
     try {
@@ -324,344 +280,287 @@ const Regulations = () => {
     }));
   }, []);
 
+  const columns = [
+    {
+      title: 'Regulation ID',
+      dataIndex: 'reg_id',
+      key: 'reg_id',
+      sorter: true,
+      width: 150,
+    },
+    {
+      title: 'Name',
+      dataIndex: 'reg_name',
+      key: 'reg_name',
+      sorter: true,
+      width: 200,
+    },
+    {
+      title: 'Description',
+      dataIndex: 'reg_description',
+      key: 'reg_description',
+      width: 400,
+      render: (text, record) => {
+        const isExpanded = expandedCells[`${record.id}-reg_description`];
+        return (
+          <div
+            className="cursor-pointer"
+            onClick={() => toggleCellExpansion(record.id, 'reg_description')}
+          >
+            <div className={`whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
+              {text}
+            </div>
+            <span className="text-blue-600 hover:text-blue-800">
+              {isExpanded ? 'Show Less' : 'Show More'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 150,
+      align: 'right',
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title={record.redirect_to ? "Go to regulation" : "No redirect link available"}>
+            <Button
+              type="text"
+              icon={<ExternalLink size={18} />}
+              onClick={() => handleRedirect(record.redirect_to)}
+              disabled={!record.redirect_to}
+              className={`text-blue-600 hover:text-blue-800 ${!record.redirect_to ? "opacity-50" : ""}`}
+            />
+          </Tooltip>
+          {isAdmin && (
+            <>
+              <Tooltip title="Edit Regulation">
+                <Button
+                  type="text"
+                  icon={<Edit size={18} />}
+                  onClick={() => openEditModal(record)}
+                  className="text-blue-600 hover:text-blue-800"
+                />
+              </Tooltip>
+              <Popconfirm
+                title="Delete this regulation?"
+                description="This action cannot be undone."
+                onConfirm={() => handleDelete(record.id)}
+                okText="Yes"
+                cancelText="No"
+                okButtonProps={{ danger: true }}
+              >
+                <Tooltip title="Delete Regulation">
+                  <Button
+                    type="text"
+                    icon={<Trash2 size={18} />}
+                    className="text-red-600 hover:text-red-800"
+                  />
+                </Tooltip>
+              </Popconfirm>
+            </>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div className="h-full flex flex-col">
       <div className="bg-white p-6 shadow-sm flex-none">
         <div className="flex items-center gap-4">
-          <div className="flex-1 min-w-[200px] relative">
-            <input
-              type="text"
+          <div className="flex-1 min-w-[200px]">
+            <Input
+              placeholder="Search regulations..."
               value={searchQuery}
               onChange={handleSearchChange}
-              placeholder="Search regulations..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+              prefix={<Search size={20} />}
+              allowClear
             />
           </div>
-          <select
-            value={selectedRegName}
-            onChange={(e) => handleFilterChange("reg_name", e.target.value)}
-            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          <Select
+            value={selectedRegName || undefined}
+            placeholder="All Regulation Names"
+            onChange={(value) => handleFilterChange("reg_name", value || "")}
+            style={{ width: 200 }}
+            allowClear
           >
-            <option value="">All Regulation Names</option>
             {[...new Set(regulations.map((r) => r.reg_name))].sort().map((name) => (
-              <option key={name} value={name}>
+              <Option key={name} value={name}>
                 {name}
-              </option>
+              </Option>
             ))}
-          </select>
+          </Select>
           {(selectedRegName || searchQuery) && (
-            <button
+            <Button
+              type="link"
               onClick={handleClearFilters}
-              className="text-blue-600 hover:underline transition-colors flex items-center gap-2"
             >
               Clear Filters
-            </button>
+            </Button>
           )}
           {isAdmin && (
-            <>
-              <button
+            <Space>
+              <Button
+                type="primary"
+                icon={<Upload size={18} />}
                 onClick={() => {
                   setModalType("excel");
                   setShowModal(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                style={{ backgroundColor: '#059669' }}
               >
-                <Upload size={18} />
                 Upload Excel
-              </button>
-              <button
+              </Button>
+              <Button
+                type="primary"
+                icon={<Plus size={18} />}
                 onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                <Plus size={18} />
                 Add Regulation
-              </button>
-            </>
+              </Button>
+            </Space>
           )}
         </div>
       </div>
-      <div className="flex-1 mx-3 mb-3 bg-white rounded-lg shadow overflow-x-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Spin indicator={<LoadingOutlined style={{ fontSize: 40 }} spin />} />
-          </div>
-        ) : (
-          <>
-            <PaginationControls
-              pagination={pagination}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
-            <div className="relative">
-              <table className="w-full border-collapse">
-                <thead className="bg-slate-200 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Regulation ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {regulations.map((regulation) => (
-                    <tr key={regulation.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                        {regulation.reg_id}
-                      </td>
-                      <td className="px-6 py-4 align-top whitespace-nowrap text-sm font-medium text-slate-900">
-                        {regulation.reg_name}
-                      </td>
-                      <td
-                        className="px-6 py-4 align-top text-sm text-slate-600 min-w-[300px] max-w-[400px] whitespace-pre-wrap cursor-pointer"
-                        onClick={() => toggleCellExpansion(regulation.id, 'reg_description')}
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={expandedCells[`${regulation.id}-reg_description`] || false}
-                        aria-label="Toggle regulation description"
-                        onKeyDown={(e) => e.key === 'Enter' && toggleCellExpansion(regulation.id, 'reg_description')}
-                      >
-                        <div className={`${expandedCells[`${regulation.id}-reg_description`] ? '' : 'line-clamp-3'}`}>
-                          {regulation.reg_description}
-                        </div>
-                        <span className="text-blue-600 hover:text-blue-800">
-                          {expandedCells[`${regulation.id}-reg_description`] ? 'Show Less' : '...'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleRedirect(regulation.redirect_to)}
-                            className={`text-blue-600 hover:text-blue-800 transition-colors ${!regulation.redirect_to ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                            aria-label="Go to regulation"
-                            title={regulation.redirect_to ? "Go to regulation" : "No redirect link available"}
-                          >
-                            <ExternalLink size={18} />
-                          </button>
-                          {isAdmin && (
-                            <>
-                              <button
-                                onClick={() => openEditModal(regulation)}
-                                className="text-blue-600 hover:text-blue-800 transition-colors"
-                                aria-label="Edit regulation"
-                                title="Edit Regulation"
-                              >
-                                <Edit size={18} />
-                              </button>
-                              <Popconfirm
-                                title="Delete this regulation?"
-                                description="This action cannot be undone."
-                                onConfirm={() => handleDelete(regulation.id)}
-                                okText="Yes"
-                                cancelText="No"
-                                okButtonProps={{ className: 'bg-red-500' }}
-                              >
-                                <button
-                                  className="text-red-600 hover:text-red-800 transition-colors"
-                                  aria-label="Delete regulation"
-                                  title="Delete Regulation"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </Popconfirm>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <PaginationControls
-              pagination={pagination}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
-          </>
-        )}
+      
+      <div className="flex-1 mx-3 mb-3">
+        <Table
+          columns={columns}
+          dataSource={regulations}
+          rowKey="id"
+          loading={isLoading}
+          pagination={pagination}
+          onChange={handleTableChange}
+          scroll={{ x: 800 }}
+          size="middle"
+        />
       </div>
-      {showModal && modalType !== "excel" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-slate-900">
-                {modalType === "add" ? "Add New Regulation" : "Edit Regulation"}
-              </h3>
-              <button onClick={closeModal}>
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Regulation ID
-                  </label>
-                  <input
-                    type="text"
-                    name="reg_id"
-                    value={regulationForm.reg_id}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    name="reg_name"
-                    value={regulationForm.reg_name}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Description
-                  </label>
-                  <textarea
-                    name="reg_description"
-                    value={regulationForm.reg_description}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Redirect Link (Optional)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="redirect_to"
-                      value={regulationForm.redirect_to}
-                      onChange={handleInputChange}
-                      placeholder="Enter URL or path to redirect"
-                      className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => regulationForm.redirect_to && handleRedirect(regulationForm.redirect_to)}
-                      className={`mt-1 px-3 py-2 rounded-md ${regulationForm.redirect_to ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-100 cursor-not-allowed text-gray-400"}`}
-                      title={regulationForm.redirect_to ? "Test redirect" : "Enter a URL first"}
-                    >
-                      <ExternalLink size={18} />
-                    </button>
-                  </div>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Leave empty if no redirection is needed. Use the test button to verify the link.
-                  </p>
-                </div>
+
+      {/* Add/Edit Modal */}
+      <Modal
+        title={modalType === "add" ? "Add New Regulation" : "Edit Regulation"}
+        open={showModal && modalType !== "excel"}
+        onCancel={closeModal}
+        footer={null}
+        width={800}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={regulationForm}
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item
+              name="reg_id"
+              label="Regulation ID"
+              rules={[{ required: true, message: 'Please input regulation ID!' }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="reg_name"
+              label="Name"
+              rules={[{ required: true, message: 'Please input regulation name!' }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="reg_description"
+              label="Description"
+              rules={[{ required: true, message: 'Please input regulation description!' }]}
+              className="col-span-2"
+            >
+              <TextArea rows={4} />
+            </Form.Item>
+            <Form.Item
+              name="redirect_to"
+              label="Redirect Link (Optional)"
+              className="col-span-2"
+            >
+              <Input.Group compact>
+                <Input
+                  style={{ width: 'calc(100% - 40px)' }}
+                  placeholder="Enter URL or path to redirect"
+                />
+                <Button
+                  type="primary"
+                  icon={<ExternalLink size={18} />}
+                  onClick={() => form.getFieldValue('redirect_to') && handleRedirect(form.getFieldValue('redirect_to'))}
+                  disabled={!form.getFieldValue('redirect_to')}
+                  style={{ width: 40 }}
+                />
+              </Input.Group>
+              <div className="text-sm text-gray-500 mt-1">
+                Leave empty if no redirection is needed. Use the test button to verify the link.
               </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  {modalType === "add" ? "Add Regulation" : "Save Changes"}
-                </button>
-              </div>
-            </form>
+            </Form.Item>
           </div>
-        </div>
-      )}
-      {showModal && modalType === "excel" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-slate-900">
-                Upload Regulations Excel File
-              </h3>
-              <button onClick={closeModal}>
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <div className="space-y-4">
-                <div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept=".xlsx,.xls"
-                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {selectedFile && (
-                    <p className="mt-2 text-sm text-slate-600">
-                      Selected file: {selectedFile.name}
-                    </p>
-                  )}
-                </div>
-                {partialErrors.length > 0 && (
-                  <div className="mt-4 p-4 bg-red-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-red-800 mb-2">
-                      The following errors occurred:
-                    </h4>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {partialErrors.map((error, index) => (
-                        <li key={index} className="text-sm text-red-600">
-                          Row {error.row}: {Object.entries(error.errors || {}).map(([field, msg]) => `${field}: ${msg}`).join(", ") || error}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleFileUpload}
-                  disabled={!selectedFile || isUploading}
-                  className={`px-4 py-2 rounded-md text-white ${!selectedFile || isUploading
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                >
-                  {isUploading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Uploading...
-                    </div>
-                  ) : (
-                    "Upload File"
-                  )}
-                </button>
-              </div>
-            </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="primary" htmlType="submit">
+              {modalType === "add" ? "Add Regulation" : "Save Changes"}
+            </Button>
           </div>
+        </Form>
+      </Modal>
+
+      {/* Excel Upload Modal */}
+      <Modal
+        title="Upload Regulations Excel File"
+        open={showModal && modalType === "excel"}
+        onCancel={closeModal}
+        footer={[
+          <Button key="cancel" onClick={closeModal}>
+            Cancel
+          </Button>,
+          <Button
+            key="upload"
+            type="primary"
+            loading={isUploading}
+            disabled={!selectedFile}
+            onClick={handleFileUpload}
+          >
+            Upload File
+          </Button>
+        ]}
+        width={600}
+      >
+        <div className="space-y-4">
+          <div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".xlsx,.xls"
+              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {selectedFile && (
+              <p className="mt-2 text-sm text-slate-600">
+                Selected file: {selectedFile.name}
+              </p>
+            )}
+          </div>
+          {partialErrors.length > 0 && (
+            <div className="mt-4 p-4 bg-red-50 rounded-lg">
+              <h4 className="text-sm font-medium text-red-800 mb-2">
+                The following errors occurred:
+              </h4>
+              <ul className="list-disc pl-5 space-y-1">
+                {partialErrors.map((error, index) => (
+                  <li key={index} className="text-sm text-red-600">
+                    Row {error.row}: {Object.entries(error.errors || {}).map(([field, msg]) => `${field}: ${msg}`).join(", ") || error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

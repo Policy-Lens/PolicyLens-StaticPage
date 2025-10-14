@@ -12,7 +12,8 @@ const apiRequest = async (
   body = null,
   requiresAuth = false,
   isMultipart = false,
-  responseType = null
+  responseType = null,
+  onUploadProgress = null
 ) => {
   try {
     const headers = {};
@@ -21,6 +22,10 @@ const apiRequest = async (
       const accessToken = Cookies.get("accessToken");
       if (accessToken) {
         headers.Authorization = `Bearer ${accessToken}`;
+      } else {
+        // If auth is required and there's no token, don't even try the request.
+        // This will be caught by the token refresh logic.
+        throw { response: { status: 401 } };
       }
     }
 
@@ -28,6 +33,7 @@ const apiRequest = async (
       method,
       url: `${BASE_URL}${endpoint}`,
       headers,
+      onUploadProgress,
     };
 
     if (responseType) {
@@ -56,9 +62,16 @@ const apiRequest = async (
     return response;
   } catch (error) {
     if (error.response?.status === 401 && requiresAuth) {
-      return handleTokenRefresh(method, endpoint, body, isMultipart);
+      return handleTokenRefresh(method, endpoint, body, isMultipart, responseType, onUploadProgress);
     }
-    throw error.response?.data || { message: "Something went wrong" };
+    // Preserve previous behavior (throwing response data) but also attach status
+    const status = error.response?.status;
+    const data = error.response?.data;
+    if (data && typeof data === "object") {
+      // Merge status and raw data while keeping top-level keys for backward compatibility
+      throw { status, data, ...data };
+    }
+    throw { status, message: "Something went wrong" };
   }
 };
 
@@ -67,7 +80,9 @@ const handleTokenRefresh = async (
   method,
   endpoint,
   body,
-  isMultipart = false
+  isMultipart = false,
+  responseType = null,
+  onUploadProgress = null
 ) => {
   try {
     const refreshToken = Cookies.get("refreshToken");
@@ -87,7 +102,7 @@ const handleTokenRefresh = async (
       sameSite: "Strict",
     });
 
-    return apiRequest(method, endpoint, body, true, isMultipart, responseType);
+    return apiRequest(method, endpoint, body, true, isMultipart, responseType, onUploadProgress);
   } catch (error) {
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");

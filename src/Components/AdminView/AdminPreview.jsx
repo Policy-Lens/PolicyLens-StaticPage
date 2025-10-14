@@ -28,140 +28,49 @@ const { Panel } = Collapse;
 
 const PreviewPage = () => {
   const { projectid } = useParams();
-  const [listData, setListData] = useState([]);
-  const [jsonData, setJsonData] = useState([]);
+  const [projectData, setProjectData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("list"); // Set default view to "list"
   const [rawViewType, setRawViewType] = useState("latest"); // To toggle between latest and full data in raw view
-  const [stepMeta, setStepMeta] = useState({}); // { [step_no]: { review_status, review_comment, assignments: [...] } }
   const [fileViewerVisible, setFileViewerVisible] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // Single bulk data fetch - eliminates N+1 pattern
+  const fetchProjectData = async () => {
+    setLoading(true);
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/plc/project/${projectid}/plc-overview/`,
+        null,
+        true
+      );
+      
+      if (response.status === 200) {
+        console.log("Bulk project data:", response.data);
+        setProjectData(response.data);
+      } else if (response.status === 404) {
+        setProjectData(null);
+        message.error("No data found for this project.");
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        setProjectData(null);
+        message.error("No data found for this project.");
+      } else {
+        console.error("Error fetching project data:", error);
+        message.error(error.message || "Failed to load project data");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (view === "list") {
-      fetchListData();
-    } else if (view === "json") {
-      fetchJsonData();
-    } else if (view === "raw") {
-      if (rawViewType === "latest") {
-        fetchListData();
-      } else {
-        fetchJsonData();
-      }
+    if (projectid) {
+      fetchProjectData();
     }
-  }, [view, projectid, rawViewType]);
-
-  // Fetch review and assignment info for all unique steps
-  
-  // Fetch review and assignment info for all unique steps
-  const fetchStepMeta = async (stepNos) => {
-    const meta = {};
-    await Promise.all(
-      stepNos.map(async (step_no) => {
-        try {
-          // 1. Get PLCStep meta (review status/comment, step_id)
-          const stepRes = await apiRequest(
-            "GET",
-            `/api/plc/plc_step/${projectid}/${step_no}/get_id/`,
-            null,
-            true
-          );
-          let step_id = stepRes.data.plc_step_id;
-          meta[step_no] = {
-            review_status: stepRes.data.review_status,
-            review_comment: stepRes.data.review_comment,
-            status: stepRes.data.status,
-            process: stepRes.data.process,
-            associated_iso_clause: stepRes.data.associated_iso_clause,
-            assignments: [],
-          };
-          // 2. Get assignments for this step
-          try {
-            const assignRes = await apiRequest(
-              "GET",
-              `/api/plc/step-assignment/${step_id}/`,
-              null,
-              true
-            );
-            if (Array.isArray(assignRes.data)) {
-              meta[step_no].assignments = assignRes.data;
-            }
-          } catch (e) {
-            // No assignments or not authorized
-          }
-        } catch (e) {
-          // Step meta fetch failed
-        }
-      })
-    );
-    setStepMeta(meta);
-  };
-
-  const fetchListData = async () => {
-    setLoading(true);
-    try {
-      const response = await apiRequest(
-        "GET",
-        `/api/plc/plc-data/all-steps/${projectid}/latest/`,
-        null,
-        true
-      );
-      if (response.status === 200) {
-        console.log(response.data);
-        setListData(response.data);
-        // Get all unique step_nos
-        const stepNos = [...new Set(response.data.map((d) => d.step_no))];
-        fetchStepMeta(stepNos);
-      } else if (response.status === 404) {
-        setListData([]);
-        message.error("No data found for this project.");
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setListData([]);
-        message.error("No data found for this project.");
-      } else {
-        console.error("Error fetching list data:", error);
-        message.error(error.message || "Failed to load latest step data");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchJsonData = async () => {
-    setLoading(true);
-    try {
-      const response = await apiRequest(
-        "GET",
-        `/api/plc/plc-data/all-steps/${projectid}/`,
-        null,
-        true
-      );
-      if (response.status === 200) {
-        setJsonData(response.data);
-        // Get all unique step_nos from all entries
-        const allStepNos = new Set();
-        response.data.forEach((field) => {
-          field.data.forEach((entry) => allStepNos.add(entry.step_no));
-        });
-        fetchStepMeta([...allStepNos]);
-      } else if (response.status === 404) {
-        setJsonData([]);
-        message.error("No data found for this project.");
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setJsonData([]);
-        message.error("No data found for this project.");
-      } else {
-        console.error("Error fetching JSON data:", error);
-        message.error(error.message || "Failed to load complete step data");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [projectid]);
 
   // Extract filename from file path
   const getFileName = (filePath) => {
@@ -232,8 +141,6 @@ const PreviewPage = () => {
     setFileViewerVisible(true);
   };
 
-
-
   const renderListView = () => {
     if (loading) {
       return (
@@ -243,93 +150,83 @@ const PreviewPage = () => {
       );
     }
 
-    if (!listData || listData.length === 0) {
+    if (!projectData || !projectData.steps || projectData.steps.length === 0) {
       return <Empty description="No step data available" className="my-10" />;
     }
 
-    // Group by step_no
-    const grouped = {};
-    listData.forEach((item) => {
-      if (!grouped[item.step_no]) grouped[item.step_no] = [];
-      grouped[item.step_no].push(item);
-    });
     return (
       <div className="bg-white rounded-lg shadow-md p-6 overflow-hidden">
         <div className="max-h-[70vh] overflow-y-auto pr-2">
-          {Object.keys(grouped).map((step_no) => {
-            const stepItems = grouped[step_no];
-            const meta = stepMeta[step_no] || {};
-            return (
-              <div key={step_no} className="mb-8 border-b pb-6 border-gray-200">
-                <div className="mb-2 flex items-center gap-4">
-                  <Text className="text-xl font-bold">Step {step_no}</Text>
-                  <Tag color="blue">{meta.status || stepItems[0].status}</Tag>
-                  <Tag color="purple">{meta.process}</Tag>
-                  {meta.associated_iso_clause && (
-                    <Tag color="geekblue">ISO: {meta.associated_iso_clause}</Tag>
-                  )}
-                </div>
-                <div className="mb-2">
-                  <b>Review Status:</b> {meta.review_status || "-"} <b>Review Comment:</b> {meta.review_comment || "-"}
-                </div>
-                {meta.assignments && meta.assignments.length > 0 && (
-                  <div className="mb-2">
-                    <b>Assignments:</b>
-                    <ul className="ml-4 list-disc">
-                      {meta.assignments.map((a) => (
-                        <li key={a.id}>
-                          <span><b>Description:</b> {a.description || "-"} </span>
-                          <span><b>References:</b> {a.references || "-"} </span>
-                          <span><b>Deadline:</b> {a.deadline || "-"} </span>
-                          <span><b>Assigned to:</b> {a.assigned_to_names?.join(", ") || "-"}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+          {projectData.steps.map((step) => (
+            <div key={step.step_no} className="mb-8 border-b pb-6 border-gray-200">
+              <div className="mb-2 flex items-center gap-4">
+                <Text className="text-xl font-bold">Step {step.step_no}</Text>
+                <Tag color="blue">{step.status}</Tag>
+                <Tag color="purple">{step.process}</Tag>
+                {step.associated_iso_clause && (
+                  <Tag color="geekblue">ISO: {step.associated_iso_clause}</Tag>
                 )}
-                <List
-                  bordered={false}
-                  itemLayout="horizontal"
-                  dataSource={stepItems}
-                  renderItem={(item) => (
-                    <List.Item className="bg-white mb-2 rounded-lg shadow-sm p-5 border border-gray-200">
-                      <Space size="large" className="flex items-start">
-                        <CheckCircleOutlined className="text-2xl text-green-500 mt-1" />
-                        <div>
-                          <Text className="text-lg font-medium">{item.field_name}</Text>
-                          <div className="text-sm text-gray-600 mt-1">{item.text_data}</div>
-                          {item.documents && item.documents.length > 0 && (
-                            <div className="mt-2">
-                              <Text className="text-sm font-medium">Documents:</Text>
-                              <div className="space-y-1 mt-1">
-                                {item.documents.map((doc) => (
-                                  <div key={doc.id} className="flex items-center">
-                                    <FileTextOutlined className="text-blue-500 mr-2" />
-                                    <span 
-                                      className="text-blue-500 cursor-pointer hover:underline"
-                                      onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
-                                    >
-                                      {getFileName(doc.file)}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500 mt-2">
-                            <b>Sequence:</b> {item.sequence_no} | <b>Saved by:</b> {item.saved_by} | <b>Timestamp:</b> {formatDate(item.saved_at)}
-                          </div>
-                        </div>
-                      </Space>
-                      <Tag className="text-sm px-3 py-1 rounded-full bg-green-100 text-green-600">
-                        {item.status || "Completed"}
-                      </Tag>
-                    </List.Item>
-                  )}
-                />
               </div>
-            );
-          })}
+              <div className="mb-2">
+                <b>Review Status:</b> {step.review_status || "-"} <b>Review Comment:</b> {step.review_comment || "-"}
+              </div>
+              {step.assignments && step.assignments.length > 0 && (
+                <div className="mb-2">
+                  <b>Assignments:</b>
+                  <ul className="ml-4 list-disc">
+                    {step.assignments.map((a) => (
+                      <li key={a.id}>
+                        <span><b>Description:</b> {a.description || "-"} </span>
+                        <span><b>References:</b> {a.references || "-"} </span>
+                        <span><b>Deadline:</b> {a.deadline || "-"} </span>
+                        <span><b>Assigned to:</b> {a.assigned_to_names?.join(", ") || "-"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <List
+                bordered={false}
+                itemLayout="horizontal"
+                dataSource={step.latest_data}
+                renderItem={(item) => (
+                  <List.Item className="bg-white mb-2 rounded-lg shadow-sm p-5 border border-gray-200">
+                    <Space size="large" className="flex items-start">
+                      <CheckCircleOutlined className="text-2xl text-green-500 mt-1" />
+                      <div>
+                        <Text className="text-lg font-medium">{item.field_name}</Text>
+                        <div className="text-sm text-gray-600 mt-1">{item.text_data}</div>
+                        {item.documents && item.documents.length > 0 && (
+                          <div className="mt-2">
+                            <Text className="text-sm font-medium">Documents:</Text>
+                            <div className="space-y-1 mt-1">
+                              {item.documents.map((doc) => (
+                                <div key={doc.id} className="flex items-center">
+                                  <FileTextOutlined className="text-blue-500 mr-2" />
+                                  <span 
+                                    className="text-blue-500 cursor-pointer hover:underline"
+                                    onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
+                                  >
+                                    {getFileName(doc.file)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 mt-2">
+                          <b>Sequence:</b> {item.sequence_no} | <b>Saved by:</b> {item.saved_by} | <b>Timestamp:</b> {formatDate(item.saved_at)}
+                        </div>
+                      </div>
+                    </Space>
+                    <Tag className="text-sm px-3 py-1 rounded-full bg-green-100 text-green-600">
+                      {step.status || "Completed"}
+                    </Tag>
+                  </List.Item>
+                )}
+              />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -344,120 +241,120 @@ const PreviewPage = () => {
       );
     }
 
-    if (!jsonData || jsonData.length === 0) {
+    if (!projectData || !projectData.steps || projectData.steps.length === 0) {
       return <Empty description="No step data available" className="my-10" />;
     }
 
-    // Group entries by step_no for meta
-    const stepFieldMap = {};
-    jsonData.forEach((field) => {
-      field.data.forEach((entry) => {
-        if (!stepFieldMap[entry.step_no]) stepFieldMap[entry.step_no] = [];
-        stepFieldMap[entry.step_no].push({ ...entry, field_name: field.field_name });
-      });
-    });
+    // Transform data for JSON view format
+    const jsonViewData = projectData.steps.map(step => ({
+      step_no: step.step_no,
+      status: step.status,
+      process: step.process,
+      associated_iso_clause: step.associated_iso_clause,
+      review_status: step.review_status,
+      review_comment: step.review_comment,
+      assignments: step.assignments,
+      data: step.latest_data
+    }));
+
     return (
       <div className="bg-white rounded-lg shadow-md p-6 overflow-hidden">
         <div className="max-h-[70vh] overflow-y-auto pr-2">
           <Collapse className="bg-white">
-            {Object.keys(stepFieldMap).map((step_no) => {
-              const entries = stepFieldMap[step_no];
-              const meta = stepMeta[step_no] || {};
-              return (
-                <Panel
-                  header={
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-lg">Step {step_no}</span>
-                      <span>
-                        <Tag color="blue">{meta.status || entries[0].status}</Tag>
-                        <Tag color="purple">{meta.process}</Tag>
-                        {meta.associated_iso_clause && (
-                          <Tag color="geekblue">ISO: {meta.associated_iso_clause}</Tag>
-                        )}
-                      </span>
-                      <span>
-                        <b>Review Status:</b> {meta.review_status || "-"} <b>Review Comment:</b> {meta.review_comment || "-"}
-                      </span>
-                      {meta.assignments && meta.assignments.length > 0 && (
-                        <span>
-                          <b>Assignments:</b>
-                          <ul className="ml-4 list-disc">
-                            {meta.assignments.map((a) => (
-                              <li key={a.id}>
-                                <span><b>Description:</b> {a.description || "-"} </span>
-                                <span><b>References:</b> {a.references || "-"} </span>
-                                <span><b>Deadline:</b> {a.deadline || "-"} </span>
-                                <span><b>Assigned to:</b> {a.assigned_to_names?.join(", ") || "-"}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </span>
+            {jsonViewData.map((step) => (
+              <Panel
+                header={
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-lg">Step {step.step_no}</span>
+                    <span>
+                      <Tag color="blue">{step.status}</Tag>
+                      <Tag color="purple">{step.process}</Tag>
+                      {step.associated_iso_clause && (
+                        <Tag color="geekblue">ISO: {step.associated_iso_clause}</Tag>
                       )}
+                    </span>
+                    <span>
+                      <b>Review Status:</b> {step.review_status || "-"} <b>Review Comment:</b> {step.review_comment || "-"}
+                    </span>
+                    {step.assignments && step.assignments.length > 0 && (
+                      <span>
+                        <b>Assignments:</b>
+                        <ul className="ml-4 list-disc">
+                          {step.assignments.map((a) => (
+                            <li key={a.id}>
+                              <span><b>Description:</b> {a.description || "-"} </span>
+                              <span><b>References:</b> {a.references || "-"} </span>
+                              <span><b>Deadline:</b> {a.deadline || "-"} </span>
+                              <span><b>Assigned to:</b> {a.assigned_to_names?.join(", ") || "-"}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </span>
+                    )}
+                  </div>
+                }
+                key={step.step_no}
+              >
+                {step.data.map((entry, entryIndex) => (
+                  <div
+                    key={entryIndex}
+                    className="mb-6 pb-2 bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm"
+                  >
+                    <div className="flex justify-between mb-3 pb-2 border-b border-gray-200">
+                      <Text strong className="text-base">
+                        {entry.field_name} (Entry #{entryIndex + 1})
+                      </Text>
+                      <Text type="secondary">{formatDate(entry.saved_at)}</Text>
                     </div>
-                  }
-                  key={step_no}
-                >
-                  {entries.map((entry, entryIndex) => (
-                    <div
-                      key={entryIndex}
-                      className="mb-6 pb-2 bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm"
-                    >
-                      <div className="flex justify-between mb-3 pb-2 border-b border-gray-200">
-                        <Text strong className="text-base">
-                          {entry.field_name} (Entry #{entryIndex + 1})
+                    <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4">
+                      <div className="flex items-center">
+                        <Text type="secondary" className="font-medium mr-2">
+                          Step Number:
                         </Text>
-                        <Text type="secondary">{formatDate(entry.saved_at)}</Text>
+                        <Text>{step.step_no}</Text>
                       </div>
-                      <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4">
-                        <div className="flex items-center">
-                          <Text type="secondary" className="font-medium mr-2">
-                            Step Number:
-                          </Text>
-                          <Text>{entry.step_no}</Text>
-                        </div>
-                        <div className="flex items-center">
-                          <Text type="secondary" className="font-medium mr-2">
-                            Sequence Number:
-                          </Text>
-                          <Text>{entry.sequence_no}</Text>
-                        </div>
+                      <div className="flex items-center">
+                        <Text type="secondary" className="font-medium mr-2">
+                          Sequence Number:
+                        </Text>
+                        <Text>{entry.sequence_no}</Text>
                       </div>
+                    </div>
+                    <div className="mb-4">
+                      <Text type="secondary" className="font-medium">
+                        Value:
+                      </Text>
+                      <div className="p-3 bg-white rounded mt-1 border border-gray-100">
+                        {entry.text_data}
+                      </div>
+                    </div>
+                    {entry.documents && entry.documents.length > 0 && (
                       <div className="mb-4">
                         <Text type="secondary" className="font-medium">
-                          Value:
+                          Documents:
                         </Text>
-                        <div className="p-3 bg-white rounded mt-1 border border-gray-100">
-                          {entry.text_data}
-                        </div>
-                      </div>
-                      {entry.documents && entry.documents.length > 0 && (
-                        <div className="mb-4">
-                          <Text type="secondary" className="font-medium">
-                            Documents:
-                          </Text>
-                          <div className="space-y-2 mt-1">
-                            {entry.documents.map((doc) => (
-                              <div
-                                key={doc.id}
-                                className="flex items-center bg-white p-3 rounded border border-gray-100"
-                              >
-                                <div className="flex items-center cursor-pointer" onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}>
-                                  <FileTextOutlined className="text-blue-500 mr-2" />
-                                  <span className="text-blue-500 hover:underline">{getFileName(doc.file)}</span>
-                                </div>
+                        <div className="space-y-2 mt-1">
+                          {entry.documents.map((doc) => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center bg-white p-3 rounded border border-gray-100"
+                            >
+                              <div className="flex items-center cursor-pointer" onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}>
+                                <FileTextOutlined className="text-blue-500 mr-2" />
+                                <span className="text-blue-500 hover:underline">{getFileName(doc.file)}</span>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                      <div className="text-xs text-gray-500">
-                        <b>Saved by:</b> {entry.saved_by}
                       </div>
+                    )}
+                    <div className="text-xs text-gray-500">
+                      <b>Saved by:</b> {entry.saved_by}
                     </div>
-                  ))}
-                </Panel>
-              );
-            })}
+                  </div>
+                ))}
+              </Panel>
+            ))}
           </Collapse>
         </div>
       </div>
@@ -473,9 +370,9 @@ const PreviewPage = () => {
       );
     }
 
-    const data = rawViewType === "latest" ? listData : jsonData;
+    const data = projectData;
 
-    if (!data || data.length === 0) {
+    if (!data || !data.steps || data.steps.length === 0) {
       return <Empty description="No data available" className="my-10" />;
     }
 
