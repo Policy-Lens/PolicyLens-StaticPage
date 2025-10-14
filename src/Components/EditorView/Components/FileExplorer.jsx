@@ -87,7 +87,12 @@ const FileExplorer = ({ onFileSelect, onFileEdit }) => {
       }
 
       const response = await apiRequest('GET', endpoint, null, true);
-      setFiles(response.data);
+      // Handle both paginated and non-paginated responses
+      if (response.data && Array.isArray(response.data.results)) {
+        setFiles(response.data.results);
+      } else {
+        setFiles(response.data || []);
+      }
     } catch (error) {
       console.error('Error fetching files:', error);
     } finally {
