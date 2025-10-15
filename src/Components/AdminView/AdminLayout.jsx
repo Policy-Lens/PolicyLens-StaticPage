@@ -12,8 +12,11 @@ import {
   Database,
   Library,
   Files,
+  BarChart3,
 } from "lucide-react";
 import { useNotifications } from "../../Context/NotificationContext";
+import ThemeToggle from "../ThemeToggle";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const AdminLayout = () => {
   const { checkLogin, user } = useContext(AuthContext);
@@ -35,7 +38,8 @@ const AdminLayout = () => {
     location.pathname.includes("/myevidences") ||
     location.pathname.includes("/askforhelp") ||
     location.pathname.includes("/myreports") ||
-    location.pathname.includes("/policylibrary");
+    location.pathname.includes("/policylibrary") ||
+    location.pathname.includes("/dashboard");
 
   // Define tabs with their icons
   const tabIcons = {
@@ -46,6 +50,7 @@ const AdminLayout = () => {
     MyEvidences: <Database size={16} />,
     MyReports: <Files size={16} />,
     PolicyLibrary: <Library size={16} />,
+    Dashboard: <BarChart3 size={16} />,
   };
 
   const tabs = [
@@ -54,6 +59,7 @@ const AdminLayout = () => {
     "My Evidences",
     "My Reports",
     "Policy Library",
+    "Dashboard",
     "Calendar",
     "Ask for Help",
   ];
@@ -67,6 +73,7 @@ const AdminLayout = () => {
     else if (path.includes("askforhelp")) setActiveTab("Ask for Help");
     else if (path.includes("myreports")) setActiveTab("My Reports");
     else if (path.includes("policylibrary")) setActiveTab("Policy Library");
+    else if (path.includes("dashboard")) setActiveTab("Dashboard");
     else setActiveTab("Workflow");
   }, [window.location.pathname]);
 
@@ -97,6 +104,8 @@ const AdminLayout = () => {
       navigate(`/project/${projectid}/myreports`);
     } else if (tab === "Policy Library") {
       navigate(`/project/${projectid}/policylibrary`);
+    } else if (tab === "Dashboard") {
+      navigate(`/project/${projectid}/dashboard`);
     } else if (tab === "Workflow") {
       navigate(`/project/${projectid}`);
     }
@@ -108,36 +117,43 @@ const AdminLayout = () => {
     markNotificationsAsRead();
   };
 
+  const { isDarkMode } = useTheme();
+
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-screen w-full dark-bg-primary">
       {/* Sidebar */}
       <SideNav collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 overflow-auto bg-gray-100 p-0 ${
+        className={`flex-1 flex flex-col transition-all duration-300 overflow-auto p-0 ${
           collapsed ? "ml-16" : "ml-56"
-        }`}
+        } ${isDarkMode ? 'dark-bg-primary' : 'bg-gray-100'}`}
       >
         {/* Project Tabs Navigation - Show on Project Lifecycle and all top nav tab pages */}
         {isTopNavVisible && (
-          <div className="bg-white border-b border-gray-200 shadow-sm">
-            <div className="flex justify-start space-x-4 px-6 py-3">
-              {tabs.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabClick(tab)}
-                  className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 
-                    ${
-                      activeTab === tab
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                >
-                  {tabIcons[tab.replaceAll(" ", "")] || null}
-                  <span>{tab}</span>
-                </button>
-              ))}
+          <div className={`border-b shadow-sm ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-200'}`}>
+            <div className="flex justify-between items-center px-6 py-3">
+              <div className="flex justify-start space-x-4">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => handleTabClick(tab)}
+                    className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 
+                      ${
+                        activeTab === tab
+                          ? "bg-blue-500 text-white"
+                          : isDarkMode 
+                            ? "dark-bg-tertiary dark-text-secondary hover:dark-bg-hover" 
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                  >
+                    {tabIcons[tab.replaceAll(" ", "")] || null}
+                    <span>{tab}</span>
+                  </button>
+                ))}
+              </div>
+              <ThemeToggle />
             </div>
           </div>
         )}

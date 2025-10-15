@@ -37,13 +37,40 @@ const Projects = () => {
     getProjects();
   };
 
+  const handleArchiveProject = async (projectId, event) => {
+    event.preventDefault(); // Prevent navigation to project
+    event.stopPropagation();
+    
+    if (window.confirm('Are you sure you want to archive this project?')) {
+      try {
+        const res = await apiRequest(
+          "POST",
+          `/api/project/${projectId}/archive/`,
+          null,
+          true
+        );
+        if (res.status === 200) {
+          console.log('Project archived successfully');
+          getProjects(); // Refresh the list
+        } else {
+          alert('Failed to archive project');
+        }
+      } catch (error) {
+        console.error('Error archiving project:', error);
+        alert('Failed to archive project');
+      }
+    }
+  };
+
   const getProjects = async () => {
     setLoading(true);
     try {
       const res = await apiRequest("GET", "/api/project/list/", null, true);
       console.log(res);
       if (res.status == 200) {
-        setCards(res.data);
+        // Backend returns {success: true, data: [...]}
+        // So we need res.data.data to get the actual project array
+        setCards(res.data.data || []);
       }
     } catch (error) {
       if (error.message === "Session expired. Please log in again.") {
@@ -105,57 +132,85 @@ const Projects = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {cards.length > 0 ? (
               cards.map((card, index) => (
-                <Link
-                  to={`/project/${card.id}`}
-                  onClick={() => {
-                    setProject(card);
-                  }}
+                <div
                   key={index}
-                  className="bg-white shadow-md border border-gray-300 rounded-lg p-4 hover:shadow-lg"
+                  className="bg-white shadow-md border border-gray-300 rounded-lg p-4 hover:shadow-lg relative group"
                 >
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      {card.logo ? (
-                        <img
-                          src={card.logo}
-                          alt={`${card?.companyName} Logo`}
-                          className="w-12 h-12 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 shadow-sm">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-7 w-7 text-blue-600"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                            <line x1="12" y1="11" x2="12" y2="17"></line>
-                            <line x1="9" y1="14" x2="15" y2="14"></line>
-                          </svg>
+                  <Link
+                    to={`/project/${card.id}`}
+                    onClick={() => {
+                      setProject(card);
+                    }}
+                    className="block"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-3">
+                        {card.logo ? (
+                          <img
+                            src={card.logo}
+                            alt={`${card?.companyName} Logo`}
+                            className="w-12 h-12 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 shadow-sm">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-7 w-7 text-blue-600"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                              <line x1="12" y1="11" x2="12" y2="17"></line>
+                              <line x1="9" y1="14" x2="15" y2="14"></line>
+                            </svg>
+                          </div>
+                        )}
+                        <div>
+                          <h2 className="text-lg font-semibold text-gray-800">
+                            {card.company.name}
+                          </h2>
+                          <h3 className="text-sm text-gray-500">{card.name}</h3>
                         </div>
-                      )}
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-800">
-                          {card.company.name}
-                        </h2>
-                        <h3 className="text-sm text-gray-500">{card.name}</h3>
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-sm text-gray-500">
-                      <span className="font-semibold text-gray-700">
-                        Created Date :
-                      </span>{" "}
-                      {formatDate(card.created_at)}
-                    </p>
-                  </div>
-                </Link>
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-500">
+                        <span className="font-semibold text-gray-700">
+                          Created Date :
+                        </span>{" "}
+                        {formatDate(card.created_at)}
+                      </p>
+                    </div>
+                  </Link>
+                  
+                  {/* Archive button - only visible on hover and for Super Consultants */}
+                  {user?.role === "Super Consultant" && (
+                    <button
+                      onClick={(e) => handleArchiveProject(card.id, e)}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-md"
+                      title="Archive Project"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 8h14M5 8a2 2 0 110-4h1.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               ))
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">

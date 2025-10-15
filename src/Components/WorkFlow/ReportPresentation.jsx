@@ -61,7 +61,7 @@ const ReportPresentation = () => {
         onCancel={handlePdfModalClose}
         width={900}
         style={{ top: 20 }}
-        bodyStyle={{ padding: 0, height: "80vh" }}
+        styles={{ body: { padding: 0, height: "80vh" } }}
         footer={[
           <Button key="close" type="primary" onClick={handlePdfModalClose}>
             Close

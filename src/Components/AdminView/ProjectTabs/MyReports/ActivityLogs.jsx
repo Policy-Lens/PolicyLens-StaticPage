@@ -454,11 +454,11 @@ const ActivityLogs = () => {
           </Button>,
         ]}
         width={600}
-        bodyStyle={{ 
+        styles={{ body: { 
           maxHeight: '70vh', 
           overflowY: 'auto',
           padding: '16px'
-        }}
+        } }}
         style={{ top: 20 }}
       >
         {selectedLog && (

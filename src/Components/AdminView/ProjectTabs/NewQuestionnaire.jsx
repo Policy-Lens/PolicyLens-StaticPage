@@ -27,6 +27,7 @@ import {
   ThumbsUp,
   MessageCircle,
   Eye, // Added Eye icon for question details
+  Import, // Added Import icon for importing questions
 } from "lucide-react";
 import { ProjectContext } from "../../../Context/ProjectContext";
 import { AuthContext } from "../../../AuthContext";
@@ -34,8 +35,10 @@ import { apiRequest, BASE_URL } from "../../../utils/api";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { message, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 const NewQuestionnaire = (props) => {
+  const { isDarkMode } = useTheme();
   const { projectid } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,6 +95,17 @@ const NewQuestionnaire = (props) => {
   const [bulkAssignmentMethod, setBulkAssignmentMethod] = useState("specific"); // specific, random, sequential
   const [bulkAssignmentReps, setBulkAssignmentReps] = useState([]);
   const [isBulkAssigning, setIsBulkAssigning] = useState(false);
+
+  // Import Questions state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [libraryQuestions, setLibraryQuestions] = useState([]);
+  const [isLoadingLibraryQuestions, setIsLoadingLibraryQuestions] = useState(false);
+  const [selectedLibraryQuestions, setSelectedLibraryQuestions] = useState([]);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Bulk PDCA Update state
+  const [isPdcaUpdateModalOpen, setIsPdcaUpdateModalOpen] = useState(false);
+  const [isUpdatingPdca, setIsUpdatingPdca] = useState(false);
 
   // Review state
   const [isAssignReviewerDropdownOpen, setIsAssignReviewerDropdownOpen] =
@@ -369,6 +383,213 @@ const NewQuestionnaire = (props) => {
     } catch (error) {
       console.error('Error loading answer history from localStorage:', error);
       return [];
+    }
+  };
+
+  // Import Questions functions
+  const openImportModal = async () => {
+    setIsImportModalOpen(true);
+    await fetchLibraryQuestions();
+  };
+
+  const closeImportModal = () => {
+    setIsImportModalOpen(false);
+    setSelectedLibraryQuestions([]);
+    setLibraryQuestions([]);
+  };
+
+  const fetchLibraryQuestions = async () => {
+    setIsLoadingLibraryQuestions(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("type", activeTab);
+      params.append("standard", "ISO27001"); // Default to ISO27001 for now
+      
+      const endpoint = `/api/new-questionnaire/library/?${params.toString()}`;
+      const response = await apiRequest("GET", endpoint, null, true);
+      
+      if (response.status === 200) {
+        setLibraryQuestions(response.data);
+      } else {
+        throw new Error(`Failed with status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to fetch library questions:", error);
+      message.error("Failed to fetch questions from library.");
+      setLibraryQuestions([]);
+    } finally {
+      setIsLoadingLibraryQuestions(false);
+    }
+  };
+
+  const handleLibraryQuestionSelect = (questionId) => {
+    setSelectedLibraryQuestions(prev => {
+      if (prev.includes(questionId)) {
+        return prev.filter(id => id !== questionId);
+      } else {
+        return [...prev, questionId];
+      }
+    });
+  };
+
+  const handleSelectAllLibraryQuestions = () => {
+    if (selectedLibraryQuestions.length === libraryQuestions.length) {
+      setSelectedLibraryQuestions([]);
+    } else {
+      setSelectedLibraryQuestions(libraryQuestions.map(q => q.id));
+    }
+  };
+
+  const importSelectedQuestions = async () => {
+    if (selectedLibraryQuestions.length === 0) {
+      message.warning("Please select at least one question to import.");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/new-questionnaire/project/${projectid}/import-questions/`,
+        {
+          question_ids: selectedLibraryQuestions,
+          type: activeTab
+        },
+        true // requiresAuth = true
+      );
+
+      if (response.status === 201) {
+        message.success(`Successfully imported ${selectedLibraryQuestions.length} question(s).`);
+        closeImportModal();
+        handleGetQuestions(); // Refresh the questions list
+      } else {
+        throw new Error(`Failed with status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to import questions:", error);
+      message.error("Failed to import questions. Please try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Bulk PDCA Update functions
+  const openPdcaUpdateModal = () => {
+    setIsPdcaUpdateModalOpen(true);
+  };
+
+  const closePdcaUpdateModal = () => {
+    setIsPdcaUpdateModalOpen(false);
+  };
+
+  const updatePdcaValues = async () => {
+    if (activeTab !== "clause") {
+      message.warning("PDCA values can only be updated for clause questions.");
+      return;
+    }
+
+    // Remove role restriction - allow all users to update PDCA values
+
+    setIsUpdatingPdca(true);
+    try {
+      // Get all clause questions that need PDCA updates
+      const clauseQuestions = questions.filter(q => q.type === "clause" && !q.pdca_cycle);
+      
+      console.log("Clause questions found:", clauseQuestions.length);
+      console.log("Sample clause question:", clauseQuestions[0]);
+      
+      if (clauseQuestions.length === 0) {
+        message.info("All clause questions already have PDCA values assigned.");
+        closePdcaUpdateModal();
+        return;
+      }
+
+      // Create updates based on clause type mapping
+      const updates = clauseQuestions.map(question => {
+        let pdcaValue = "";
+        
+        console.log("Processing question:", {
+          id: question.id,
+          type_description: question.type_description,
+          reference: question.reference
+        });
+        
+        // Map based on clause type - try multiple patterns
+        if (question.type_description?.includes("4 - Context") || 
+            question.type_description?.includes("Context") ||
+            question.reference?.includes("4.")) {
+          pdcaValue = "Plan";
+        } else if (question.type_description?.includes("5 - Leadership") || 
+                   question.type_description?.includes("Leadership") ||
+                   question.reference?.includes("5.")) {
+          pdcaValue = "Plan";
+        } else if (question.type_description?.includes("6 - Planning") || 
+                   question.type_description?.includes("Planning") ||
+                   question.reference?.includes("6.")) {
+          pdcaValue = "Plan";
+        } else if (question.type_description?.includes("7 - Support") || 
+                   question.type_description?.includes("Support") ||
+                   question.reference?.includes("7.")) {
+          pdcaValue = "Do";
+        } else if (question.type_description?.includes("8 - Operation") || 
+                   question.type_description?.includes("Operation") ||
+                   question.reference?.includes("8.")) {
+          pdcaValue = "Do";
+        } else if (question.type_description?.includes("9 - Performance") || 
+                   question.type_description?.includes("Performance") ||
+                   question.reference?.includes("9.")) {
+          pdcaValue = "Check";
+        } else if (question.type_description?.includes("10 - Improvement") || 
+                   question.type_description?.includes("Improvement") ||
+                   question.reference?.includes("10.")) {
+          pdcaValue = "Act";
+        }
+
+        console.log("Mapped PDCA value:", pdcaValue);
+
+        return {
+          question_id: question.id,
+          pdca_cycle: pdcaValue
+        };
+      }).filter(update => update.pdca_cycle); // Only include valid mappings
+      
+      console.log("Updates to be sent:", updates);
+
+      if (updates.length === 0) {
+        message.warning("No questions found that can be automatically mapped to PDCA values.");
+        closePdcaUpdateModal();
+        return;
+      }
+
+      const response = await apiRequest(
+        "POST",
+        `/api/new-questionnaire/project/${projectid}/bulk-update-pdca/`,
+        { updates },
+        true // requiresAuth = true
+      );
+
+      if (response.status === 200) {
+        message.success(`Successfully updated PDCA values for ${updates.length} questions.`);
+        closePdcaUpdateModal();
+        handleGetQuestions(); // Refresh the questions list
+      } else {
+        throw new Error(`Failed with status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to update PDCA values:", error);
+      
+      // Provide specific error messages based on the error type
+      if (error.status === 403) {
+        message.error("You don't have permission to update PDCA values. Only administrators can perform this action.");
+      } else if (error.status === 401) {
+        message.error("Authentication required. Please log in again.");
+      } else if (error.status === 400) {
+        message.error("Invalid data provided. Please check the question data and try again.");
+      } else {
+        message.error("Failed to update PDCA values. Please try again.");
+      }
+    } finally {
+      setIsUpdatingPdca(false);
     }
   };
 
@@ -1202,16 +1423,16 @@ const NewQuestionnaire = (props) => {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className={`flex flex-col h-screen ${isDarkMode ? 'dark-bg-primary' : 'bg-slate-50'}`}>
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg">
         {/* Left Panel: Questions List */}
         <div
           className={`flex flex-col ${activeQuestion ? "w-3/4" : "w-full"
-            } bg-white border-r border-slate-200 transition-width duration-300 ease-in-out`}
+            } border-r transition-width duration-300 ease-in-out ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-slate-200'}`}
         >
           {/* Top Bar: Header and Actions */}
-          <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
+          <div className={`flex flex-col border-b sticky top-0 z-10 ${isDarkMode ? 'dark-bg-card dark-border' : 'border-slate-200 bg-white'}`}>
             {/* Header and Actions */}
             <div className="flex items-center p-4">
               {/* Header */}
@@ -1271,7 +1492,11 @@ const NewQuestionnaire = (props) => {
 
                   {/* Filter Dropdown Content */}
                   {filterDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-[calc(100vh-120px)] flex flex-col">
+                    <div className={`absolute right-0 mt-2 w-72 border rounded-lg shadow-xl z-20 max-h-[calc(100vh-120px)] flex flex-col ${
+                      isDarkMode 
+                        ? 'dark-bg-card dark-border' 
+                        : 'bg-white border-slate-200'
+                    }`}>
                       {/* Header */}
                       <div className="p-3 border-b border-slate-200 bg-slate-50 font-medium text-slate-700 flex justify-between items-center sticky top-0 z-10">
                         <span>Filter Options</span>
@@ -1473,6 +1698,26 @@ const NewQuestionnaire = (props) => {
                     </div>
                   )}
                 </div>
+
+                {/* Import Questions Button */}
+                <button
+                  className="px-4 py-2.5 bg-green-600 text-white rounded-lg flex items-center hover:bg-green-700 transition-colors shadow-sm hover:shadow-md"
+                  onClick={openImportModal}
+                >
+                  <Import size={16} className="mr-1.5" />
+                  <span>Import Questions</span>
+                </button>
+
+                {/* Update PDCA Button (only for clause questions) */}
+                {activeTab === "clause" && (
+                  <button
+                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg flex items-center hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                    onClick={openPdcaUpdateModal}
+                  >
+                    <RotateCcw size={16} className="mr-1.5" />
+                    <span>Update PDCA</span>
+                  </button>
+                )}
 
                 {/* Assignment Button (for company role) */}
                 {(projectRole === "company" ||
@@ -1801,7 +2046,11 @@ const NewQuestionnaire = (props) => {
 
         {/* Right Panel: Question/Answer Details (Conditional) */}
         {activeQuestion && (
-          <div className="w-1/4 bg-white border-l border-slate-200 flex flex-col transition-transform duration-300 ease-in-out">
+          <div className={`w-1/4 border-l flex flex-col transition-transform duration-300 ease-in-out ${
+            isDarkMode 
+              ? 'dark-bg-card dark-border' 
+              : 'bg-white border-slate-200'
+          }`}>
             {/* Header */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white sticky top-0 z-30 shadow-md">
               <div>
@@ -3517,6 +3766,180 @@ const NewQuestionnaire = (props) => {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Questions Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-green-50 to-white">
+              <h2 className="text-lg font-semibold text-slate-800">
+                Import Questions from Library
+              </h2>
+              <button
+                onClick={closeImportModal}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* Selection Summary */}
+              <div className="p-4 border-b border-slate-200 bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-slate-600">
+                      {selectedLibraryQuestions.length} of {libraryQuestions.length} questions selected
+                    </span>
+                    <button
+                      onClick={handleSelectAllLibraryQuestions}
+                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                      {selectedLibraryQuestions.length === libraryQuestions.length ? "Deselect All" : "Select All"}
+                    </button>
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    Type: {activeTab === "clause" ? "Clause" : activeTab === "control" ? "Control" : "VAPT"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions List */}
+              <div className="flex-1 overflow-y-auto">
+                {isLoadingLibraryQuestions ? (
+                  <div className="flex items-center justify-center h-64">
+                    <Spin size="large" />
+                  </div>
+                ) : libraryQuestions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                    <FileText size={48} className="mb-4 text-slate-300" />
+                    <p className="text-lg font-medium">No questions found</p>
+                    <p className="text-sm">No questions available in the library for this type.</p>
+                  </div>
+                ) : (
+                  <div className="p-4">
+                    <div className="space-y-3">
+                      {libraryQuestions.map((question) => (
+                        <div
+                          key={question.id}
+                          className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                            selectedLibraryQuestions.includes(question.id)
+                              ? "border-green-300 bg-green-50"
+                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                          onClick={() => handleLibraryQuestionSelect(question.id)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1">
+                              <input
+                                type="checkbox"
+                                checked={selectedLibraryQuestions.includes(question.id)}
+                                onChange={() => handleLibraryQuestionSelect(question.id)}
+                                className="w-4 h-4 text-green-600 border-slate-300 rounded focus:ring-green-500"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-medium text-slate-700">
+                                  {question.reference}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                                  {question.standard}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
+                                  {question.type_display || question.type}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-600 leading-relaxed">
+                                {question.question}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={closeImportModal}
+                className="px-4 py-2 text-slate-600 hover:text-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={importSelectedQuestions}
+                disabled={selectedLibraryQuestions.length === 0 || isImporting}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isImporting ? (
+                  <>
+                    <Spin size="small" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Import size={16} />
+                    Import {selectedLibraryQuestions.length} Question{selectedLibraryQuestions.length !== 1 ? 's' : ''}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDCA Update Modal */}
+      {isPdcaUpdateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Update PDCA Values</h3>
+            <p className="text-gray-600 mb-6">
+              This will automatically update PDCA values for all clause questions based on their ISO clause types:
+            </p>
+            <div className="mb-6 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Context (4.x), Leadership (5.x), Planning (6.x):</span>
+                <span className="font-medium text-blue-600">Plan</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Support (7.x), Operation (8.x):</span>
+                <span className="font-medium text-green-600">Do</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Performance Evaluation (9.x):</span>
+                <span className="font-medium text-yellow-600">Check</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Improvement (10.x):</span>
+                <span className="font-medium text-red-600">Act</span>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closePdcaUpdateModal}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isUpdatingPdca}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updatePdcaValues}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isUpdatingPdca}
+              >
+                {isUpdatingPdca ? 'Updating...' : 'Update PDCA Values'}
               </button>
             </div>
           </div>

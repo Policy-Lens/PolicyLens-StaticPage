@@ -19,6 +19,7 @@ import {
   Filter,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
+import { useTheme } from "../../contexts/ThemeContext";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -54,6 +55,7 @@ const DashboardPage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const { isDarkMode } = useTheme();
   const { user, loading, checkLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -421,7 +423,7 @@ const DashboardPage = () => {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <canvas id="gauge-chart" width="260" height="180"></canvas>
-        <div className="text-center mt-1 text-sm font-medium text-gray-700">
+        <div className={`text-center mt-1 text-sm font-medium ${isDarkMode ? 'dark-text-primary' : 'text-gray-700'}`}>
           Medium-High Risk
         </div>
       </div>
@@ -431,94 +433,94 @@ const DashboardPage = () => {
   // Risk Heat Map component
   const RiskHeatMap = () => {
     return (
-      <div className="border border-gray-100 rounded-md bg-white overflow-hidden">
+      <div className={`border rounded-md overflow-hidden ${isDarkMode ? 'dark-bg-card dark-border' : 'border-gray-100 bg-white'}`}>
         <table className="w-full">
           <thead>
             <tr>
-              <th className="border border-gray-100 p-2 bg-gray-50"></th>
-              <th className="border border-gray-100 p-2 text-xs font-medium text-gray-600 bg-gray-50">
+              <th className={`border p-2 ${isDarkMode ? 'dark-border dark-bg-tertiary' : 'border-gray-100 bg-gray-50'}`}></th>
+              <th className={`border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-bg-tertiary dark-text-secondary' : 'border-gray-100 text-gray-600 bg-gray-50'}`}>
                 Very Low
               </th>
-              <th className="border border-gray-100 p-2 text-xs font-medium text-gray-600 bg-gray-50">
+              <th className={`border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-bg-tertiary dark-text-secondary' : 'border-gray-100 text-gray-600 bg-gray-50'}`}>
                 Low
               </th>
-              <th className="border border-gray-100 p-2 text-xs font-medium text-gray-600 bg-gray-50">
+              <th className={`border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-bg-tertiary dark-text-secondary' : 'border-gray-100 text-gray-600 bg-gray-50'}`}>
                 Medium
               </th>
-              <th className="border border-gray-100 p-2 text-xs font-medium text-gray-600 bg-gray-50">
+              <th className={`border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-bg-tertiary dark-text-secondary' : 'border-gray-100 text-gray-600 bg-gray-50'}`}>
                 High
               </th>
-              <th className="border border-gray-100 p-2 text-xs font-medium text-gray-600 bg-gray-50">
+              <th className={`border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-bg-tertiary dark-text-secondary' : 'border-gray-100 text-gray-600 bg-gray-50'}`}>
                 Very High
               </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="border border-gray-100 p-2 text-xs font-medium text-gray-700">
+              <td className={`border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-text-primary' : 'border-gray-100 text-gray-700'}`}>
                 Very High
               </td>
-              <td className="border border-gray-100 p-2 bg-green-100"></td>
-              <td className="border border-gray-100 p-2 bg-yellow-100"></td>
-              <td className="border border-gray-100 p-2 bg-red-500 text-white text-center font-medium">
+              <td className={`border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-100`}></td>
+              <td className={`border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-yellow-100`}></td>
+              <td className={`border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-red-500 text-white text-center font-medium`}>
                 1
               </td>
-              <td className="border border-gray-100 p-2 bg-red-600 text-white text-center font-medium">
+              <td className={`border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-red-600 text-white text-center font-medium`}>
                 1
               </td>
-              <td className="border border-gray-100 p-2 bg-red-700 text-white"></td>
+              <td className={`border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-red-700 text-white`}></td>
             </tr>
             <tr>
-              <td className="border border-gray-100 p-2 text-xs font-medium text-gray-700">
+              <td className="border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-text-primary' : 'border-gray-100 text-gray-700'}">
                 High
               </td>
-              <td className="border border-gray-100 p-2 bg-green-200"></td>
-              <td className="border border-gray-100 p-2 bg-yellow-200"></td>
-              <td className="border border-gray-100 p-2 bg-orange-300"></td>
-              <td className="border border-gray-100 p-2 bg-red-500 text-white text-center font-medium">
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-200"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-yellow-200"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-orange-300"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-red-500 text-white text-center font-medium">
                 2
               </td>
-              <td className="border border-gray-100 p-2 bg-red-600 text-white"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-red-600 text-white"></td>
             </tr>
             <tr>
-              <td className="border border-gray-100 p-2 text-xs font-medium text-gray-700">
+              <td className="border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-text-primary' : 'border-gray-100 text-gray-700'}">
                 Medium
               </td>
-              <td className="border border-gray-100 p-2 bg-green-400"></td>
-              <td className="border border-gray-100 p-2 bg-green-300"></td>
-              <td className="border border-gray-100 p-2 bg-yellow-300 text-center font-medium">
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-400"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-300"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-yellow-300 text-center font-medium">
                 6
               </td>
-              <td className="border border-gray-100 p-2 bg-orange-400"></td>
-              <td className="border border-gray-100 p-2 bg-red-500 text-white"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-orange-400"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-red-500 text-white"></td>
             </tr>
             <tr>
-              <td className="border border-gray-100 p-2 text-xs font-medium text-gray-700">
+              <td className="border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-text-primary' : 'border-gray-100 text-gray-700'}">
                 Low
               </td>
-              <td className="border border-gray-100 p-2 bg-green-500 text-white text-center font-medium">
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-500 text-white text-center font-medium">
                 5
               </td>
-              <td className="border border-gray-100 p-2 bg-green-400"></td>
-              <td className="border border-gray-100 p-2 bg-green-300"></td>
-              <td className="border border-gray-100 p-2 bg-yellow-300"></td>
-              <td className="border border-gray-100 p-2 bg-orange-400"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-400"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-300"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-yellow-300"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-orange-400"></td>
             </tr>
             <tr>
-              <td className="border border-gray-100 p-2 text-xs font-medium text-gray-700">
+              <td className="border p-2 text-xs font-medium ${isDarkMode ? 'dark-border dark-text-primary' : 'border-gray-100 text-gray-700'}">
                 Very Low
               </td>
-              <td className="border border-gray-100 p-2 bg-green-600 text-white text-center font-medium">
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-600 text-white text-center font-medium">
                 3
               </td>
-              <td className="border border-gray-100 p-2 bg-green-500 text-white"></td>
-              <td className="border border-gray-100 p-2 bg-green-400"></td>
-              <td className="border border-gray-100 p-2 bg-green-300"></td>
-              <td className="border border-gray-100 p-2 bg-yellow-200"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-500 text-white"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-400"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-green-300"></td>
+              <td className="border p-2 ${isDarkMode ? 'dark-border' : 'border-gray-100'} bg-yellow-200"></td>
             </tr>
           </tbody>
         </table>
-        <div className="text-center mt-2 mb-1 text-xs font-medium text-gray-500">
+        <div className={`text-center mt-2 mb-1 text-xs font-medium ${isDarkMode ? 'dark-text-tertiary' : 'text-gray-500'}`}>
           Impact
         </div>
       </div>
@@ -526,12 +528,12 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 p-6">
+    <div className={`min-h-screen p-6 ${isDarkMode ? 'dark-bg-primary dark-text-primary' : 'bg-gray-50 text-gray-800'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header section - simplified */}
         <div className="flex flex-col mb-6">
           <div className="flex items-baseline">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'dark-text-primary' : 'text-gray-900'}`}>Dashboard</h1>
             <span className="ml-3 text-blue-600 text-sm">Audit Committee</span>
             <span className="ml-auto text-sm text-gray-500">
               As at {new Date().toLocaleDateString()}
@@ -549,7 +551,11 @@ const DashboardPage = () => {
             <input
               type="text"
               placeholder="Search risks, entities or categories..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className={`pl-10 pr-4 py-2 w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                isDarkMode 
+                  ? 'dark-bg-card dark-border dark-text-primary' 
+                  : 'border-gray-200'
+              }`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -562,8 +568,12 @@ const DashboardPage = () => {
                 onClick={() => setActiveFilter(option.value)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                   activeFilter === option.value
-                    ? "bg-blue-100 text-blue-700 border border-blue-200"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                    ? isDarkMode 
+                      ? "dark-bg-active dark-text-primary dark-border" 
+                      : "bg-blue-100 text-blue-700 border border-blue-200"
+                    : isDarkMode
+                      ? "dark-bg-card dark-text-secondary dark-border hover:dark-bg-hover"
+                      : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                 }`}
               >
                 {option.value === "all" && <Filter size={14} />}
@@ -590,10 +600,10 @@ const DashboardPage = () => {
           {metricCards.map((card, index) => (
             <div
               key={index}
-              className={`${card.bgColor} rounded-xl p-4 transition-all hover:shadow-md border border-gray-100`}
+              className={`${card.bgColor} rounded-xl p-4 transition-all hover:shadow-md border ${isDarkMode ? 'dark-border' : 'border-gray-100'}`}
             >
               <div className="flex justify-between items-start">
-                <div className="p-2 rounded-lg bg-white shadow-sm">
+                <div className={`p-2 rounded-lg shadow-sm ${isDarkMode ? 'dark-bg-tertiary' : 'bg-white'}`}>
                   {card.icon}
                 </div>
                 <div
@@ -610,7 +620,7 @@ const DashboardPage = () => {
                 </div>
               </div>
               <div className="mt-3">
-                <p className="text-sm font-medium text-gray-500">
+                <p className={`text-sm font-medium ${isDarkMode ? 'dark-text-secondary' : 'text-gray-500'}`}>
                   {card.title}
                 </p>
                 <h3 className={`text-2xl font-bold mt-1 ${card.textColor}`}>
@@ -623,14 +633,14 @@ const DashboardPage = () => {
 
         {/* First row - top stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
+          <div className={`p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-100'}`}>
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Overall Risk
             </h2>
             <GaugeChart />
           </div>
 
-          <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
+          <div className={`p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-100'}`}>
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risks by Entity
             </h2>
@@ -639,7 +649,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
+          <div className={`p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-100'}`}>
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risk Categories
             </h2>
@@ -669,7 +679,7 @@ const DashboardPage = () => {
 
         {/* Middle row - Compliance Trends - Left-aligned */}
         <div className="mb-5 ml-0 mr-auto" style={{ width: "90%" }}>
-          <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
+          <div className={`p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-100'}`}>
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risk Compliance Trends (Last 12 Months)
             </h2>
@@ -694,7 +704,7 @@ const DashboardPage = () => {
 
         {/* Last row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
+          <div className={`p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-100'}`}>
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risk Assessment
             </h2>
@@ -703,7 +713,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border border-gray-100">
+          <div className={`p-5 rounded-lg hover:shadow-sm transition-shadow duration-200 border ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-gray-100'}`}>
             <h2 className="text-base font-medium text-blue-600 mb-4 pb-2 border-b border-gray-100">
               Risk Heat Map
             </h2>

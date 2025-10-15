@@ -13,11 +13,14 @@ import { PaperClipOutlined, FileTextOutlined, LoadingOutlined } from "@ant-desig
 import { ProjectContext } from "../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
 import { BASE_URL, apiRequest } from "../../utils/api";
+import { useTheme } from "../../contexts/ThemeContext";
 import InteractiveIsoClause from "../Common/InteractiveIsoClause";
+import FinalizeContractForm from "./FinalizeContractForm";
 const { TextArea } = Input;
 const { Option } = Select;
 
 function FinalizeContract() {
+  const { isDarkMode } = useTheme();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [description, setDescription] = useState("");
   const [fileList, setFileList] = useState([]);
@@ -44,6 +47,8 @@ function FinalizeContract() {
   const [reviewOldFilesNeeded, setReviewOldFilesNeeded] = useState([]);
   const [reviewRemovedOldFiles, setReviewRemovedOldFiles] = useState([]);
   const [downloadingFiles, setDownloadingFiles] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [showForm, setShowForm] = useState(true); // Show form by default
 
   const { projectid } = useParams();
   const {
@@ -104,6 +109,35 @@ function FinalizeContract() {
         setOldFilesNeeded([]);
         setRemovedOldFiles([]);
         await get_step_id(); // Refresh data immediately
+      } else {
+        message.error("Failed to finalize contract.");
+      }
+    } catch (error) {
+      message.error("Failed to finalize contract.");
+      console.error(error);
+    }
+  };
+
+  const handleFormSave = async (data) => {
+    try {
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append("field_name", "Finalize Contract");
+      formDataToSubmit.append("text_data", JSON.stringify(data));
+      formDataToSubmit.append("old_files", JSON.stringify(oldFilesNeeded));
+
+      fileList.forEach((file) => {
+        formDataToSubmit.append("files", file.originFileObj || file);
+      });
+
+      const response = await addStepData(stepId, formDataToSubmit);
+      if (response.status === 201) {
+        message.success("Contract finalized successfully!");
+        setShowForm(false); // Hide the form
+        setFormData({});
+        setFileList([]);
+        setOldFilesNeeded([]);
+        setRemovedOldFiles([]);
+        await get_step_id();
       } else {
         message.error("Failed to finalize contract.");
       }
@@ -422,12 +456,12 @@ function FinalizeContract() {
   const latestUser = getLatestUser();
 
   return (
-    <div className="min-h-full p-6">
+    <div className={`min-h-full p-6 ${isDarkMode ? 'dark-bg-primary' : ''}`}>
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Finalize Contract</h2>
+          <h2 className={`text-xl font-bold ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>Finalize Contract</h2>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
+            {projectRole && projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
               <Button
                 type="default"
                 onClick={handleSendForReview}
@@ -496,7 +530,7 @@ function FinalizeContract() {
             </span>
           </div>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button
                 type="default"
                 onClick={handleAssignTask}
@@ -505,7 +539,7 @@ function FinalizeContract() {
                 Assign Task
               </Button>
             )}
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Select
                 value={process}
                 onChange={updateProcess}
@@ -515,7 +549,7 @@ function FinalizeContract() {
                 <Option value="non core">Non Core</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select
                 value={stepStatus}
                 onChange={updateStepStatus}
@@ -526,10 +560,10 @@ function FinalizeContract() {
                 <Option value="completed">Completed</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant")) || (projectRole && projectRole.includes("admin")) || isAssignedUser) && (
               <Button
                 type="primary"
-                onClick={handleAddData}
+                onClick={() => setShowForm(true)}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {finalizeContractData.length > 0 ? "Update Contract" : "Add Contract"}
@@ -540,11 +574,11 @@ function FinalizeContract() {
       </div>
 
       {finalizeContractData.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className={`rounded-xl shadow-md overflow-hidden ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
           <div className="p-6">
             <div className="flex flex-wrap justify-between items-center mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">
+                <h3 className={`text-xl font-semibold ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>
                   Contract Information
                 </h3>
                 {latestUpdateTime && (
@@ -641,7 +675,7 @@ function FinalizeContract() {
                   Review Comment
                 </h3>
                 <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-                  <p className="text-sm text-gray-800">{reviewComment}</p>
+                  <p className={`text-sm ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>{reviewComment}</p>
                 </div>
               </div>
             )}
@@ -680,6 +714,26 @@ function FinalizeContract() {
             )}
           </div>
         </div>
+      ) : showForm ? (
+        <div className={`rounded-xl shadow-md p-6 ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-800">
+              {finalizeContractData.length > 0 ? "Update Contract" : "Add Contract"}
+            </h3>
+            <Button
+              type="default"
+              onClick={() => setShowForm(false)}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              Cancel
+            </Button>
+          </div>
+          <FinalizeContractForm
+            stepId={stepId}
+            onSave={handleFormSave}
+            initialData={formData}
+          />
+        </div>
       ) : (
         <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-md border border-gray-100 p-6 flex flex-col items-center justify-center min-h-[300px]">
           <div className="text-center max-w-md mx-auto">
@@ -710,7 +764,7 @@ function FinalizeContract() {
               Add your contract details to get started.
             </p>
             <Button
-              onClick={handleAddData}
+              onClick={() => setShowForm(true)}
               type="primary"
               size="large"
               className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all duration-200 font-medium h-10 px-6"
@@ -731,7 +785,7 @@ function FinalizeContract() {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
             Task Assignment
           </h3>
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className={`rounded-xl shadow-md p-6 ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
             <div className="mb-4">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium text-gray-700">
@@ -793,219 +847,15 @@ function FinalizeContract() {
         title={finalizeContractData.length > 0 ? "Update Contract" : "Add Contract"}
         open={isModalVisible}
         onCancel={handleModalClose}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={handleModalClose}
-            className="border-gray-300 text-gray-700"
-          >
-            Cancel
-          </Button>,
-          <Button
-            key="save"
-            type="primary"
-            onClick={handleSubmit}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {finalizeContractData.length > 0 ? "Update" : "Save"}
-          </Button>,
-        ]}
-        width={700}
+        footer={null}
+        width="90%"
+        style={{ maxWidth: '1200px' }}
       >
-        <div className="p-6">
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-blue-600"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">
-                    Download Template
-                  </h3>
-                  <div className="mt-2 text-sm text-blue-600">
-                    <p>
-                      Please download and fill in the template below before
-                      submitting your contract details.
-                    </p>
-                  </div>
-                  <div className="mt-3">
-                    <a
-                      href="/templates/Contract_template.xlsx"
-                      download="contract_template.xlsx"
-                      className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <svg
-                        className="-ml-1 mr-2 h-5 w-5 text-blue-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download Contract Template
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Description
-              </label>
-              <TextArea
-                id="description"
-                rows={6}
-                placeholder="Enter the contract details"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            {oldFilesNeeded.length > 0 && (
-              <div className="mt-4 mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Files</h4>
-                <div className="space-y-2">
-                  {oldFilesNeeded.map((fileUrl) => (
-                    <div key={fileUrl} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-blue-600" />
-                        </div>
-                        <button
-                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                          className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                          title={getFileName(fileUrl)}
-                          disabled={downloadingFiles.includes(fileUrl)}
-                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                        >
-                          {getFileName(fileUrl)}
-                          {downloadingFiles.includes(fileUrl) && (
-                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                          )}
-                        </button>
-                      </div>
-                      <Button
-                        type="text"
-                        danger
-                        onClick={() => handleRemoveFile(fileUrl)}
-                        className="flex items-center"
-                        icon={
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {removedOldFiles.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Removed Files
-                </h4>
-                <div className="space-y-3">
-                  {removedOldFiles.map((fileUrl) => (
-                    <div
-                      key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
-                          <FileTextOutlined className="text-red-500" />
-                        </div>
-                        <button
-                          onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
-                          className="text-sm text-gray-500 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
-                          title={getFileName(fileUrl)}
-                          disabled={downloadingFiles.includes(fileUrl)}
-                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
-                        >
-                          {getFileName(fileUrl)}
-                          {downloadingFiles.includes(fileUrl) && (
-                            <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
-                          )}
-                        </button>
-                      </div>
-                      <Button
-                        type="text"
-                        onClick={() => handleRestoreFile(fileUrl)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center"
-                        icon={
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 mr-1"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        }
-                      >
-                        Restore
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">
-                Upload New Files
-              </h4>
-              <Upload
-                fileList={fileList}
-                onChange={handleUploadChange}
-                beforeUpload={() => false}
-                multiple
-                showUploadList={true}
-                className="upload-list-custom"
-              >
-                <Button
-                  icon={<PaperClipOutlined />}
-                  className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg shadow-sm flex items-center"
-                >
-                  Attach Files
-                </Button>
-              </Upload>
-            </div>
-          </div>
-        </div>
+        <FinalizeContractForm
+          stepId={stepId}
+          onSave={handleFormSave}
+          initialData={formData}
+        />
       </Modal>
 
       <Modal

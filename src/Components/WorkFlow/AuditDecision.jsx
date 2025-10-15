@@ -531,11 +531,11 @@ const StakeholderInterviews = () => {
                             onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
                             className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
+                            disabled={downloadingFiles && downloadingFiles.includes(fileUrl)}
                             style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                           >
                             {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
+                            {downloadingFiles && downloadingFiles.includes(fileUrl) && (
                               <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
                             )}
                           </button>
@@ -568,11 +568,11 @@ const StakeholderInterviews = () => {
                             onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
                             className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
+                            disabled={downloadingFiles && downloadingFiles.includes(fileUrl)}
                             style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                           >
                             {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
+                            {downloadingFiles && downloadingFiles.includes(fileUrl) && (
                               <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
                             )}
                           </button>
@@ -616,7 +616,7 @@ const StakeholderInterviews = () => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Audit Decision Interviews</h2>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
+            {projectRole && projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
               <Button type="default" onClick={handleSendForReview} className="bg-green-600 hover:bg-green-700 text-white border-green-600">
                 Send for Review
               </Button>
@@ -650,19 +650,19 @@ const StakeholderInterviews = () => {
             </span>
           </div>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button type="default" onClick={handleAssignTask} className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm">
                 Assign Task
               </Button>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select value={stepStatus} onChange={updateStepStatus} style={{ width: 140 }}>
                 <Option value="pending">Pending</Option>
                 <Option value="in_progress">In Progress</Option>
                 <Option value="completed">Completed</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Button type="primary" onClick={handleAddData} className="bg-blue-600 hover:bg-blue-700">
                 {interviewData.length > 0 ? "Update Interview" : "Add Interview"}
               </Button>
@@ -725,11 +725,11 @@ const StakeholderInterviews = () => {
                                   onClick={() => handleFileDownload(doc.file, getFileName(doc.file))}
                                   className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                                   title={getFileName(doc.file)}
-                                  disabled={downloadingFiles.includes(doc.file)}
+                                  disabled={downloadingFiles && downloadingFiles.includes(doc.file)}
                                   style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                                 >
                                   {getFileName(doc.file)}
-                                  {downloadingFiles.includes(doc.file) && (
+                                  {downloadingFiles && downloadingFiles.includes(doc.file) && (
                                     <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
                                   )}
                                 </button>
@@ -766,11 +766,11 @@ const StakeholderInterviews = () => {
                             onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
                             className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                             title={getFileName(fileUrl)}
-                            disabled={downloadingFiles.includes(fileUrl)}
+                            disabled={downloadingFiles && downloadingFiles.includes(fileUrl)}
                             style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                           >
                             {getFileName(fileUrl)}
-                            {downloadingFiles.includes(fileUrl) && (
+                            {downloadingFiles && downloadingFiles.includes(fileUrl) && (
                               <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
                             )}
                           </button>
@@ -931,11 +931,11 @@ const StakeholderInterviews = () => {
                     onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
                     className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                     title={getFileName(fileUrl)}
-                    disabled={downloadingFiles.includes(fileUrl)}
+                    disabled={downloadingFiles && downloadingFiles.includes(fileUrl)}
                     style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                   >
                     {getFileName(fileUrl)}
-                    {downloadingFiles.includes(fileUrl) && (
+                    {downloadingFiles && downloadingFiles.includes(fileUrl) && (
                       <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
                     )}
                   </button>
@@ -958,11 +958,11 @@ const StakeholderInterviews = () => {
                     onClick={() => handleFileDownload(fileUrl, getFileName(fileUrl))}
                     className="text-sm text-blue-700 truncate hover:underline flex items-center gap-2 disabled:opacity-60"
                     title={getFileName(fileUrl)}
-                    disabled={downloadingFiles.includes(fileUrl)}
+                    disabled={downloadingFiles && downloadingFiles.includes(fileUrl)}
                     style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                   >
                     {getFileName(fileUrl)}
-                    {downloadingFiles.includes(fileUrl) && (
+                    {downloadingFiles && downloadingFiles.includes(fileUrl) && (
                       <LoadingOutlined spin style={{ fontSize: 16, marginLeft: 6 }} />
                     )}
                   </button>

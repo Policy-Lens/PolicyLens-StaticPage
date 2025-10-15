@@ -50,6 +50,16 @@ const Database = () => {
           >
             GICS
           </Link>
+          <Link
+            to="/home/database/nist-csf-2-0"
+            className={`${
+              location.pathname === "/home/database/nist-csf-2-0"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium`}
+          >
+            NIST CSF 2.0
+          </Link>
         </nav>
       </div>
 

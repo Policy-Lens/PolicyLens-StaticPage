@@ -24,6 +24,7 @@ import { useParams } from "react-router-dom";
 import { BASE_URL } from "../../utils/api";
 import { apiRequest } from "../../utils/api";
 import InteractiveIsoClause from "../Common/InteractiveIsoClause";
+import InquirySectionForm from "./InquirySectionForm";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -42,12 +43,45 @@ function InquirySection({ isVisible, onClose }) {
   const [oldFilesNeeded, setOldFilesNeeded] = useState({});
   const [removedOldFiles, setRemovedOldFiles] = useState({});
   const [downloadingFiles, setDownloadingFiles] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [showForm, setShowForm] = useState(true); // Show form by default
   const { projectid } = useParams();
   const { addStepData, getStepData, getStepId, checkStepAuth, projectRole } =
     useContext(ProjectContext);
 
   const handleInputChange = (field, value) => {
     setInputs((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleFormSave = async (data) => {
+    try {
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append("field_name", "Inquiry Section");
+      formDataToSubmit.append("text_data", JSON.stringify(data));
+      formDataToSubmit.append("old_files", JSON.stringify(oldFilesNeeded));
+
+      Object.values(fileLists).forEach((fileList) => {
+        fileList.forEach((file) => {
+          formDataToSubmit.append("files", file.originFileObj || file);
+        });
+      });
+
+      const response = await addStepData(stepId, formDataToSubmit);
+      if (response.status === 201) {
+        message.success("Inquiry section data saved successfully!");
+        setShowForm(false); // Hide the form
+        setFormData({});
+        setFileLists({});
+        setOldFilesNeeded({});
+        setRemovedOldFiles({});
+        await get_step_data(stepId);
+      } else {
+        message.error("Failed to save inquiry section data.");
+      }
+    } catch (error) {
+      message.error("Failed to save inquiry section data.");
+      console.error(error);
+    }
   };
 
   const handleUploadChange = (panelKey, { fileList }) => {
@@ -119,16 +153,6 @@ function InquirySection({ isVisible, onClose }) {
     }
   };
 
-  const get_step_id = async () => {
-    const response = await getStepId(projectid, 2);
-    if (response) {
-      setStepId(response.plc_step_id);
-      setAssociatedIsoClause(response.associated_iso_clause);
-      setProcess(response.process || "core");
-      await get_step_data(response.plc_step_id);
-      await checkAssignedUser(response.plc_step_id);
-    }
-  };
 
   const get_step_data = async (step_id) => {
     const stepData = await getStepData(step_id);
@@ -221,10 +245,6 @@ function InquirySection({ isVisible, onClose }) {
       setDownloadingFiles((prev) => prev.filter((f) => f !== fileUrl));
     }
   };
-
-  useEffect(() => {
-    get_step_id();
-  }, []);
 
   useEffect(() => {
     if (isVisible && stepId) {
@@ -443,53 +463,20 @@ function InquirySection({ isVisible, onClose }) {
       open={isVisible}
       onCancel={() => {
         onClose();
+        setFormData({});
+        setFileLists({});
+        setOldFilesNeeded({});
+        setRemovedOldFiles({});
       }}
       footer={null}
-      width={800}
+      width="90%"
+      style={{ maxWidth: '1200px' }}
     >
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Inquiry Section</h2>
-
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">Scope</h3>
-          {renderInputWithAttachButton(
-            "Scope",
-            "Enter the scope of the project",
-            true
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">Timeline</h3>
-          {renderInputWithAttachButton("Timeline", "Add timeline details")}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">Budget</h3>
-          {renderInputWithAttachButton("Budget", "Enter budget")}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">
-            Availability
-          </h3>
-          {renderInputWithAttachButton(
-            "Availability",
-            "Enter availability details"
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2">
-            Draft Proposal
-          </h3>
-          {renderInputWithAttachButton(
-            "Draft Proposal",
-            "Upload draft proposal",
-            true
-          )}
-        </div>
-      </div>
+      <InquirySectionForm
+        stepId={stepId}
+        onSave={handleFormSave}
+        initialData={formData}
+      />
     </Modal>
   );
 }
@@ -511,7 +498,31 @@ function InquiryPage() {
   const [taskReferences, setTaskReferences] = useState("");
   const [associatedIsoClause, setAssociatedIsoClause] = useState(null);
   const [process, setProcess] = useState("core");
+  const [showForm, setShowForm] = useState(true); // Show form by default
+  const [formData, setFormData] = useState({});
   const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
+
+  const handleFormSave = async (data) => {
+    try {
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append("field_name", "Inquiry Section");
+      formDataToSubmit.append("text_data", JSON.stringify(data));
+      formDataToSubmit.append("old_files", JSON.stringify([]));
+
+      const response = await addStepData(stepId, formDataToSubmit);
+      if (response.status === 201) {
+        message.success("Inquiry section data saved successfully!");
+        setShowForm(false); // Hide the form
+        setFormData({});
+        await get_step_data(stepId);
+      } else {
+        message.error("Failed to save inquiry section data.");
+      }
+    } catch (error) {
+      message.error("Failed to save inquiry section data.");
+      console.error(error);
+    }
+  };
   const [reviewAction, setReviewAction] = useState("accept");
   const [reviewModalComment, setReviewModalComment] = useState("");
   const [reviewFileList, setReviewFileList] = useState([]);
@@ -1102,7 +1113,7 @@ function InquiryPage() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">Inquiry Section</h2>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
+            {projectRole && projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
               <Button
                 type="default"
                 onClick={handleSendForReview}
@@ -1155,7 +1166,7 @@ function InquiryPage() {
             </span>
           </div>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button
                 type="default"
                 onClick={handleAssignTask}
@@ -1164,7 +1175,7 @@ function InquiryPage() {
                 Assign Task
               </Button>
             )}
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Select
                 value={process}
                 onChange={updateProcess}
@@ -1174,7 +1185,7 @@ function InquiryPage() {
                 <Option value="non core">Non Core</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select
                 value={stepStatus}
                 onChange={updateStepStatus}
@@ -1185,7 +1196,7 @@ function InquiryPage() {
                 <Option value="completed">Completed</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Button
                 type="primary"
                 onClick={() => setIsModalVisible(true)}
@@ -1539,6 +1550,26 @@ function InquiryPage() {
             )}
           </div>
         </div>
+      ) : showForm ? (
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-800">
+              {inquiryData.length > 0 ? "Update Inquiry Data" : "Add Inquiry Data"}
+            </h3>
+            <Button
+              type="default"
+              onClick={() => setShowForm(false)}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              Cancel
+            </Button>
+          </div>
+          <InquirySectionForm
+            stepId={stepId}
+            onSave={handleFormSave}
+            initialData={formData}
+          />
+        </div>
       ) : (
         <div className="bg-white rounded-xl shadow-md p-10 text-center">
           <div className="max-w-md mx-auto">
@@ -1567,7 +1598,7 @@ function InquiryPage() {
               started.
             </p>
             <Button
-              onClick={() => setIsModalVisible(true)}
+              onClick={() => setShowForm(true)}
               type="primary"
               size="large"
               className="bg-blue-600 hover:bg-blue-700"

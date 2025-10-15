@@ -724,7 +724,7 @@ const Questionnaire = () => {
       }
     } catch (error) {
       console.error("Error submitting feedback:", error);
-      message.error(`Failed to submit feedback: ${error.error}`);
+      message.error(`Failed to submit feedback: ${error.message || error.detail || "Unknown error"}`);
     } finally {
       setIsReviewSubmitting(false);
     }

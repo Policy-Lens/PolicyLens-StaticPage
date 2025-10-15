@@ -19,10 +19,12 @@ import {
 } from "lucide-react";
 import FileViewerModal from "../../FileViewer/FileViewerModal";
 import { useParams } from "react-router-dom";
-import { apiRequest } from "../../../utils/api";
+import { apiRequest, BASE_URL } from "../../../utils/api";
 import { AuthContext } from "../../../AuthContext";
 import { ProjectContext } from "../../../Context/ProjectContext";
 import { message } from "antd";
+import MassUploadTemplateModal from "./MassUploadTemplateModal";
+import AIDocumentWorkshop from "./AIDocumentWorkshop";
 
 // Control name options for filtering
 const CONTROL_NAME_OPTIONS = [
@@ -418,12 +420,13 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
-    regulation_standard: "",
-    regulation_control_no: "",
-    regulation_control_name: "",
-    parent_control: "",
+    template_id: "",
     category: "",
     sub_category: "",
+    regulation_standard: "",
+    regulation_clause_no: "",
+    regulation_clause_name: "",
+    parent_clause_name: "",
   });
   const fileInputRef = useRef(null);
 
@@ -446,9 +449,11 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
     }
 
     if (
+      !formData.template_id ||
+      !formData.category ||
       !formData.regulation_standard ||
-      !formData.regulation_control_no ||
-      !formData.regulation_control_name
+      !formData.regulation_clause_no ||
+      !formData.regulation_clause_name
     ) {
       message.warning("Please fill all required fields.");
       return;
@@ -460,10 +465,13 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
       // Reset state on success
       setSelectedFile(null);
       setFormData({
+        template_id: "",
+        category: "",
+        sub_category: "",
         regulation_standard: "",
-        regulation_control_no: "",
-        regulation_control_name: "",
-        parent_control: "",
+        regulation_clause_no: "",
+        regulation_clause_name: "",
+        parent_clause_name: "",
       });
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -479,6 +487,9 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
   const handleCancel = () => {
     setSelectedFile(null);
     setFormData({
+      template_id: "",
+      category: "",
+      sub_category: "",
       regulation_standard: "",
       regulation_control_no: "",
       regulation_control_name: "",
@@ -523,6 +534,24 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
               Selected: {selectedFile.name}
             </p>
           )}
+        </div>
+        <div className="mb-4">
+          <label
+            htmlFor="template_id"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Template ID *
+          </label>
+          <input
+            type="text"
+            id="template_id"
+            name="template_id"
+            value={formData.template_id}
+            onChange={handleInputChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter unique template ID (e.g., ISO-A.5.1)"
+            required
+          />
         </div>
         <div className="mb-4">
           <label
@@ -604,53 +633,53 @@ const UploadTemplateModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
         <div className="mb-4">
           <label
-            htmlFor="regulation_control_no"
+            htmlFor="regulation_clause_no"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Regulation Control No. *
+            Regulation Clause No. *
           </label>
           <input
             type="text"
-            id="regulation_control_no"
-            name="regulation_control_no"
-            value={formData.regulation_control_no}
+            id="regulation_clause_no"
+            name="regulation_clause_no"
+            value={formData.regulation_clause_no}
             onChange={handleInputChange}
             className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter regulation control number"
+            placeholder="Enter regulation clause number"
           />
         </div>
         <div className="mb-4">
           <label
-            htmlFor="regulation_control_name"
+            htmlFor="regulation_clause_name"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Regulation Control Name *
+            Regulation Clause Name *
           </label>
           <input
             type="text"
-            id="regulation_control_name"
-            name="regulation_control_name"
-            value={formData.regulation_control_name}
+            id="regulation_clause_name"
+            name="regulation_clause_name"
+            value={formData.regulation_clause_name}
             onChange={handleInputChange}
             className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter regulation control name"
+            placeholder="Enter regulation clause name"
           />
-        </div>{" "}
+        </div>
         <div className="mb-4">
           <label
-            htmlFor="parent_control"
+            htmlFor="parent_clause_name"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Parent Control
+            Parent Clause Name
           </label>
           <input
             type="text"
-            id="parent_control"
-            name="parent_control"
-            value={formData.parent_control}
+            id="parent_clause_name"
+            name="parent_clause_name"
+            value={formData.parent_clause_name}
             onChange={handleInputChange}
             className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter parent control"
+            placeholder="Enter parent clause name (optional)"
           />
         </div>
         <div className="flex justify-end space-x-3 mt-6">
@@ -721,6 +750,9 @@ const PolicyLibrary = () => {
   const [controlNameFilter, setControlNameFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [uploadTemplateModal, setUploadTemplateModal] = useState({
+    isOpen: false,
+  });
+  const [massUploadModal, setMassUploadModal] = useState({
     isOpen: false,
   });
   const [detailsModal, setDetailsModal] = useState({
@@ -821,6 +853,9 @@ const PolicyLibrary = () => {
   useEffect(() => {
     if (activeTab === "templates") {
       fetchTemplates();
+    } else if (activeTab === "aiWorkshop") {
+      // For AI Workshop, we need templates data to import
+      fetchTemplates();
     } else if (activeTab === "myFiles") {
       if (projectRole === "consultant") {
         fetchProjectFiles({ assigned_to_me: true });
@@ -847,7 +882,7 @@ const PolicyLibrary = () => {
     const newSearchTerm = e.target.value;
     setSearchTerm(newSearchTerm);
     // Trigger fetch based on active tab
-    if (activeTab === "templates") {
+    if (activeTab === "templates" || activeTab === "aiWorkshop") {
       fetchTemplates(newSearchTerm, controlNameFilter);
     } else {
       fetchProjectFiles(
@@ -866,7 +901,7 @@ const PolicyLibrary = () => {
   const handleControlNameChange = (value) => {
     setControlNameFilter(value);
     // Trigger fetch based on active tab
-    if (activeTab === "templates") {
+    if (activeTab === "templates" || activeTab === "aiWorkshop") {
       fetchTemplates(searchTerm, value);
     } else {
       fetchProjectFiles(
@@ -904,7 +939,7 @@ const PolicyLibrary = () => {
 
   // Function to refresh current tab's data
   const refreshCurrentTabData = () => {
-    if (activeTab === "templates") {
+    if (activeTab === "templates" || activeTab === "aiWorkshop") {
       fetchTemplates();
     } else {
       fetchProjectFiles(
@@ -917,18 +952,18 @@ const PolicyLibrary = () => {
     }
   };
 
-  // Column headers configuration for templates
+  // Column headers configuration for templates (updated with Template ID and clause terminology)
   const templateColumns = [
     { key: "select", label: "" },
+    { key: "template_id", label: "Template ID" },
     { key: "category", label: "Category" },
     { key: "sub_category", label: "Sub-Category" },
-    // { key: "id", label: "No." },
     { key: "file_name", label: "File Name" },
     { key: "file_type", label: "File Type" },
     { key: "regulation_standard", label: "Regulation Standard" },
-    { key: "regulation_control_no", label: "Regulation Control No." },
-    { key: "regulation_control_name", label: "Regulation Control Name" },
-    { key: "parent_control", label: "Parent Control" },
+    { key: "regulation_clause_no", label: "Regulation Clause No." },
+    { key: "regulation_clause_name", label: "Regulation Clause Name" },
+    { key: "parent_clause_name", label: "Parent Clause Name" },
   ];
 
   // Column headers for project files
@@ -1104,12 +1139,48 @@ const PolicyLibrary = () => {
 
   // Open file viewer modal
   const openFileViewer = (file) => {
+    console.log('Opening file viewer for file:', file);
+    
+    // Validate file data
+    if (!file) {
+      message.error('No file data provided');
+      return;
+    }
+
+    if (!file.id && !file.file_path && !file.url) {
+      message.error('File has no valid URL or ID');
+      return;
+    }
+    
+    console.log('File data for viewer:', file);
+    
+    // Handle different file URL scenarios
+    let fileUrl = file.file_path || file.url || "";
+    console.log('Original file URL:', fileUrl);
+    
+    // Always use local backend proxy instead of S3
+    if (file.id) {
+      // Use local backend proxy to serve files from database
+      fileUrl = `${BASE_URL}/api/controlfiles/proxy-file/${file.id}/`;
+      console.log('Using local backend proxy:', fileUrl);
+    } else if (file.file_path && !file.file_path.includes('s3.amazonaws.com')) {
+      // Only use direct URLs if they're not S3 and no ID is available
+      fileUrl = file.file_path.startsWith('http') ? file.file_path : `${BASE_URL}${file.file_path}`;
+      console.log('Using non-S3 direct URL:', fileUrl);
+    } else {
+      console.warn('No valid local file source found, falling back to proxy');
+      fileUrl = `${BASE_URL}/api/controlfiles/proxy-file/${file.id || 'unknown'}/`;
+    }
+    
+    console.log('Final URL for PDFTron:', fileUrl);
+    
     setViewerModal({
       isOpen: true,
       file: {
-        url: file.file_path || "",
+        url: fileUrl,
         extension: file.file_type?.toLowerCase() || "",
         name: file.file_name || "",
+        id: file.id || null,
       },
     });
   };
@@ -1124,8 +1195,30 @@ const PolicyLibrary = () => {
 
   // Handle file download
   const handleDownload = (file) => {
-    if (file.file_path) {
-      window.open(file.file_path, "_blank");
+    if (!file) {
+      message.error('No file data provided');
+      return;
+    }
+
+    try {
+      let downloadUrl;
+      
+      // Always use local backend proxy for downloads
+      if (file.id) {
+        downloadUrl = `${BASE_URL}/api/controlfiles/proxy-file/${file.id}/`;
+      } else if (file.file_path && !file.file_path.includes('s3.amazonaws.com')) {
+        downloadUrl = file.file_path.startsWith('http') ? file.file_path : `${BASE_URL}${file.file_path}`;
+      } else {
+        message.error('No valid local file source found');
+        return;
+      }
+
+      console.log('Downloading file from:', downloadUrl);
+      window.open(downloadUrl, "_blank");
+      message.success(`Downloading ${file.file_name || 'file'}`);
+    } catch (error) {
+      console.error('Download error:', error);
+      message.error('Failed to download file');
     }
   };
 
@@ -1175,19 +1268,31 @@ const PolicyLibrary = () => {
     });
   };
 
+  // Open mass upload modal
+  const openMassUploadModal = () => {
+    setMassUploadModal({
+      isOpen: true,
+    });
+  };
+
+  // Close mass upload modal
+  const closeMassUploadModal = () => {
+    setMassUploadModal({
+      isOpen: false,
+    });
+  };
+
   // Handle template upload submission
   const handleTemplateUpload = async (fileToUpload, formData) => {
     const uploadData = new FormData();
     uploadData.append("file_path", fileToUpload);
-    uploadData.append("regulation_standard", formData.regulation_standard);
-    uploadData.append("regulation_control_no", formData.regulation_control_no);
-    uploadData.append(
-      "regulation_control_name",
-      formData.regulation_control_name
-    );
-    uploadData.append("parent_control", formData.parent_control);
+    uploadData.append("template_id", formData.template_id);
     uploadData.append("category", formData.category);
     uploadData.append("sub_category", formData.sub_category);
+    uploadData.append("regulation_standard", formData.regulation_standard);
+    uploadData.append("regulation_clause_no", formData.regulation_clause_no);
+    uploadData.append("regulation_clause_name", formData.regulation_clause_name);
+    uploadData.append("parent_clause_name", formData.parent_clause_name);
 
     try {
       await apiRequest(
@@ -1202,6 +1307,26 @@ const PolicyLibrary = () => {
       console.error("Error uploading template:", error);
       message.error(
         error.detail || "Failed to upload template. Please try again."
+      );
+      throw error; // Re-throw error so modal knows it failed
+    }
+  };
+
+  // Handle mass upload submission
+  const handleMassUpload = async (formData) => {
+    try {
+      await apiRequest(
+        "POST",
+        "/api/controlfiles/mass-upload/",
+        formData,
+        true
+      );
+      message.success("Templates uploaded successfully!");
+      fetchTemplates(); // Refresh templates data
+    } catch (error) {
+      console.error("Error uploading templates:", error);
+      message.error(
+        error.detail || "Failed to upload templates. Please try again."
       );
       throw error; // Re-throw error so modal knows it failed
     }
@@ -1427,15 +1552,37 @@ const PolicyLibrary = () => {
           )}
         </button>
 
-        {/* Upload Template button in the top tab area if admin */}
-        {activeTab === "templates" && user?.role === "admin" && (
-          <button
-            onClick={openUploadTemplateModal}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm ml-auto mr-2 my-auto"
-          >
-            <UploadCloud size={16} />
-            <span>Upload Template</span>
-          </button>
+        <button
+          className={`py-3 px-6 font-medium relative transition-all ${activeTab === "aiWorkshop"
+            ? "text-blue-600 font-semibold"
+            : "text-gray-600 hover:text-gray-800"
+            }`}
+          onClick={() => setActiveTab("aiWorkshop")}
+        >
+          AI Document Workshop
+          {activeTab === "aiWorkshop" && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></span>
+          )}
+        </button>
+
+        {/* Upload Template buttons in the top tab area if admin */}
+        {activeTab === "templates" && (user?.role === "admin" || user?.role === "Admin" || projectRole === "consultant admin") && (
+          <div className="flex items-center space-x-2 ml-auto mr-2 my-auto">
+            <button
+              onClick={openUploadTemplateModal}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <UploadCloud size={16} />
+              <span>Upload Single</span>
+            </button>
+            <button
+              onClick={openMassUploadModal}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
+            >
+              <Upload size={16} />
+              <span>Mass Upload</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -1448,7 +1595,7 @@ const PolicyLibrary = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder={`Search ${activeTab === "templates" ? "templates" : "files"
+                  placeholder={`Search ${activeTab === "templates" ? "templates" : activeTab === "aiWorkshop" ? "templates" : "files"
                     }...`}
                   className="pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-72"
                   value={searchTerm}
@@ -1512,6 +1659,13 @@ const PolicyLibrary = () => {
           </div>
         )}
 
+        {/* AI Document Workshop */}
+        {!isLoading && activeTab === "aiWorkshop" && (
+          <div className="h-[calc(100vh-200px)]">
+            <AIDocumentWorkshop templatesData={templatesData} />
+          </div>
+        )}
+
         {/* Templates Table */}
         {!isLoading && activeTab === "templates" && (
           <div className="rounded-lg border border-gray-200 shadow-lg">
@@ -1562,9 +1716,9 @@ const PolicyLibrary = () => {
                         />
                       )}
                     </td>
-                    {/* <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.id}
-                    </td> */}
+                    <td className="px-3 py-2.5 text-sm font-medium text-blue-600">
+                      {item.template_id || `T-${item.id}`}
+                    </td>
                     <td className="px-3 py-2.5 text-sm font-medium">
                       {item.category}
                     </td>
@@ -1586,13 +1740,13 @@ const PolicyLibrary = () => {
                       {item.regulation_standard}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.regulation_control_no}
+                      {item.regulation_clause_no}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.regulation_control_name}
+                      {item.regulation_clause_name}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.parent_control || "None"}
+                      {item.parent_clause_name || "None"}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-gray-900">
                       <div className="flex space-x-2">
@@ -1830,6 +1984,11 @@ const PolicyLibrary = () => {
         isOpen={uploadTemplateModal.isOpen}
         onClose={closeUploadTemplateModal}
         onSubmit={handleTemplateUpload}
+      />
+      <MassUploadTemplateModal
+        isOpen={massUploadModal.isOpen}
+        onClose={closeMassUploadModal}
+        onSubmit={handleMassUpload}
       />
       <FileDetailsModal
         isOpen={detailsModal.isOpen}

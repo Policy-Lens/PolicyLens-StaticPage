@@ -4,14 +4,16 @@ import { Search, Plus, Upload, X, Edit, Trash2, ChevronLeft, ChevronRight } from
 import { apiRequest } from "../../../utils/api";
 import { AuthContext } from "../../../AuthContext";
 import { LoadingOutlined } from '@ant-design/icons';
+import { useTheme } from "../../../contexts/ThemeContext";
 
 const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
+  const { isDarkMode } = useTheme();
   const { currentPage, totalPages, totalCount, pageSize } = pagination;
 
   if (!totalCount || totalCount === 0) return null;
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white border-t border-slate-200">
+    <div className={`flex items-center justify-between p-4 border-t ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-slate-200'}`}>
       <div className="flex items-center gap-2">
         <label htmlFor="pageSize" className="text-sm text-slate-600">
           Rows per page:
@@ -52,6 +54,7 @@ const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
 };
 
 const ISO4217 = () => {
+  const { isDarkMode } = useTheme();
   const { user } = useContext(AuthContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,7 +84,7 @@ const ISO4217 = () => {
   });
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.is_superuser || user?.role === "admin" || user?.role === "Super Consultant") {
       setIsAdmin(true);
     }
   }, [user]);
@@ -345,25 +348,75 @@ const ISO4217 = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="bg-white p-6 shadow-sm flex-none">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 min-w-[200px] relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search currencies..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-            />
+      <div className={`p-6 shadow-sm flex-none ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
+        <div className="flex items-center justify-between">
+          <h2 className={`text-xl font-semibold ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>ISO 4217</h2>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search currencies..."
+                className={`w-64 pl-10 pr-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'dark-bg-card dark-border dark-text-primary' 
+                    : 'border-gray-300'
+                }`}
+              />
+              <Search
+                size={20}
+                className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'dark-text-tertiary' : 'text-gray-400'}`}
+              />
+            </div>
+            
+            <button className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${
+              isDarkMode 
+                ? 'dark-bg-card dark-border dark-text-primary hover:dark-bg-hover' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}>
+              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              Filter
+            </button>
+            
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => {
+                    setModalType("excel");
+                    setShowModal(true);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${
+                    isDarkMode 
+                      ? 'dark-bg-card dark-border dark-text-primary hover:dark-bg-hover' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Upload Excel
+                </button>
+                <button
+                  onClick={openAddModal}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <Plus size={18} />
+                  Add Currency
+                </button>
+              </>
+            )}
           </div>
+        </div>
+        
+        {/* Filter dropdowns row */}
+        <div className="flex items-center gap-4 mt-4">
           <select
             value={selectedAlphabeticCode}
             onChange={(e) => handleFilterChange("alphabetic_code", e.target.value)}
-            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="block w-48 border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode ? 'dark-bg-card dark-border dark-text-primary' : 'border-gray-300'}"
           >
             <option value="">All Alphabetic Codes</option>
             {[...new Set(currencies.map((c) => c.alphabetic_code))].sort().map((code) => (
@@ -375,7 +428,7 @@ const ISO4217 = () => {
           <select
             value={selectedNumericCode}
             onChange={(e) => handleFilterChange("numeric_code", e.target.value)}
-            className="block w-48 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="block w-48 border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode ? 'dark-bg-card dark-border dark-text-primary' : 'border-gray-300'}"
           >
             <option value="">All Numeric Codes</option>
             {[...new Set(currencies.map((c) => c.numeric_code))].sort().map((code) => (
@@ -391,27 +444,6 @@ const ISO4217 = () => {
             >
               Clear Filters
             </button>
-          )}
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => {
-                  setModalType("excel");
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-              >
-                <Upload size={18} />
-                Upload Excel
-              </button>
-              <button
-                onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Plus size={18} />
-                Add Currency
-              </button>
-            </>
           )}
         </div>
       </div>

@@ -18,8 +18,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "antd";
 import { AuthContext } from "../../AuthContext";
 import { useNotifications } from "../../Context/NotificationContext";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const Sidebar = ({ onToggle }) => {
+  const { isDarkMode } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, handleLogout } = useContext(AuthContext);
@@ -93,9 +95,16 @@ const Sidebar = ({ onToggle }) => {
     },
   ];
 
+  // Debug: Log user role
+  console.log('Sidebar - User role:', user?.role);
+  console.log('Sidebar - User object:', user);
+  
   // Conditionally filter the menu items based on the user's role
-  if (!["Super Consultant", "consultant", "Consultant"].includes(user?.role)) {
+  if (!["Super Consultant", "consultant", "Consultant", "admin", "Admin"].includes(user?.role)) {
+    console.log('Filtering out consultant-team for role:', user?.role);
     menuItems = menuItems.filter(item => item.key !== 'consultant-team');
+  } else {
+    console.log('Keeping consultant-team for role:', user?.role);
   }
 
   const policyLib = {
@@ -114,7 +123,7 @@ const Sidebar = ({ onToggle }) => {
     <div style={{ display: "flex" }}>
       {/* Sidebar Container */}
       <div
-        className="h-screen bg-white shadow-md flex flex-col justify-between transition-all duration-300"
+        className={`h-screen shadow-md flex flex-col justify-between transition-all duration-300 ${isDarkMode ? 'dark-bg-secondary' : 'bg-white'}`}
         style={{
           width: collapsed ? "80px" : "220px",
           position: "fixed",
@@ -204,10 +213,10 @@ const Sidebar = ({ onToggle }) => {
             <UserCircle size={36} className="text-blue-600" />
             {!collapsed && (
               <div>
-                <p className="text-sm font-semibold text-gray-800">
+                <p className={`text-sm font-semibold ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>
                   {user?.name || "User"}
                 </p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                <p className={`text-xs capitalize ${isDarkMode ? 'dark-text-secondary' : 'text-gray-500'}`}>{user?.role}</p>
               </div>
             )}
           </div>

@@ -4,24 +4,30 @@ import { Search, Plus, Upload, X, Edit, Trash2, ChevronLeft, ChevronRight, Eye, 
 import { apiRequest } from "../../../utils/api";
 import { LoadingOutlined } from '@ant-design/icons';
 import { AuthContext } from "../../../AuthContext";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 // PaginationControls Component
 const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
+  const { isDarkMode } = useTheme();
   const { currentPage, totalPages, totalCount, pageSize } = pagination;
 
   if (!totalCount || totalCount === 0) return null;
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white border-t border-slate-200">
+    <div className={`flex items-center justify-between p-4 border-t ${isDarkMode ? 'dark-bg-card dark-border' : 'bg-white border-slate-200'}`}>
       <div className="flex items-center gap-2">
-        <label htmlFor="pageSize" className="text-sm text-slate-600">
+        <label htmlFor="pageSize" className={`text-sm ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}`}>
           Rows per page:
         </label>
         <select
           id="pageSize"
           value={pageSize}
           onChange={(e) => onPageSizeChange(e.target.value)}
-          className="border border-slate-300 rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={`border rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+            isDarkMode 
+              ? 'dark-bg-card dark-border dark-text-primary' 
+              : 'border-slate-300'
+          }`}
         >
           <option value={10}>10</option>
           <option value={25}>25</option>
@@ -29,21 +35,29 @@ const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
           <option value="all">All</option>
         </select>
       </div>
-      <div className="text-sm text-slate-600">
+      <div className={`text-sm ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}`}>
         Page {currentPage} of {totalPages} ({totalCount} items)
       </div>
       <div className="flex items-center gap-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+          className={`flex items-center justify-center w-8 h-8 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed ${
+            isDarkMode 
+              ? 'dark-bg-card dark-border hover:dark-bg-hover' 
+              : 'border-slate-300 hover:bg-slate-100'
+          }`}
         >
           <ChevronLeft size={18} />
         </button>
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+          className={`flex items-center justify-center w-8 h-8 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed ${
+            isDarkMode 
+              ? 'dark-bg-card dark-border hover:dark-bg-hover' 
+              : 'border-slate-300 hover:bg-slate-100'
+          }`}
         >
           <ChevronRight size={18} />
         </button>
@@ -53,6 +67,7 @@ const PaginationControls = ({ pagination, onPageChange, onPageSizeChange }) => {
 };
 
 const ISO27001 = () => {
+  const { isDarkMode } = useTheme();
   const { user } = useContext(AuthContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,8 +120,13 @@ const ISO27001 = () => {
   ];
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    console.log("ISO27001 - User role:", user?.role, "User:", user);
+    if (user?.is_superuser || user?.role === "admin" || user?.role === "Super Consultant") {
       setIsAdmin(true);
+      console.log("ISO27001 - Setting isAdmin to true");
+    } else {
+      setIsAdmin(false);
+      console.log("ISO27001 - Setting isAdmin to false");
     }
   }, [user]);
 
@@ -374,39 +394,71 @@ const ISO27001 = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="bg-white p-6 shadow-sm flex-none">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 min-w-[200px] relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search controls..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-            />
+      <div className={`p-6 shadow-sm flex-none ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
+        <div className="flex items-center justify-between">
+          <h2 className={`text-xl font-semibold ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>ISO 27001 Controls</h2>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search controls..."
+                className={`w-64 pl-10 pr-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'dark-bg-card dark-border dark-text-primary' 
+                    : 'border-gray-300'
+                }`}
+              />
+              <Search
+                size={20}
+                className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'dark-text-tertiary' : 'text-gray-400'}`}
+              />
+            </div>
+            
+            <button className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${
+              isDarkMode 
+                ? 'dark-bg-card dark-border dark-text-primary hover:dark-bg-hover' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}>
+              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              Filter
+            </button>
+            
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => {
+                    setModalType("excel");
+                    setShowModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Upload Excel
+                </button>
+                <button
+                  onClick={openAddModal}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <Plus size={18} />
+                  Add Control
+                </button>
+              </>
+            )}
           </div>
-
-          {/* <select
-            value={selectedRegId}
-            onChange={(e) => setSelectedRegId(e.target.value)}
-            className="block w-40 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Reg IDs</option>
-            {regIdOptions.map((id) => (
-              <option key={id} value={id}>
-                {id}
-              </option>
-            ))}
-          </select> */}
-
+        </div>
+        
+        {/* Filter dropdowns row */}
+        <div className="flex items-center gap-4 mt-4">
           <select
             value={selectedParentId}
             onChange={handleParentIdChange}
-            className="block w-64 border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="block w-64 border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Parent Controls</option>
             {parentIdOptions.map((option) => (
@@ -422,27 +474,6 @@ const ISO27001 = () => {
             >
               Clear Filters
             </button>
-          )}
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => {
-                  setModalType("excel");
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-              >
-                <Upload size={18} />
-                Upload Excel
-              </button>
-              <button
-                onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Plus size={18} />
-                Add Control
-              </button>
-            </>
           )}
         </div>
       </div>

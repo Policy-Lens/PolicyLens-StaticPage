@@ -14,11 +14,13 @@ import {
 import { AuthContext } from "../../AuthContext";
 import { apiRequest } from "../../utils/api";
 import { message, Spin } from "antd";
+import { useTheme } from "../../contexts/ThemeContext";
 import { LoadingOutlined } from "@ant-design/icons";
 import Sidebar from "./Sidebar";
 import { useLocation } from "react-router-dom";
 
 const QuestionLibrary = () => {
+  const { isDarkMode } = useTheme();
   const { user } = useContext(AuthContext);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -35,11 +37,13 @@ const QuestionLibrary = () => {
   const [filters, setFilters] = useState({
     type: "",
     standard: "ISO27001", // Default standard
+    pdca_cycle: "", // Add PDCA filter
   });
   // Add pendingFilters state for dropdown
   const [pendingFilters, setPendingFilters] = useState({
     type: "",
     standard: "ISO27001",
+    pdca_cycle: "", // Add PDCA filter
   });
 
   // Modal states
@@ -67,6 +71,12 @@ const QuestionLibrary = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Bulk PDCA update state
+  const [showBulkPdcaModal, setShowBulkPdcaModal] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [bulkPdcaValue, setBulkPdcaValue] = useState("");
+  const [isUpdatingPdca, setIsUpdatingPdca] = useState(false);
 
   // Type choices for filtering and form
   const clauseTypeChoices = [
@@ -137,6 +147,7 @@ const QuestionLibrary = () => {
     if (searchQuery) params.append("search", searchQuery);
     if (filters.type) params.append("type_description", filters.type);
     if (filters.standard) params.append("standard", filters.standard);
+    if (filters.pdca_cycle) params.append("pdca_cycle", filters.pdca_cycle);
 
     endpoint += params.toString();
 
@@ -450,6 +461,80 @@ const QuestionLibrary = () => {
     }
   };
 
+  // Bulk PDCA update functions
+  const handleBulkPdcaUpdate = async () => {
+    if (!bulkPdcaValue || selectedQuestions.length === 0) {
+      message.warning("Please select questions and a PDCA value");
+      return;
+    }
+
+    setIsUpdatingPdca(true);
+
+    try {
+      const updates = selectedQuestions.map(question => ({
+        question_id: question.id,
+        pdca_cycle: bulkPdcaValue
+      }));
+
+      const response = await apiRequest(
+        "POST",
+        "/api/new-questionnaire/library/bulk-update-pdca/",
+        { updates },
+        true
+      );
+
+      message.success(`Successfully updated ${response.questions.length} questions`);
+      
+      // Refresh questions list
+      await handleGetQuestions();
+      
+      // Close modal and reset state
+      setShowBulkPdcaModal(false);
+      setSelectedQuestions([]);
+      setBulkPdcaValue("");
+    } catch (error) {
+      console.error("Error updating PDCA values:", error);
+      message.error(
+        `Failed to update PDCA values: ${error.message || "Unknown error"}`
+      );
+    } finally {
+      setIsUpdatingPdca(false);
+    }
+  };
+
+  const handleQuestionSelection = (question, isSelected) => {
+    if (isSelected) {
+      setSelectedQuestions(prev => [...prev, question]);
+    } else {
+      setSelectedQuestions(prev => prev.filter(q => q.id !== question.id));
+    }
+  };
+
+  const handleSelectAll = () => {
+    const clauseQuestions = questions.filter(q => q.type === "clause");
+    if (selectedQuestions.length === clauseQuestions.length) {
+      setSelectedQuestions([]);
+    } else {
+      setSelectedQuestions(clauseQuestions);
+    }
+  };
+
+  const openBulkPdcaModal = () => {
+    if (activeTab !== "clause") {
+      message.warning("Bulk PDCA update is only available for clause questions");
+      return;
+    }
+    setSelectedQuestions([]);
+    setBulkPdcaValue("");
+    setShowBulkPdcaModal(true);
+  };
+
+  const closeBulkPdcaModal = () => {
+    setShowBulkPdcaModal(false);
+    setSelectedQuestions([]);
+    setBulkPdcaValue("");
+  };
+
   // Effect to refetch questions when dependencies change
   useEffect(() => {
     handleGetQuestions();
@@ -508,17 +593,17 @@ const QuestionLibrary = () => {
   // If not admin, show access denied message
   if (!isAdmin) {
     return (
-      <div className="flex flex-col h-screen items-center justify-center bg-slate-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+      <div className={`flex flex-col h-screen items-center justify-center ${isDarkMode ? 'dark-bg-primary' : 'bg-slate-50'}`}>
+        <div className={`p-8 rounded-xl shadow-lg max-w-md w-full text-center ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
               <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <h1 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>
             Access Denied
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className={`mb-6 ${isDarkMode ? 'dark-text-secondary' : 'text-gray-600'}`}>
             You don't have permission to access the Question Library. This area
             is restricted to administrators only.
           </p>
@@ -536,13 +621,13 @@ const QuestionLibrary = () => {
   return (
     <div className="flex flex-1 overflow-hidden shadow-xl rounded-lg h-screen">
       {/* Question List */}
-      <div className="flex flex-col w-full bg-white transition-width duration-300 ease-in-out">
+      <div className={`flex flex-col w-full transition-width duration-300 ease-in-out ${isDarkMode ? 'dark-bg-primary' : 'bg-white'}`}>
         {/* Top Bar: Header and Actions */}
-        <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
+        <div className={`flex flex-col border-b sticky top-0 z-10 ${isDarkMode ? 'dark-bg-card dark-border' : 'border-slate-200 bg-white'}`}>
           {/* Header and Actions */}
           <div className="flex items-center p-4">
             {/* Header */}
-            <h2 className="text-lg font-semibold text-slate-700">
+            <h2 className={`text-lg font-semibold ${isDarkMode ? 'dark-text-primary' : 'text-slate-700'}`}>
               Question Library
             </h2>
 
@@ -556,7 +641,11 @@ const QuestionLibrary = () => {
                   placeholder="Search questions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 placeholder-slate-400"
+                  className={`pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-64 ${
+                    isDarkMode 
+                      ? 'dark-bg-card dark-border dark-text-primary placeholder-slate-400' 
+                      : 'border-slate-200 placeholder-slate-400'
+                  }`}
                 />
               </div>
 
@@ -567,7 +656,7 @@ const QuestionLibrary = () => {
                     filterDropdownOpen
                       ? "border-indigo-300 ring-2 ring-indigo-300"
                       : "border-slate-200"
-                  } rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm`}
+                  } rounded-lg flex items-center text-slate-700 ${isDarkMode ? 'hover:dark-bg-hover' : 'hover:bg-slate-50'} transition-colors focus:outline-none shadow-sm`}
                   onClick={toggleFilterDropdown}
                 >
                   <Filter
@@ -633,7 +722,7 @@ const QuestionLibrary = () => {
                               className={`w-full text-left px-2 py-1.5 rounded text-sm ${
                                 filters.type === type
                                   ? "bg-indigo-50 text-indigo-700 font-medium"
-                                  : "text-slate-600 hover:bg-slate-50"
+                                  : `${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`
                               }`}
                             >
                               {type}
@@ -642,10 +731,42 @@ const QuestionLibrary = () => {
                         </div>
                       </div>
 
+                      {/* PDCA Cycle Filter (only for clause questions) */}
+                      {activeTab === "clause" && (
+                        <div className="p-3 border-b border-slate-200">
+                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
+                            <span>PDCA Cycle</span>
+                            {filters.pdca_cycle && (
+                              <button
+                                onClick={() => handleFilterChange("pdca_cycle", "")}
+                                className="text-xs text-slate-500 hover:text-slate-700"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </h4>
+                          <div className="space-y-1">
+                            {["Plan", "Do", "Check", "Act"].map((cycle) => (
+                              <button
+                                key={cycle}
+                                onClick={() => handleFilterChange("pdca_cycle", cycle)}
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm ${
+                                  filters.pdca_cycle === cycle
+                                    ? "bg-indigo-50 text-indigo-700 font-medium"
+                                    : `${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`
+                                }`}
+                              >
+                                {cycle}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Active Filters Summary */}
-                      {(filters.type || searchQuery) && (
+                      {(filters.type || filters.pdca_cycle || searchQuery) && (
                         <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
-                          <h4 className="text-xs font-medium text-slate-600 mb-1">
+                          <h4 className="text-xs font-medium ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} mb-1">
                             Active Filters:
                           </h4>
                           <div className="flex flex-wrap gap-1">
@@ -655,6 +776,17 @@ const QuestionLibrary = () => {
                                 {filters.type}
                                 <button
                                   onClick={() => handleFilterChange("type", "")}
+                                  className="ml-1 hover:text-indigo-900"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            )}
+                            {filters.pdca_cycle && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                                PDCA: {filters.pdca_cycle}
+                                <button
+                                  onClick={() => handleFilterChange("pdca_cycle", "")}
                                   className="ml-1 hover:text-indigo-900"
                                 >
                                   <X size={12} />
@@ -678,10 +810,14 @@ const QuestionLibrary = () => {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="flex p-3 border-t border-slate-200 bg-slate-50 gap-2 sticky bottom-0 z-10">
+                    <div className={`flex p-3 border-t gap-2 sticky bottom-0 z-10 ${isDarkMode ? 'dark-border dark-bg-tertiary' : 'border-slate-200 bg-slate-50'}`}>
                       <button
                         onClick={clearFilters}
-                        className="flex-1 py-2 text-center bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                        className={`flex-1 py-2 text-center border rounded-lg transition-colors shadow-sm ${
+                          isDarkMode 
+                            ? 'dark-bg-card dark-border dark-text-primary hover:dark-bg-hover' 
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
                       >
                         Clear All
                       </button>
@@ -698,7 +834,11 @@ const QuestionLibrary = () => {
 
               {/* Upload Button */}
               <button
-                className="px-4 py-2.5 border border-slate-200 rounded-lg flex items-center text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none shadow-sm"
+                className={`px-4 py-2.5 border rounded-lg flex items-center transition-colors focus:outline-none shadow-sm ${
+                  isDarkMode 
+                    ? 'dark-bg-card dark-border dark-text-primary hover:dark-bg-hover' 
+                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
                 onClick={openUploadModal}
               >
                 <UploadCloud size={16} className="mr-2 text-slate-400" />
@@ -713,6 +853,17 @@ const QuestionLibrary = () => {
                 <Plus size={16} className="mr-1.5" />
                 <span>Add Question</span>
               </button>
+
+              {/* Bulk PDCA Update Button (only for clause questions) */}
+              {activeTab === "clause" && (
+                <button
+                  className="px-4 py-2.5 bg-green-600 text-white rounded-lg flex items-center hover:bg-green-700 transition-colors shadow-sm hover:shadow-md"
+                  onClick={openBulkPdcaModal}
+                >
+                  <Edit size={16} className="mr-1.5" />
+                  <span>Bulk Update PDCA</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -774,37 +925,47 @@ const QuestionLibrary = () => {
           ) : (
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="w-40 min-w-[10rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('reference')}>
+                <tr className={`border-b ${isDarkMode ? 'dark-bg-tertiary dark-border' : 'bg-slate-50 border-slate-200'}`}>
+                  <th className={`w-40 min-w-[10rem] p-4 text-left font-semibold cursor-pointer ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}`} onClick={() => handleSort('reference')}>
                     Reference {sortColumn === 'reference' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                   </th>
-                  <th className="w-80 p-4 text-left font-semibold text-slate-600">
+                  <th className={`w-80 p-4 text-left font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}`}>
                     Question
                   </th>
                   {['vapt', 'vapt_form'].includes(activeTab) && (
-                    <th className="w-40 min-w-[8rem] p-4 text-left font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('type')}>
+                    <th className="w-40 min-w-[8rem] p-4 text-left font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} cursor-pointer" onClick={() => handleSort('type')}>
                       Type {sortColumn === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                   )}
                   {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
-                    <th className="w-48 min-w-[10rem] p-4 text-center font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('control_no')}>
+                    <th className="w-48 min-w-[10rem] p-4 text-center font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} cursor-pointer" onClick={() => handleSort('control_no')}>
                       {activeTab === 'clause' ? 'Clause No.' : 'Control No.'} {sortColumn === 'control_no' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                   )}
                   {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
-                    <th className="w-48 min-w-[11rem] p-4 text-center font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('control_name')}>
+                    <th className="w-48 min-w-[11rem] p-4 text-center font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} cursor-pointer" onClick={() => handleSort('control_name')}>
                       {activeTab === 'clause' ? 'Clause Name' : 'Control Name'} {sortColumn === 'control_name' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                   )}
-                  <th className="w-44 p-4 text-center font-semibold text-slate-600">
+                  <th className="w-44 p-4 text-center font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}">
                     Standard
                   </th>
                   {activeTab === "clause" && (
-                    <th className="w-40 min-w-[10rem] p-4 text-center font-semibold text-slate-600 cursor-pointer" onClick={() => handleSort('pdca_cycle')}>
+                    <th className="w-40 min-w-[10rem] p-4 text-center font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} cursor-pointer" onClick={() => handleSort('pdca_cycle')}>
                       PDCA Cycle {sortColumn === 'pdca_cycle' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼'}
                     </th>
                   )}
-                  <th className="w-28 p-4 text-left font-semibold text-slate-600">
+                  {activeTab === "clause" && (
+                    <th className="w-16 p-4 text-center font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}">
+                      <input
+                        type="checkbox"
+                        checked={selectedQuestions.length === questions.filter(q => q.type === "clause").length && questions.filter(q => q.type === "clause").length > 0}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
+                      />
+                    </th>
+                  )}
+                  <th className="w-28 p-4 text-left font-semibold ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'}">
                     Actions
                   </th>
                 </tr>
@@ -827,17 +988,17 @@ const QuestionLibrary = () => {
                         </div>
                       </td>
                       {['vapt', 'vapt_form'].includes(activeTab) && (
-                        <td className="p-4 text-slate-600 text-left">
+                        <td className="p-4 ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} text-left">
                           {question.type_description}
                         </td>
                       )}
                       {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
-                        <td className="p-4 text-slate-600 text-center">
+                        <td className="p-4 ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} text-center">
                           {question.type_description?.split(' - ')[0]}
                         </td>
                       )}
                       {activeTab !== 'vapt' && activeTab !== 'vapt_form' && (
-                        <td className="p-4 text-slate-600 text-center">
+                        <td className="p-4 ${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} text-center">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
                             {question.type_description?.split(' - ')[1]}
                           </span>
@@ -862,6 +1023,16 @@ const QuestionLibrary = () => {
                           }`}>
                             {question.pdca_cycle}
                           </span>
+                        </td>
+                      )}
+                      {activeTab === "clause" && (
+                        <td className="p-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedQuestions.some(q => q.id === question.id)}
+                            onChange={(e) => handleQuestionSelection(question, e.target.checked)}
+                            className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
+                          />
                         </td>
                       )}
                       <td className="p-4">
@@ -1073,7 +1244,7 @@ const QuestionLibrary = () => {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  className={`px-4 py-2 border border-slate-200 rounded-lg transition-colors ${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`}
                   onClick={closeModal}
                 >
                   Cancel
@@ -1112,7 +1283,7 @@ const QuestionLibrary = () => {
 
             <div className="p-6">
               <div className="mb-6">
-                <p className="text-slate-600 mb-4">
+                <p className="${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} mb-4">
                   Upload an Excel file with questions to add to the library. The
                   file should follow the required format.
                 </p>
@@ -1181,7 +1352,7 @@ const QuestionLibrary = () => {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  className={`px-4 py-2 border border-slate-200 rounded-lg transition-colors ${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`}
                   onClick={closeModal}
                 >
                   Cancel
@@ -1218,7 +1389,7 @@ const QuestionLibrary = () => {
               <AlertCircle size={24} className="mr-3" />
               <h3 className="text-lg font-medium">Delete Question</h3>
             </div>
-            <p className="text-slate-600 mb-2">
+            <p className="${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} mb-2">
               Are you sure you want to delete this question?
             </p>
             <p className="text-sm text-slate-500 mb-5">
@@ -1229,7 +1400,7 @@ const QuestionLibrary = () => {
             </p>
             <div className="flex justify-end gap-3">
               <button
-                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                className={`px-4 py-2 text-sm border border-slate-200 rounded-lg transition-colors ${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`}
                 onClick={cancelDeleteQuestion}
               >
                 Cancel
@@ -1248,6 +1419,110 @@ const QuestionLibrary = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk PDCA Update Modal */}
+      {showBulkPdcaModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-t-lg">
+              <h3 className="text-lg font-medium">
+                Bulk Update PDCA Values
+              </h3>
+              <button
+                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                onClick={closeBulkPdcaModal}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-slate-600 mb-4">
+                  Select questions and choose a PDCA cycle value to update them in bulk.
+                </p>
+                
+                {/* Selected Questions Count */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-blue-800 text-sm">
+                    <strong>{selectedQuestions.length}</strong> question{selectedQuestions.length !== 1 ? 's' : ''} selected
+                  </p>
+                </div>
+
+                {/* PDCA Value Selection */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    PDCA Cycle *
+                  </label>
+                  <select
+                    value={bulkPdcaValue}
+                    onChange={(e) => setBulkPdcaValue(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-green-300 transition-all"
+                    required
+                  >
+                    <option value="">Select a PDCA Cycle</option>
+                    <option value="Plan">Plan</option>
+                    <option value="Do">Do</option>
+                    <option value="Check">Check</option>
+                    <option value="Act">Act</option>
+                  </select>
+                </div>
+
+                {/* Selected Questions List */}
+                {selectedQuestions.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Selected Questions:
+                    </label>
+                    <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg">
+                      {selectedQuestions.map((question) => (
+                        <div key={question.id} className="flex items-center justify-between p-2 border-b border-slate-100 last:border-b-0">
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-slate-700">
+                              {question.reference}
+                            </span>
+                            <span className="text-xs text-slate-500 ml-2">
+                              {question.pdca_cycle || 'No PDCA'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleQuestionSelection(question, false)}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  className={`px-4 py-2 border border-slate-200 rounded-lg transition-colors ${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`}
+                  onClick={closeBulkPdcaModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-70"
+                  onClick={handleBulkPdcaUpdate}
+                  disabled={!bulkPdcaValue || selectedQuestions.length === 0 || isUpdatingPdca}
+                >
+                  {isUpdatingPdca && (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                  )}
+                  {isUpdatingPdca ? "Updating..." : "Update PDCA Values"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {partialErrors && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-xl p-6 mx-4 h-80 overflow-y-auto">
@@ -1257,7 +1532,7 @@ const QuestionLibrary = () => {
                 Errors in Excel File While Uploading
               </h3>
             </div>
-            <p className="text-slate-600 mb-2">
+            <p className="${isDarkMode ? 'dark-text-secondary' : 'text-slate-600'} mb-2">
               The following errors were found in the uploaded Excel file:
             </p>
             <ul className="list-inside mb-5">
@@ -1266,7 +1541,7 @@ const QuestionLibrary = () => {
                   <div className="flex items-start flex-col p-2 border border-slate-200 rounded-lg mb-2">
                     <div className="font-bold text-size">Row {error.row} </div>
                     <div className="bg-slate-200 text-red-600 p-1">
-                      {error.error}
+                      {error.message || error.detail || "An error occurred"}
                     </div>
                   </div>
                 </li>
@@ -1274,7 +1549,7 @@ const QuestionLibrary = () => {
             </ul>
             <div className="flex justify-end gap-3">
               <button
-                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                className={`px-4 py-2 text-sm border border-slate-200 rounded-lg transition-colors ${isDarkMode ? 'dark-text-secondary hover:dark-bg-hover' : 'text-slate-600 hover:bg-slate-50'}`}
                 onClick={() => {
                   setPartialErrors(false);
                   setPartialErrorsWhileUploading([]);

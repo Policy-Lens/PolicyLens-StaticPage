@@ -212,6 +212,7 @@ const PDFTronViewer = ({ fileUrl, fileType, onLoadingChange }) => {
 
                 // Load the document with the specified options
                 try {
+                    console.log('PDFTron loading document from URL:', fileUrl);
                     viewer.current.Core.documentViewer.loadDocument(fileUrl, loadOptions);
                 } catch (docLoadError) {
                     console.error('Error loading document:', docLoadError);

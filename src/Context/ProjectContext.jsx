@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { apiRequest } from "../utils/api";
+import { apiRequest, BASE_URL, isAuthenticated } from "../utils/api";
 import { useParams } from "react-router-dom";
 export const ProjectContext = createContext();
 
@@ -30,16 +30,34 @@ export const ProjectProvider = ({ children }) => {
   };
 
   const getStepId = async (project_id, step_no) => {
-    const res = await apiRequest(
-      "GET",
-      `/api/plc/plc_step/${project_id}/${step_no}/get_id/`,
-      null,
-      true
-    );
-    if (res.status == 200) {
-      return res.data;
-    } else {
-      // console.log(res.error)
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/plc/plc_step/${project_id}/${step_no}/get_id/`,
+        null,
+        true
+      );
+      if (res.status == 200) {
+        return res.data;
+      } else {
+        console.error("Failed to get step ID:", res);
+        throw new Error(`Failed to get step ID: ${res.status}`);
+      }
+    } catch (error) {
+      // Handle timeout errors more gracefully
+      if (error.message && error.message.includes('timeout')) {
+        console.warn("API timeout for step ID - this might indicate server issues");
+        throw new Error("Request timed out. Please try refreshing the page.");
+      }
+      
+      console.error("Error in getStepId:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.status,
+        data: error.data || error.response?.data,
+        stack: error.stack
+      });
+      throw error;
     }
   };
 
@@ -59,14 +77,39 @@ export const ProjectProvider = ({ children }) => {
   };
 
   const getStepData = async (step_id) => {
-    const res = await apiRequest(
-      "GET",
-      `/api/plc/plc_data/${step_id}/latest/`,
-      null,
-      true
-    );
-    // console.log(res.data);
-    return res.data;
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/plc/plc_data/${step_id}/latest/`,
+        null,
+        true
+      );
+      // Handle 204 No Content response (no data available yet)
+      if (res.status === 204) {
+        return [];
+      }
+      return res.data || [];
+    } catch (error) {
+      // Handle 204 No Content as a normal case, not an error
+      if (error.status === 204) {
+        return [];
+      }
+      
+      // Handle timeout errors more gracefully
+      if (error.message && error.message.includes('timeout')) {
+        console.warn("API timeout for step data - returning empty data");
+        return [];
+      }
+      
+      console.error("Error in getStepData:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.status,
+        data: error.data || error.response?.data,
+        stack: error.stack
+      });
+      throw error;
+    }
   };
 
   const addStepData = async (step_id, data) => {
@@ -95,13 +138,28 @@ export const ProjectProvider = ({ children }) => {
   };
 
   const getStepAssignment = async (step_id) => {
-    const res = await apiRequest(
-      "GET",
-      `/api/plc/step-assignment/${step_id}/`,
-      null,
-      true
-    );
-    return res;
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/plc/step-assignment/${step_id}/`,
+        null,
+        true
+      );
+      return res;
+    } catch (error) {
+      // Handle 204 No Content as a normal case, not an error
+      if (error.status === 204) {
+        return { status: 204, data: [] };
+      }
+      console.error("Error in getStepAssignment:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.status,
+        data: error.data || error.response?.data,
+        stack: error.stack
+      });
+      throw error;
+    }
   };
   const getMembers = async (projectid) => {
     const res = await apiRequest(

@@ -810,11 +810,14 @@ const MyReports = () => {
 
           const response = await apiRequest('GET', `/api/rarpt/project/${projectid}/reports/${reportType}/${tab.report.id}/`, null, true);
           if (response && response.data) {
-            // Report exists, update with fresh data
-            validatedTabs.push({
+            // Report exists, update with fresh data and ensure unique tab ID
+            const updatedTab = {
               ...tab,
-              report: response.data
-            });
+              report: response.data,
+              // Ensure the tab ID follows the new unique format
+              id: `report-${tab.report.id}-${tab.type}`
+            };
+            validatedTabs.push(updatedTab);
           }
           // If report doesn't exist, skip this tab
         } catch (error) {
@@ -822,7 +825,12 @@ const MyReports = () => {
           if (error.response && error.response.status === 401) {
             console.warn(`Authentication failed for report ${tab.report.id}, keeping tab but not refreshing data`);
             // Keep the tab but don't refresh the data - user can still see the cached data
-            validatedTabs.push(tab);
+            // Also ensure the tab ID follows the new unique format
+            const updatedTab = {
+              ...tab,
+              id: `report-${tab.report.id}-${tab.type}`
+            };
+            validatedTabs.push(updatedTab);
           } else {
             // For other errors (404, 500, etc.), skip the tab
             console.warn(`Report ${tab.report.id} validation failed, skipping tab:`, error);
@@ -836,7 +844,8 @@ const MyReports = () => {
 
   // Handle report row click to open in new tab
   const handleOpenReportInTab = (report) => {
-    const tabId = `report-${report.id}`;
+    // Create unique tab ID using both report ID and type to avoid conflicts
+    const tabId = `report-${report.id}-${report.report_tab}`;
     const tabTitle = `${report.name} (${report.type})`;
 
     // Check if tab already exists
@@ -905,7 +914,8 @@ const MyReports = () => {
 
   // Handle report deletion and close corresponding tab
   const handleReportDelete = (deletedReport) => {
-    const tabId = `report-${deletedReport.id}`;
+    // Use the same unique tab ID format as in handleOpenReportInTab
+    const tabId = `report-${deletedReport.id}-${deletedReport.report_tab}`;
 
     // Check if the deleted report's tab is open
     const tabIndex = tabs.findIndex(tab => tab.id === tabId);
@@ -966,7 +976,9 @@ const MyReports = () => {
 
   // Render tab content
   const renderTabContent = () => {
-    if (!activeTab) return null;
+    if (!activeTab) {
+      return null;
+    }
 
     // Handle case where report data might be missing
     if (activeTab.type !== 'table' && !activeTab.report) {
@@ -990,7 +1002,7 @@ const MyReports = () => {
         </div>
       );
     }
-
+    
     switch (activeTab.type) {
       case 'table':
         return (
@@ -1097,7 +1109,7 @@ const MyReports = () => {
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-1">
-            <div className="flex items-center min-w-full bg-gray-50">
+            <div className="flex items-center bg-gray-50">
               {tabs.map((tab) => (
                 <div
                   key={tab.id}

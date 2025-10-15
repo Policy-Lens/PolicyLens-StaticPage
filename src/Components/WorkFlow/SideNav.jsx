@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 import { ProjectContext } from "../../Context/ProjectContext";
 import { AuthContext } from "../../AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const SideNav = ({ collapsed, setCollapsed }) => {
+  const { isDarkMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { projectid } = useParams();
@@ -35,7 +37,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
     {
       label: "Project Dashboard",
       icon: <LayoutDashboard size={20} />,
-      path: `/project/${projectid}/admindashboard`,
+      path: `/project/${projectid}/dashboard`,
     },
     {
       label: "Project Team",
@@ -80,13 +82,14 @@ const SideNav = ({ collapsed, setCollapsed }) => {
 
   return (
     <div
-      className={`bg-white border-r border-gray-200 fixed top-0 left-0 h-screen 
+      className={`fixed top-0 left-0 h-screen 
         transition-all duration-300 ease-in-out z-30
         ${collapsed ? "w-16" : "w-56"}
-        flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.06)]`}
+        flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.06)]
+        ${isDarkMode ? 'dark-bg-secondary dark-border' : 'bg-white border-r border-gray-200'}`}
     >
       {/* Sidebar Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 py-4 flex items-center justify-between px-4">
+      <div className={`border-b py-4 flex items-center justify-between px-4 ${isDarkMode ? 'dark-bg-tertiary dark-border' : 'bg-gradient-to-r from-blue-50 to-white border-gray-200'}`}>
         <div
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => navigate("/home/dashboard")}
@@ -98,7 +101,7 @@ const SideNav = ({ collapsed, setCollapsed }) => {
             />
           </div>
           {!collapsed && (
-            <span className="font-semibold text-base text-gray-800 group-hover:text-blue-700 transition-colors">
+            <span className={`font-semibold text-base group-hover:text-blue-700 transition-colors ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>
               Home
             </span>
           )}
@@ -128,8 +131,12 @@ const SideNav = ({ collapsed, setCollapsed }) => {
                 ${collapsed ? "justify-center" : "gap-3"} 
                 ${
                   active
-                    ? "bg-blue-100 text-blue-800"
-                    : "text-gray-700 hover:bg-blue-50"
+                    ? isDarkMode 
+                      ? "dark-bg-active dark-text-primary" 
+                      : "bg-blue-100 text-blue-800"
+                    : isDarkMode
+                      ? "dark-text-secondary hover:dark-bg-hover"
+                      : "text-gray-700 hover:bg-blue-50"
                 } 
                 active:scale-98 relative overflow-hidden`}
               onClick={() => navigate(item.path)}
@@ -142,8 +149,10 @@ const SideNav = ({ collapsed, setCollapsed }) => {
                 {React.cloneElement(item.icon, {
                   className: `${
                     active
-                      ? "text-blue-700"
-                      : "text-gray-500 group-hover:text-blue-600"
+                      ? isDarkMode ? "dark-text-primary" : "text-blue-700"
+                      : isDarkMode 
+                        ? "dark-text-tertiary group-hover:dark-text-primary" 
+                        : "text-gray-500 group-hover:text-blue-600"
                   } transition-colors`,
                 })}
               </div>
@@ -152,8 +161,10 @@ const SideNav = ({ collapsed, setCollapsed }) => {
                 <span
                   className={`text-sm font-medium whitespace-nowrap transition-colors ${
                     active
-                      ? "text-blue-800"
-                      : "text-gray-700 group-hover:text-blue-700"
+                      ? isDarkMode ? "dark-text-primary" : "text-blue-800"
+                      : isDarkMode 
+                        ? "dark-text-secondary group-hover:dark-text-primary" 
+                        : "text-gray-700 group-hover:text-blue-700"
                   }`}
                 >
                   {item.label}
@@ -169,12 +180,12 @@ const SideNav = ({ collapsed, setCollapsed }) => {
       </nav>
 
       {/* User Profile & Project Role */}
-      <div className="border-t border-gray-200 pt-3 pb-2 px-3">
+      <div className={`border-t pt-3 pb-2 px-3 ${isDarkMode ? 'dark-border' : 'border-gray-200'}`}>
         {/* User Profile */}
         <div
-          className={`flex items-center gap-3 mb-3 p-2 rounded-lg bg-gray-50 ${
-            collapsed ? "justify-center" : ""
-          }`}
+          className={`flex items-center gap-3 mb-3 p-2 rounded-lg ${
+            isDarkMode ? 'dark-bg-tertiary' : 'bg-gray-50'
+          } ${collapsed ? "justify-center" : ""}`}
         >
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 overflow-hidden">
             <UserCircle size={collapsed ? 20 : 24} />
@@ -182,10 +193,10 @@ const SideNav = ({ collapsed, setCollapsed }) => {
 
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-gray-800 truncate">
+              <p className={`text-sm font-semibold truncate ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>
                 {user?.name || "consultant 1"}
               </p>
-              <p className="text-xs text-gray-500 capitalize">
+              <p className={`text-xs capitalize ${isDarkMode ? 'dark-text-secondary' : 'text-gray-500'}`}>
                 {user?.role || "Consultant"}
               </p>
             </div>
@@ -194,9 +205,9 @@ const SideNav = ({ collapsed, setCollapsed }) => {
 
         {/* Project Role - Only show if admin */}
         {!collapsed && projectRole === "consultant admin" && (
-          <div className="mb-3 px-2 py-1 bg-blue-50 rounded-md">
-            <p className="text-xs text-gray-500">Project Role:</p>
-            <p className="text-sm font-medium text-blue-700 capitalize">
+          <div className={`mb-3 px-2 py-1 rounded-md ${isDarkMode ? 'dark-bg-card' : 'bg-blue-50'}`}>
+            <p className={`text-xs ${isDarkMode ? 'dark-text-secondary' : 'text-gray-500'}`}>Project Role:</p>
+            <p className={`text-sm font-medium capitalize ${isDarkMode ? 'dark-text-primary' : 'text-blue-700'}`}>
               {projectRole || "Consultant Admin"}
             </p>
           </div>

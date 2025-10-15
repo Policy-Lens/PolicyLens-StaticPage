@@ -262,7 +262,7 @@ const FileViewerModal = ({ visible, file, onClose }) => {
           Close
         </Button>
       ]}
-      bodyStyle={{ padding: '16px', maxHeight: '85vh', overflow: 'auto' }}
+      styles={{ body: { padding: '16px', maxHeight: '85vh', overflow: 'auto' } }}
       style={{ top: 20 }}
     >
       {renderFileContent()}

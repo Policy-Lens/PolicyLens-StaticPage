@@ -18,7 +18,7 @@ const ConsultantTeamPage = () => {
   });
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const canEdit = ["consultant admin", "admin", "Super Consultant"].includes(user?.role);
+  const canEdit = ["consultant admin", "admin", "Admin", "Super Consultant"].includes(user?.role);
 
   useEffect(() => {
     const fetchConsultants = async () => {
@@ -94,9 +94,9 @@ const ConsultantTeamPage = () => {
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Consultant Team</h1>
       
       <div className="flex justify-between items-center mb-4">
-        {/* Create Consultant Button (Super Consultant only) */}
+        {/* Create Consultant Button (Super Consultant and Admin only) */}
         <div>
-          {user?.role === "Super Consultant" && (
+          {(user?.role === "Super Consultant" || user?.role === "admin" || user?.role === "Admin") && (
             <button
               className="px-4 py-2 rounded-lg font-medium shadow-md bg-green-600 text-white hover:bg-green-700"
               onClick={() => setShowCreateModal(true)}

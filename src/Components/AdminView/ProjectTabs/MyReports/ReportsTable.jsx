@@ -254,6 +254,7 @@ const ReportsTable = ({ refreshTrigger, onRowClick, onReportDelete }) => {
     // Handle view report
     const handleView = (e, report) => {
         e.stopPropagation && e.stopPropagation();
+        
         if (onRowClick) {
             onRowClick(report);
         } else {
@@ -1411,9 +1412,9 @@ const ReportsTable = ({ refreshTrigger, onRowClick, onReportDelete }) => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {visibleReports.map((report) => (
+                                {visibleReports.map((report, index) => (
                                     <tr
-                                        key={report.id}
+                                        key={`${report.id}-${report.type}-${index}`}
                                         className="hover:bg-gray-50 cursor-pointer"
                                         onClick={(e) => handleView(e, report)}
                                     >

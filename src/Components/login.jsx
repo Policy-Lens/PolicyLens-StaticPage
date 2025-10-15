@@ -7,8 +7,10 @@ import { AuthContext } from "../AuthContext";
 import { apiRequest, BASE_URL_WS } from "../utils/api";
 import { Eye, EyeOff } from "lucide-react";
 import { useNotifications } from "../Context/NotificationContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 const LoginPage = () => {
+  const { isDarkMode } = useTheme();
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -108,10 +110,18 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-blue-300">
-      <div className="bg-white p-10 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-blue-700">Login</h2>
-        <p className="text-center text-gray-600 mt-2">Access your account</p>
+    <div className={`flex items-center justify-center min-h-screen ${
+      isDarkMode 
+        ? 'dark-bg-primary' 
+        : 'bg-gradient-to-br from-blue-100 to-blue-300'
+    }`}>
+      <div className={`p-10 rounded-lg shadow-xl w-full max-w-md ${
+        isDarkMode 
+          ? 'dark-bg-card' 
+          : 'bg-white'
+      }`}>
+        <h2 className={`text-3xl font-bold text-center ${isDarkMode ? 'dark-text-primary' : 'text-blue-700'}`}>Login</h2>
+        <p className={`text-center mt-2 ${isDarkMode ? 'dark-text-secondary' : 'text-gray-600'}`}>Access your account</p>
 
         {message && (
           <div className="mt-4 bg-green-50 border border-green-200 rounded-md p-3 flex items-center animate-fade-in transform transition duration-300 ease-in-out">

@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Collapse, Button, Input, Modal, Select, DatePicker, Form } from "antd";
 import { PaperClipOutlined } from "@ant-design/icons";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const { Panel } = Collapse;
 const { TextArea } = Input;
 
 const BrainstormSolution = () => {
+  const { isDarkMode } = useTheme();
   const [fileLists, setFileLists] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -16,15 +18,19 @@ const BrainstormSolution = () => {
   };
 
   const renderLargeInputWithAttachButton = (panelKey, placeholder) => (
-    <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+    <div className={`relative border rounded-lg overflow-hidden ${isDarkMode ? 'dark-border' : 'border-gray-300'}`}>
       <TextArea
         rows={4}
         placeholder={placeholder}
-        className="border-none resize-none p-4 pr-[100px] text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={`border-none resize-none p-4 pr-[100px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'dark-text-primary dark-bg-card' : 'text-gray-800'}`}
       />
       <div className="absolute bottom-3 right-4">
         <Button
-          className="bg-gray-100 rounded-full px-4 py-1 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-200 focus:outline-none"
+          className={`rounded-full px-4 py-1 text-sm font-semibold shadow-sm focus:outline-none ${
+            isDarkMode 
+              ? 'dark-bg-tertiary dark-text-secondary hover:dark-bg-hover' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
         >
           <PaperClipOutlined className="mr-2" />
           Attach Files
@@ -34,7 +40,7 @@ const BrainstormSolution = () => {
   );
 
   return (
-    <div className="relative p-6 rounded-md bg-white">
+    <div className={`relative p-6 rounded-md ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
       <h2 className="text-xl font-bold mb-4">Schedule Meeting</h2>
       <Button
         type="primary"

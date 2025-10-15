@@ -47,17 +47,94 @@ const LoadingIndicator = () => (
 );
 
 const steps = [
-  { title: "Service Requirements", content: <ServiceRequirements /> },
-  { title: "Inquiry Section", content: <InquirySection /> },
-  { title: "Finalize Contract", content: <FinalizeContract /> },
-  { title: "Gap Analysis", content: <GapAnalysis /> },
-  { title: "Data Analysis", content: <DataAnalysis /> },
-  { title: "RART", content: <RART /> },
-  { title: "Planning and Discussing Policies", content: <Planning /> },
-  { title: "Implementation of Policies", content: <DiscussImplementation /> },
-  { title: "Internal Audit Process", content: <InternalAuditProcess /> },
-  { title: "Audit Decision", content: <AuditDecision /> },
-  { title: "Sustenance", content: <Sustenance /> },
+  { 
+    title: "Service Requirements", 
+    content: <ServiceRequirements />,
+    process: "Non Core",
+    standard: "ISO27001",
+    isoClause: "ISO: No Clause",
+    pdca: "Plan"
+  },
+  { 
+    title: "Inquiry Section", 
+    content: <InquirySection />,
+    process: "Non Core",
+    standard: "ISO27001",
+    isoClause: "ISO: No Clause",
+    pdca: "Plan"
+  },
+  { 
+    title: "Finalize Contract", 
+    content: <FinalizeContract />,
+    process: "Non Core",
+    standard: "ISO27001",
+    isoClause: "ISO: No Clause",
+    pdca: "Plan"
+  },
+  { 
+    title: "Gap Analysis", 
+    content: <GapAnalysis />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 4.1, 4.2, 4.3, 4.4",
+    pdca: "Plan"
+  },
+  { 
+    title: "Data Analysis", 
+    content: <DataAnalysis />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 4.3",
+    pdca: "Plan"
+  },
+  { 
+    title: "RART", 
+    content: <RART />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: No Clause",
+    pdca: "Plan"
+  },
+  { 
+    title: "Planning and Discussing Policies", 
+    content: <Planning />,
+    process: "Non Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 4.3, 5.1, 5.2, 5.3",
+    pdca: "Plan"
+  },
+  { 
+    title: "Implementation of Policies", 
+    content: <DiscussImplementation />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 6.3, 7.1, 7.2, 7, 8",
+    pdca: "Do"
+  },
+  { 
+    title: "Internal Audit Process", 
+    content: <InternalAuditProcess />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 9.1, 9.2",
+    pdca: "Check"
+  },
+  { 
+    title: "Audit Decision", 
+    content: <AuditDecision />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 9.3",
+    pdca: "Check"
+  },
+  { 
+    title: "Sustenance", 
+    content: <Sustenance />,
+    process: "Core",
+    standard: "ISO27001",
+    isoClause: "ISO: 10",
+    pdca: "Act"
+  },
 ];
 
 const CarouselHorizontalStepper = () => {
@@ -298,6 +375,7 @@ const CarouselHorizontalStepper = () => {
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Process</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Standard</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">ISO Clause</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">PDCA</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Progress</th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-700">Action</th>
                 </tr>
@@ -307,8 +385,9 @@ const CarouselHorizontalStepper = () => {
                   const status = getStepStatus(index);
                   const isAccessible = canNavigateToStep(index);
                   const currentStepData = stepData[index] || {};
-                  const process = currentStepData.process || "core";
-                  const associatedIsoClause = currentStepData.associatedIsoClause;
+                  const process = step.process || currentStepData.process || "core";
+                  const associatedIsoClause = step.isoClause || currentStepData.associatedIsoClause;
+                  const pdca = step.pdca;
 
                   return (
                     <tr
@@ -352,12 +431,12 @@ const CarouselHorizontalStepper = () => {
                       </td>
                       <td className="py-4 px-6">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${process === "core"
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${process === "Core"
                             ? "bg-blue-100 text-blue-800"
                             : "bg-orange-100 text-orange-800"
                             }`}
                         >
-                          {process === "core" ? "Core" : "Non Core"}
+                          {process}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -374,6 +453,17 @@ const CarouselHorizontalStepper = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           ISO:&nbsp;<InteractiveIsoClause isoClause={associatedIsoClause} />
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          pdca === "Plan" ? "bg-emerald-100 text-emerald-700" :
+                          pdca === "Do" ? "bg-pink-100 text-pink-700" :
+                          pdca === "Check" ? "bg-orange-100 text-orange-700" :
+                          pdca === "Act" ? "bg-purple-100 text-purple-700" :
+                          "bg-slate-100 text-slate-700"
+                        }`}>
+                          {pdca}
                         </span>
                       </td>
                       <td className="py-4 px-6">

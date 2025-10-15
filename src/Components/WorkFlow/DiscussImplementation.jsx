@@ -240,7 +240,7 @@ function DiscussImplementation() {
             </span>
           </div>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button
                 type="default"
                 onClick={handleAssignTask}
@@ -249,7 +249,7 @@ function DiscussImplementation() {
                 Assign Task
               </Button>
             )}
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Select
                 value={process}
                 onChange={updateProcess}
@@ -260,7 +260,7 @@ function DiscussImplementation() {
                 <Option value="non core">Non Core</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select
                 value={stepStatus}
                 onChange={updateStepStatus}

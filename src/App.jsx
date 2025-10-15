@@ -5,7 +5,6 @@ import {
   Navigate,
 } from "react-router-dom";
 import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper";
-import AdminDashboard from "./Components/AdminView/DashboardComponents/AdminDashboard";
 import ProjectTeam from "./Components/AdminView/ProjectTeam";
 import AdminPreview from "./Components/AdminView/AdminPreview";
 import AuditorsPage from "./Components/HomeNav/Auditors";
@@ -24,18 +23,20 @@ import Support from "./Components/AdminView/ProjectTabs/Support";
 import MyReports from "./Components/AdminView/ProjectTabs/MyReports/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
+import Dashboard from "./Components/AdminView/ProjectTabs/Dashboard";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
 import ISO4217 from "./Components/HomeNav/Database/ISO4217";
 import GICS from "./Components/HomeNav/Database/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
-import AdminDashboardRouter from "./Components/AdminView/DashboardComponents/AdminDashboardRouter";
 import Regulations from "./Components/HomeNav/Database/Regulations";
 import ISO27001 from "./Components/HomeNav/Database/ISO27001";
+import NISTCSF2 from "./Components/HomeNav/Database/NISTCSF2";
 import HomeLayout from "./Components/HomeNav/HomeLayout";
 import { NotificationProvider } from "./Context/NotificationContext";
 import NotificationToast from "./Components/Common/NotificationToast";
@@ -120,6 +121,10 @@ const router = createBrowserRouter([
             path: "gics",
             element: <GICS />,
           },
+          {
+            path: "nist-csf-2-0",
+            element: <NISTCSF2 />,
+          },
         ],
       },
       {
@@ -147,10 +152,6 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <CarouselHorizontalStepper />,
-      },
-      {
-        path: "admindashboard/*",
-        element: <AdminDashboardRouter />,
       },
       {
         path: "internalauditprocess",
@@ -208,20 +209,26 @@ const router = createBrowserRouter([
         path: "policylibrary",
         element: <PolicyLibrary />,
       },
+      {
+        path: "dashboard",
+        element: <Dashboard />,
+      },
     ],
   },
 ]);
 
 const AppLayout = () => {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <ProjectProvider>
-          <RouterProvider router={router} />
-          <NotificationToast />
-        </ProjectProvider>
-      </NotificationProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <ProjectProvider>
+            <RouterProvider router={router} />
+            <NotificationToast />
+          </ProjectProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

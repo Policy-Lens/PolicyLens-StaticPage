@@ -708,7 +708,7 @@ function ImplementPolicies() {
             Implement Policies
           </h2>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") &&
+            {projectRole && projectRole.includes("consultant admin") &&
               reviewStatus !== "under_review" &&
               reviewStatus !== "accepted" && (
                 <Button
@@ -784,7 +784,7 @@ function ImplementPolicies() {
             </span>
           </div>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button
                 type="default"
                 onClick={handleAssignTask}
@@ -793,7 +793,7 @@ function ImplementPolicies() {
                 Assign Task
               </Button>
             )}
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Select
                 value={process}
                 onChange={updateProcess}
@@ -804,7 +804,7 @@ function ImplementPolicies() {
                 <Option value="non core">Non Core</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select
                 value={stepStatus}
                 onChange={updateStepStatus}
@@ -816,7 +816,7 @@ function ImplementPolicies() {
                 <Option value="completed">Completed</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Button
                 type="primary"
                 onClick={handleAddData}
@@ -1001,7 +1001,7 @@ function ImplementPolicies() {
               Start implementing policies by adding your implementation details
               and progress.
             </p>
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Button
                 onClick={handleAddData}
                 type="primary"

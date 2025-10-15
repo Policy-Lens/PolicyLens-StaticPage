@@ -508,7 +508,7 @@ const RART = () => {
               Risk Assessment and Risk Treatment (RART)
             </h1>
             <div className="flex space-x-3">
-              {projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
+              {projectRole && projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
                 <Button
                   type="default"
                   onClick={handleSendForReview}
@@ -556,7 +556,7 @@ const RART = () => {
               </span>
             </div>
             <div className="flex space-x-3">
-              {projectRole.includes("consultant admin") && (
+              {projectRole && projectRole.includes("consultant admin") && (
                 <Button
                   type="default"
                   onClick={handleAssignTask}
@@ -565,7 +565,7 @@ const RART = () => {
                   Assign Task
                 </Button>
               )}
-              {projectRole.includes("consultant admin") && (
+              {projectRole && projectRole.includes("consultant admin") && (
                 <Select
                   value={process}
                   onChange={updateProcess}
@@ -575,7 +575,7 @@ const RART = () => {
                   <Option value="non core">Non Core</Option>
                 </Select>
               )}
-              {(projectRole.includes("consultant admin") || isAssignedUser) && (
+              {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
                 <Select
                   value={stepStatus}
                   onChange={updateStepStatus}

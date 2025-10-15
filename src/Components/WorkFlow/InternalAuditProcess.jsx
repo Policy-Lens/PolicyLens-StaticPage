@@ -806,7 +806,7 @@ const InternalAuditProcess = () => {
             Internal Audit Process
           </h2>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") &&
+            {projectRole && projectRole.includes("consultant admin") &&
               reviewStatus !== "under_review" &&
               reviewStatus !== "accepted" && (
                 <Button
@@ -882,7 +882,7 @@ const InternalAuditProcess = () => {
             </span>
           </div>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button
                 type="default"
                 onClick={handleAssignTask}
@@ -891,7 +891,7 @@ const InternalAuditProcess = () => {
                 Assign Task
               </Button>
             )}
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Select
                 value={process}
                 onChange={updateProcess}
@@ -902,7 +902,7 @@ const InternalAuditProcess = () => {
                 <Option value="non core">Non Core</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select
                 value={stepStatus}
                 onChange={updateStepStatus}

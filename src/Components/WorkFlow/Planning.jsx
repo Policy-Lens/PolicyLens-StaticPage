@@ -15,10 +15,12 @@ import { useParams } from "react-router-dom";
 import { BASE_URL, apiRequest } from "../../utils/api";
 import DiscussingPolicies from "./DiscussingPolicies";
 import InteractiveIsoClause from "../Common/InteractiveIsoClause";
+import { useTheme } from "../../contexts/ThemeContext";
 const { TextArea } = Input;
 const { Option } = Select;
 
 const Planning = () => {
+  const { isDarkMode } = useTheme();
   const [fileList, setFileList] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAssignTaskVisible, setIsAssignTaskVisible] = useState(false);
@@ -510,7 +512,11 @@ const Planning = () => {
                     <a
                       href="/templates/Review_template.xlsx"
                       download="review_template.xlsx"
-                      className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none"
+                      className={`inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 focus:outline-none ${
+                        isDarkMode 
+                          ? 'dark-bg-card dark-border hover:dark-bg-hover' 
+                          : 'bg-white hover:bg-blue-50'
+                      }`}
                     >
                       <svg className="-ml-1 mr-2 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -551,7 +557,11 @@ const Planning = () => {
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Existing Review Files</h4>
                 <div className="space-y-3">
                   {reviewOldFilesNeeded.map((fileUrl) => (
-                    <div key={fileUrl} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <div key={fileUrl} className={`flex items-center justify-between p-3 rounded-lg border shadow-sm ${
+                      isDarkMode 
+                        ? 'dark-bg-card dark-border' 
+                        : 'bg-white border-gray-200'
+                    }`}>
                       <div className="flex items-center overflow-hidden">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                           <FileTextOutlined className="text-blue-600" />
@@ -637,14 +647,14 @@ const Planning = () => {
   };
 
   return (
-    <div className="min-h-full p-6">
+    <div className={`min-h-full p-6 ${isDarkMode ? 'dark-bg-primary' : ''}`}>
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">
+          <h2 className={`text-xl font-semibold ${isDarkMode ? 'dark-text-primary' : 'text-gray-800'}`}>
             Create a Plan/Draft Policies
           </h2>
           <div className="flex space-x-3">
-            {projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
+            {projectRole && projectRole.includes("consultant admin") && reviewStatus !== "under_review" && reviewStatus !== "accepted" && (
               <Button
                 type="default"
                 onClick={handleSendForReview}
@@ -692,16 +702,20 @@ const Planning = () => {
             </span>
           </div>
           <div className="flex gap-2">
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Button
                 type="default"
                 onClick={handleAssignTask}
-                className="bg-white hover:bg-gray-50 border border-gray-300 shadow-sm"
+                className={`border shadow-sm ${
+                  isDarkMode 
+                    ? 'dark-bg-card dark-border hover:dark-bg-hover' 
+                    : 'bg-white hover:bg-gray-50 border-gray-300'
+                }`}
               >
                 Assign Task
               </Button>
             )}
-            {projectRole.includes("consultant admin") && (
+            {projectRole && projectRole.includes("consultant admin") && (
               <Select
                 value={process}
                 onChange={updateProcess}
@@ -711,7 +725,7 @@ const Planning = () => {
                 <Option value="non core">Non Core</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Select
                 value={stepStatus}
                 onChange={updateStepStatus}
@@ -722,7 +736,7 @@ const Planning = () => {
                 <Option value="completed">Completed</Option>
               </Select>
             )}
-            {(projectRole.includes("consultant admin") || isAssignedUser) && (
+            {((projectRole && projectRole.includes("consultant admin")) || isAssignedUser) && (
               <Button
                 type="primary"
                 onClick={handleAddData}
@@ -735,7 +749,7 @@ const Planning = () => {
         </div>
       </div>
       {planningData.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className={`rounded-xl shadow-md overflow-hidden ${isDarkMode ? 'dark-bg-card' : 'bg-white'}`}>
           <div className="p-6">
             <div className="flex flex-wrap justify-between items-center mb-6">
               <div>
@@ -836,7 +850,11 @@ const Planning = () => {
                 <h3 className="text-sm uppercase tracking-wider text-gray-500 font-semibold mb-3">
                   Review Comment
                 </h3>
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                <div className={`p-3 rounded-lg shadow-sm border ${
+                  isDarkMode 
+                    ? 'dark-bg-card dark-border' 
+                    : 'bg-white border-gray-100'
+                }`}>
                   <p className="text-sm text-gray-800">{reviewComment}</p>
                 </div>
               </div>
@@ -850,7 +868,11 @@ const Planning = () => {
                   {reviewOldFilesNeeded.map((fileUrl) => (
                     <div
                       key={fileUrl}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
+                      className={`flex items-center justify-between p-3 rounded-lg border shadow-sm ${
+                        isDarkMode 
+                          ? 'dark-bg-card dark-border' 
+                          : 'bg-white border-gray-200'
+                      }`}
                     >
                       <div className="flex items-center overflow-hidden">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
@@ -1041,7 +1063,11 @@ const Planning = () => {
                 <a
                   href="/templates/planning_template.xlsx"
                   download="planning_template.xlsx"
-                  className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none"
+                  className={`inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 focus:outline-none ${
+                    isDarkMode 
+                      ? 'dark-bg-card dark-border hover:dark-bg-hover' 
+                      : 'bg-white hover:bg-blue-50'
+                  }`}
                 >
                   <svg
                     className="-ml-1 mr-2 h-5 w-5 text-blue-500"
@@ -1081,7 +1107,11 @@ const Planning = () => {
               {oldFilesNeeded.map((fileUrl) => (
                 <div
                   key={fileUrl}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
+                  className={`flex items-center justify-between p-3 rounded-lg border shadow-sm ${
+                    isDarkMode 
+                      ? 'dark-bg-card dark-border' 
+                      : 'bg-white border-gray-200'
+                  }`}
                 >
                   <div className="flex items-center overflow-hidden">
                     <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
