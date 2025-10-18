@@ -3,7 +3,6 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { apiRequest } from "../utils/api";
 import { useParams } from "react-router-dom";
-
 export const ProjectContext = createContext();
 
 export const ProjectProvider = ({ children }) => {
@@ -13,6 +12,8 @@ export const ProjectProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [projectRoleCache, setProjectRoleCache] = useState({}); // Cache project roles
+  
+  // const { projectid } = useParams();
 
   // Centralized authentication check - runs once on mount
   useEffect(() => {
@@ -40,7 +41,7 @@ export const ProjectProvider = ({ children }) => {
         setAuthChecked(true);
       }
     };
-    getProjectRole();
+    // getProjectRole(projectid);
     checkAuth();
   }, []);
 

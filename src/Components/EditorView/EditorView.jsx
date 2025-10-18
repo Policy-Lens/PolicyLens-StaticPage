@@ -23,6 +23,11 @@ import {
   createWorkspace as apiCreateWorkspace,
   deleteWorkspace as apiDeleteWorkspace,
   deleteFile as apiDeleteFile,
+  createFile as apiCreateFile,
+  getFiles as apiGetFiles,
+  getFileDetail as apiGetFileDetail,
+  updateFile as apiUpdateFile,
+  getFileVersions as apiGetFileVersions
 } from "../../utils/aiWorkshopApi";
 import ReactMarkdown from "react-markdown";
 import { 
@@ -46,7 +51,8 @@ import {
   Share,
   Clock,
   GitBranch,
-  GripVertical
+  GripVertical,
+  RotateCcw
 } from "lucide-react";
 
 const { TabPane } = Tabs;
@@ -96,6 +102,24 @@ const getFileTypeFromName = (filename) => {
     'doc': 'document'
   };
   return typeMap[ext] || 'markdown';
+};
+
+// Manage recent files with 3-file limit
+const manageRecentFiles = (file, workspaceId) => {
+  const recentKey = `recent_files_${workspaceId}`;
+  const recentFiles = JSON.parse(localStorage.getItem(recentKey) || "[]");
+  
+  // Remove if already exists
+  const filtered = recentFiles.filter(f => f.id !== file.id);
+  
+  // Add to beginning
+  const updated = [{ ...file, lastAccessed: new Date().toISOString() }, ...filtered];
+  
+  // Keep only 3 most recent
+  const limited = updated.slice(0, 3);
+  
+  localStorage.setItem(recentKey, JSON.stringify(limited));
+  return limited;
 };
 
 // Enhanced File Explorer with workspace management
@@ -181,12 +205,22 @@ const FileExplorer = ({
     }
   };
 
+  const checkIfAnyFileNotSavedFromLocalStorage = () => {
+    const localFiles = JSON.parse(localStorage.getItem(`lsfiles`) || "{}");
+    const backendFiles = templatesData.map(template => template.id);
+    const notSavedFiles = localFiles.filter(file => !backendFiles.includes(file.id));
+    return notSavedFiles;
+  };
+
   const saveWorkspacesToStorage = (workspacesList) => {
     const userWorkspaces = workspacesList.filter(ws => ws.type !== "system");
     localStorage.setItem(`workspaces_${projectid}`, JSON.stringify(userWorkspaces));
   };
 
   useEffect(() => {
+    // if (checkIfAnyFileNotSavedFromLocalStorage()) {
+    //   message.warning("Some files are not saved. Please save them before leaving.");
+    // }
     if (selectedWorkspace) {
       loadWorkspaceFiles();
     }
@@ -230,9 +264,63 @@ const FileExplorer = ({
         setIsLoadingFiles(false);
       }
     } else {
-      // Load user workspace files from localStorage
-      const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
-      setFiles(savedFiles);
+      // Load user workspace files and sync with backend
+      setIsLoadingFiles(true);
+      try {
+        // Get files from backend
+        const response = await apiGetFiles(selectedWorkspace.id);
+        const backendFiles = response.data.results || response.data || [];
+        
+        // Process backend files - handle original_file vs file distinction
+        const processedFiles = await Promise.all(
+          backendFiles.map(async (fileData) => {
+            // Use the .md file content, not the original uploaded file
+            const fileToUse = fileData.file;
+            
+            // Check for unsaved changes in local storage
+            const unsavedContent = localStorage.getItem(`unsaved_${fileData.id}`);
+            let content = unsavedContent || '';
+            
+            // If no unsaved content, load from file URL
+            if (!content && fileToUse) {
+              try {
+                const contentResponse = await fetch(fileToUse);
+                content = await contentResponse.text();
+              } catch (error) {
+                console.error(`Error loading content for file ${fileData.filename}:`, error);
+              }
+            }
+            
+            return {
+              id: fileData.id,
+              filename: fileData.filename,
+              content: content,
+              file_type: fileData.file_type || 'markdown',
+              workspace_id: selectedWorkspace.id,
+              created_at: fileData.created_at,
+              updated_at: fileData.updated_at,
+              file_url: fileToUse,
+              original_file: fileData.original_file,
+              hasUnsavedChanges: !!unsavedContent
+            };
+          })
+        );
+
+        setFiles(processedFiles);
+        
+        // Save to local storage
+        localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(processedFiles));
+        
+      } catch (error) {
+        console.error('Error loading workspace files:', error);
+        message.error('Error loading files. Please try again.');
+        
+        // Fallback to local storage
+        const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
+        setFiles(savedFiles);
+      } finally {
+        setIsLoadingFiles(false);
+      }
     }
   };
 
@@ -355,7 +443,7 @@ const FileExplorer = ({
     }
   };
 
-  const handleFileUpload = ({ file, onSuccess, onError, onProgress }) => {
+  const handleFileUpload = async ({ file, onSuccess, onError, onProgress }) => {
     if (!selectedWorkspace) {
       message.error("Please select a workspace first");
       onError(new Error("No workspace selected"));
@@ -369,7 +457,21 @@ const FileExplorer = ({
     }
 
     setIsUploading(true);
-    
+
+    const data = new FormData();
+
+    data.append('file', file);
+    data.append('filename', file.name);
+    console.log(selectedWorkspace)
+    const response = await apiCreateFile(selectedWorkspace.id,data)
+    if(response.status !== 201){
+      message.error("Failed to upload file. Please try again.");
+      onError(new Error("Failed to upload file"));
+      return;
+    }
+    const currfile = response.data
+    const content = await fetch(currfile.file).then(res => res.text());
+    console.log(currfile)
     // Simulate file upload with progress
     let progress = 0;
     const interval = setInterval(() => {
@@ -383,15 +485,15 @@ const FileExplorer = ({
         // Create file from upload
         const reader = new FileReader();
         reader.onload = (e) => {
-          const content = e.target.result;
+          // loading content from file url received in response
           const newFile = {
-            id: `file-${Date.now()}`,
-            filename: file.name,
+            id: currfile.id,
+            filename: currfile.filename,
             content: typeof content === 'string' ? content : "Uploaded file content",
-            file_type: getFileTypeFromName(file.name),
+            file_type: getFileTypeFromName(currfile.file_type),
             workspace_id: selectedWorkspace.id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            created_at: new Date(currfile.created_at).toISOString(),
+            updated_at: new Date(currfile.updated_at).toISOString(),
             created_by: user?.id || 'default'
           };
 
@@ -559,7 +661,7 @@ const FileExplorer = ({
             {isLoadingFiles ? (
               <div className="flex items-center justify-center py-8">
                 <Spin size="large" />
-                <span className="ml-2 text-gray-500">Converting documents...</span>
+                <span className="ml-2 text-gray-500">Loading documents...</span>
               </div>
             ) : filteredFiles.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
@@ -581,7 +683,10 @@ const FileExplorer = ({
                 {filteredFiles.map((file) => (
                   <div
                     key={file.id}
-                    onClick={() => onFileSelect(file)}
+                    onClick={() => {
+                      manageRecentFiles(file, selectedWorkspace.id);
+                      onFileSelect(file);
+                    }}
                     className={`p-3 rounded-lg cursor-pointer border transition-all hover:shadow-sm ${
                       selectedFile?.id === file.id 
                         ? 'bg-blue-50 border-blue-200 shadow-sm'
@@ -714,58 +819,79 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState(null);
+  const [showVersionPreview, setShowVersionPreview] = useState(false);
+  const [versionPreviewContent, setVersionPreviewContent] = useState("");
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const { user } = useContext(AuthContext);
 
-  const loadVersionHistory = () => {
-    // Try to load from localStorage first
-    if (file?.id) {
-      const savedVersions = JSON.parse(localStorage.getItem(`versions_${file.id}`) || "[]");
-      if (savedVersions.length > 0) {
-        setFileVersions(savedVersions);
-        return;
-      }
+  const loadVersionHistory = async () => {
+    if (!file?.id) return;
+    
+    setIsLoadingVersions(true);
+    try {
+      const response = await apiGetFileVersions(file.id);
+      console.log(response)
+      const versions = response.data.results || [];
+      
+      // Sort by version_number descending (latest first)
+      // const sortedVersions = versions.sort((a, b) => b.version_number - a.version_number);
+      
+      setFileVersions(versions);
+      setShowVersionHistory(true);
+    } catch (error) {
+      console.error('Error loading version history:', error);
+      message.error('Failed to load version history');
+      setFileVersions([]);
+    } finally {
+      setIsLoadingVersions(false);
     }
-    
-    // Create sample version history if no saved versions
-    const versions = [
-      {
-        id: 1,
-        version_number: '1.0',
-        created_at: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        author: 'System',
-        changes: 'Initial document creation',
-        content: content || 'Initial version content'
-      },
-      {
-        id: 2,
-        version_number: '1.1',
-        created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        author: 'AI Assistant',
-        changes: 'Updated by AI Assistant - improved formatting',
-        content: content || 'Updated content with AI improvements'
-      },
-      {
-        id: 3,
-        version_number: '1.2',
-        created_at: new Date().toISOString(),
-        author: user?.username || 'Current User',
-        changes: 'Manual edits and corrections',
-        content: content || 'Current version with manual edits'
-      }
-    ];
-    
-    setFileVersions(versions);
   };
 
   useEffect(() => {
     if (file) {
       console.log('MarkdownEditor received file:', file.filename, 'content length:', file.content?.length || 0);
-      setContent(file.content || "");
-      setOriginalContent(file.content || "");
-      setHasUnsavedChanges(false);
+      
+      // Check for unsaved changes in local storage
+      const unsavedContent = localStorage.getItem(`unsaved_${file.id}`);
+      
+      // If there's unsaved content, compare it with the actual file content
+      if (unsavedContent) {
+        if (unsavedContent === file.content) {
+          // Unsaved content is the same as saved content, remove it
+          console.log('Unsaved content matches saved content, removing from local storage');
+          localStorage.removeItem(`unsaved_${file.id}`);
+          
+          // Also update the file in workspace storage to remove unsaved flag
+          if (selectedWorkspace) {
+            const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
+            const updatedFiles = savedFiles.map(f => 
+              f.id === file.id 
+                ? { ...f, hasUnsavedChanges: false }
+                : f
+            );
+            localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(updatedFiles));
+          }
+          
+          setContent(file.content || "");
+          setOriginalContent(file.content || "");
+          setHasUnsavedChanges(false);
+        } else {
+          // Unsaved content is different, use it
+          console.log('Loaded unsaved changes from local storage');
+          setContent(unsavedContent);
+          setOriginalContent(file.content || "");
+          setHasUnsavedChanges(true);
+        }
+      } else {
+        // No unsaved content, use file content
+        setContent(file.content || "");
+        setOriginalContent(file.content || "");
+        setHasUnsavedChanges(false);
+      }
+      
       loadFileVersions();
     }
-  }, [file]);
+  }, [file, selectedWorkspace]);
 
   const loadFileVersions = () => {
     if (!file) return;
@@ -784,14 +910,38 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
       clearTimeout(autoSaveTimeout);
     }
 
-    // Set new auto-save timeout (5 seconds)
+    // Auto-save to local storage only (not to database)
     const timeout = setTimeout(() => {
-      saveFile(newContent);
-      // Create a new version when content is saved
-      createNewVersion(newContent);
-    }, 5000);
+      autoSaveToLocalStorage(newContent);
+    }, 3000); // Auto-save every 3 seconds to local storage
     
     setAutoSaveTimeout(timeout);
+  };
+
+  const autoSaveToLocalStorage = (contentToSave) => {
+    if (!file || !selectedWorkspace) return;
+
+    // Check if content is different from original (saved) content
+    const isActuallyUnsaved = contentToSave !== originalContent;
+
+    // Update file in local workspace storage
+    const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
+    const updatedFiles = savedFiles.map(f => 
+      f.id === file.id 
+        ? { ...f, content: contentToSave, hasUnsavedChanges: isActuallyUnsaved, lastAutoSaved: new Date().toISOString() }
+        : f
+    );
+    localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(updatedFiles));
+
+    // Save or remove unsaved content based on whether it differs from original
+    if (isActuallyUnsaved) {
+      localStorage.setItem(`unsaved_${file.id}`, contentToSave);
+    } else {
+      localStorage.removeItem(`unsaved_${file.id}`);
+    }
+
+    setLastSaved(new Date());
+    console.log('Auto-saved to local storage');
   };
 
   const createNewVersion = (newContent) => {
@@ -813,7 +963,7 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
     }
   };
 
-  const saveFile = (contentToSave = content) => {
+  const saveFile = async (contentToSave = content) => {
     if (!file || !selectedWorkspace) return;
 
     // Clear auto-save timeout
@@ -822,28 +972,72 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
       setAutoSaveTimeout(null);
     }
 
-    // Create version if content has changed significantly
-    if (contentToSave !== originalContent) {
-      createVersion(originalContent);
+    // Don't save system files to database
+    if (selectedWorkspace.type === "system") {
+      message.info("System files cannot be saved to database");
+      return;
     }
 
-    const updatedFile = {
-      ...file,
-      content: contentToSave,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      // Create version if content has changed significantly
+      if (contentToSave !== originalContent) {
+        createVersion(originalContent);
+      }
 
-    // Update file in workspace
-    const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
-    const updatedFiles = savedFiles.map(f => f.id === file.id ? updatedFile : f);
-    localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(updatedFiles));
+      //Convert content to .md file and send the data as formdata with file Update file in database via API 
+      const updateData = {
+        content: contentToSave,
+        filename: file.filename
+      };
 
-    setOriginalContent(contentToSave);
-    setHasUnsavedChanges(false);
-    setLastSaved(new Date());
-    onFileUpdate(updatedFile);
-    
-    message.success("File saved successfully");
+      const formdata = new FormData()
+      formdata.append('file', new Blob([contentToSave], { type: 'text/markdown' }))
+      const response = await apiUpdateFile(file.id, formdata)
+      
+      if (response.status === 200) {
+        const updatedFile = {
+          ...file,
+          content: contentToSave,
+          updated_at: new Date().toISOString(),
+          hasUnsavedChanges: false
+        };
+
+        // Update file in local workspace storage
+        const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
+        const updatedFiles = savedFiles.map(f => f.id === file.id ? updatedFile : f);
+        localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(updatedFiles));
+
+        // Clear unsaved changes from local storage
+        localStorage.removeItem(`unsaved_${file.id}`);
+
+        setOriginalContent(contentToSave);
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        onFileUpdate(updatedFile);
+        
+        message.success("File saved to database successfully");
+      } else {
+        throw new Error('Failed to save file');
+      }
+    } catch (error) {
+      console.error('Error saving file:', error);
+      message.error("Failed to save file to database. Changes saved locally.");
+      
+      // Fallback: save to local storage only
+      const updatedFile = {
+        ...file,
+        content: contentToSave,
+        updated_at: new Date().toISOString(),
+        hasUnsavedChanges: true
+      };
+
+      const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
+      const updatedFiles = savedFiles.map(f => f.id === file.id ? updatedFile : f);
+      localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(updatedFiles));
+      
+      localStorage.setItem(`unsaved_${file.id}`, contentToSave);
+      onFileUpdate(updatedFile);
+    }
   };
 
   const createVersion = (previousContent) => {
@@ -861,6 +1055,81 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
     const updatedVersions = [newVersion, ...versions].slice(0, 10); // Keep last 10 versions
     localStorage.setItem(`versions_${file.id}`, JSON.stringify(updatedVersions));
     setFileVersions(updatedVersions);
+  };
+
+  const viewVersionContent = async (version) => {
+    if (!version || !version.version_file) return;
+    
+    try {
+      // Fetch the version file content
+      const response = await fetch(version.version_file);
+      const content = await response.text();
+      
+      setVersionPreviewContent(content);
+      setSelectedVersion(version);
+      setShowVersionPreview(true);
+    } catch (error) {
+      console.error('Error loading version content:', error);
+      message.error('Failed to load version content');
+    }
+  };
+
+  const revertToVersion = async (version) => {
+    if (!version || !version.version_file) return;
+    
+    try {
+      // Fetch the version file content
+      const response = await fetch(version.version_file);
+      const versionContent = await response.text();
+      
+      // Simply set the content - this will be compared with originalContent
+      setContent(versionContent);
+      
+      // Check if this version matches the saved content (originalContent)
+      const isUnsaved = versionContent !== originalContent;
+      setHasUnsavedChanges(isUnsaved);
+      
+      // Update local storage
+      if (selectedWorkspace) {
+        const savedFiles = JSON.parse(localStorage.getItem(`files_${selectedWorkspace.id}`) || "[]");
+        const updatedFiles = savedFiles.map(f => 
+          f.id === file.id 
+            ? { ...f, content: versionContent, hasUnsavedChanges: isUnsaved, lastAutoSaved: isUnsaved ? new Date().toISOString() : undefined }
+            : f
+        );
+        localStorage.setItem(`files_${selectedWorkspace.id}`, JSON.stringify(updatedFiles));
+        
+        // Handle unsaved content in local storage
+        if (isUnsaved) {
+          localStorage.setItem(`unsaved_${file.id}`, versionContent);
+        } else {
+          localStorage.removeItem(`unsaved_${file.id}`);
+        }
+      }
+      
+      // Close all modals
+      setShowVersionPreview(false);
+      setShowVersionHistory(false);
+      setSelectedVersion(null);
+      setVersionPreviewContent("");
+      
+      // Show appropriate message
+      if (isUnsaved) {
+        message.success({
+          content: `File content reverted to version ${version.version_number}. Don't forget to save!`,
+          duration: 5
+        });
+      } else {
+        message.success({
+          content: `File content reverted to version ${version.version_number} (current saved version)`,
+          duration: 3
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error reverting to version:', error);
+      message.error('Failed to revert to this version');
+    }
   };
 
   const restoreVersion = (version) => {
@@ -921,11 +1190,9 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
           <div className="flex items-center space-x-2">
             <Button
               icon={<History size={16} />}
-              onClick={() => {
-                loadVersionHistory();
-                setShowVersionHistory(true);
-              }}
+              onClick={() => loadVersionHistory()}
               title="Version History"
+              loading={isLoadingVersions}
             >
               History
             </Button>
@@ -1003,63 +1270,152 @@ const MarkdownEditor = ({ file, onFileUpdate, selectedWorkspace }) => {
 
       {/* Version History Modal */}
       <Modal
-        title="Version History"
+        title={
+          <div className="flex items-center justify-between">
+            <span>Version History</span>
+            {isLoadingVersions && <Spin size="small" />}
+          </div>
+        }
         open={showVersionHistory}
         onCancel={() => {
           setShowVersionHistory(false);
           setSelectedVersion(null);
         }}
-        width={800}
-        footer={
-          selectedVersion && (
-            <div className="flex justify-between">
-              <Button onClick={() => setSelectedVersion(null)}>
-                Cancel
-              </Button>
-              <Button 
-                type="primary" 
-                onClick={() => restoreVersion(selectedVersion)}
-              >
-                Restore This Version
-              </Button>
-            </div>
-          )
-        }
+        width={900}
+        footer={null}
       >
         <div className="max-h-96 overflow-y-auto">
-          {fileVersions.length === 0 ? (
-            <p className="text-gray-500">No version history available</p>
+          {isLoadingVersions ? (
+            <div className="flex items-center justify-center py-8">
+              <Spin size="large" />
+            </div>
+          ) : fileVersions.length === 0 ? (
+            <div className="text-center py-8">
+              <History size={48} className="mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500">No version history available</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {fileVersions.map((version) => (
                 <Card
                   key={version.id}
                   size="small"
-                  className={`cursor-pointer ${
-                    selectedVersion?.id === version.id ? 'border-blue-500' : ''
-                  }`}
-                  onClick={() => setSelectedVersion(version)}
+                  className="cursor-pointer hover:shadow-md transition-shadow border-gray-200"
+                  onClick={() => viewVersionContent(version)}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">Version {version.version_number}</div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(version.created_at).toLocaleString()}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
+                        <span className="text-blue-600 font-bold text-lg">
+                          v{version.version_number}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-800">
+                          Version {version.version_number}
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center space-x-2">
+                          <Clock size={12} />
+                          <span>{new Date(version.created_at).toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-400">
-                      {version.content.length} characters
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="text"
+                        icon={<RotateCcw size={16} />}
+                        className="text-blue-600 hover:text-blue-700"
+                        title="Revert to this version"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          revertToVersion(version);
+                        }}
+                      />
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          viewVersionContent(version);
+                        }}
+                      >
+                        View
+                      </Button>
                     </div>
                   </div>
-                  {selectedVersion?.id === version.id && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded text-sm max-h-32 overflow-y-auto">
-                      <ReactMarkdown>{version.content.substring(0, 200)}...</ReactMarkdown>
-                    </div>
-                  )}
                 </Card>
               ))}
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Version Preview Modal */}
+      <Modal
+        title={`Version ${selectedVersion?.version_number} Preview`}
+        open={showVersionPreview}
+        onCancel={() => {
+          setShowVersionPreview(false);
+          setVersionPreviewContent("");
+          setSelectedVersion(null);
+        }}
+        width={1000}
+        style={{top:50}}
+        footer={
+          <div className="flex justify-between">
+            <Button onClick={() => {
+              setShowVersionPreview(false);
+              setVersionPreviewContent("");
+              setSelectedVersion(null);
+            }}>
+              Close
+            </Button>
+            <div className="space-x-2">
+              <Button
+                icon={<RotateCcw size={16} />}
+                title="Revert to this version"
+                onClick={() => {
+                  revertToVersion(selectedVersion);
+                }}
+              >
+                Revert to This Version
+              </Button>
+              <Button
+                type="primary"
+                icon={<Download size={16} />}
+                onClick={() => {
+                  const blob = new Blob([versionPreviewContent], { type: 'text/markdown' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `v${selectedVersion?.version_number}_${file.filename}.md`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  message.success('Version downloaded');
+                }}
+              >
+                Download
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        <div className="rounded-lg overflow-hidden">
+          <Tabs defaultActiveKey="preview">
+            <TabPane tab={<span className="flex items-center"><Eye size={16} className="mr-1" />Preview</span>} key="preview">
+              <div className="p-6 prose prose-sm max-w-none bg-white" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <ReactMarkdown>{versionPreviewContent}</ReactMarkdown>
+              </div>
+            </TabPane>
+            <TabPane tab={<span className="flex items-center"><FileText size={16} className="mr-1" />Raw</span>} key="raw">
+              <div className="p-4 bg-gray-50" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <pre className="text-sm font-mono whitespace-pre-wrap">{versionPreviewContent}</pre>
+              </div>
+            </TabPane>
+          </Tabs>
+          
         </div>
       </Modal>
     </div>

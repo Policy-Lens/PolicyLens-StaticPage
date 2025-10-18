@@ -37,7 +37,7 @@ export const getFileDetail = async (fileId) => {
 };
 
 export const updateFile = async (fileId, data) => {
-  return apiRequest('PUT', `${AI_WORKSHOP_BASE_URL}/files/${fileId}/`, data, true);
+  return apiRequest('PATCH', `${AI_WORKSHOP_BASE_URL}/files/${fileId}/`, data, true);
 };
 
 export const deleteFile = async (fileId) => {
