@@ -40,7 +40,7 @@ const ISO4217 = () => {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "Admin") {
       setIsAdmin(true);
     }
   }, [user]);
@@ -392,7 +392,7 @@ const ISO4217 = () => {
           )}
         </div>
       </div>
-      <div className="flex-1 p-4 bg-white overflow-x-auto">
+      <div className="flex-1 m-4 bg-white overflow-x-auto">
         <Table
           columns={columns}
           dataSource={currencies}
@@ -402,6 +402,7 @@ const ISO4217 = () => {
           onChange={handleTableChange}
           scroll={{ x: 800 }}
           size="middle"
+          sticky={true}
         />
       </div>
       {showModal && modalType !== "excel" && (
