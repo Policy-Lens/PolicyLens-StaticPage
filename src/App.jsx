@@ -9,7 +9,9 @@ import AdminDashboard from "./Components/AdminView/DashboardComponents/AdminDash
 import ProjectTeam from "./Components/AdminView/ProjectTeam";
 import AdminPreview from "./Components/AdminView/AdminPreview";
 import AuditorsPage from "./Components/HomeNav/Auditors";
-import CompaniesPage from "./Components/HomeNav/Company";
+import CompaniesPage from "./Components/HomeNav/Company/CompanyList";
+import CompanyDetail from "./Components/HomeNav/Company/CompanyDetail";
+import AccountActivation from "./Components/Auth/AccountActivation";
 import DashboardPage from "./Components/HomeNav/Dashboard";
 import DocumentsPage from "./Components/HomeNav/Documents";
 import SettingsPage from "./Components/HomeNav/Settings";
@@ -59,6 +61,10 @@ const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
+    path: "/activateaccount",
+    element: <AccountActivation />,
+  },
+  {
     path: "home",
     element: <HomeLayout />,
     children: [
@@ -77,6 +83,10 @@ const router = createBrowserRouter([
       {
         path: "company",
         element: <CompaniesPage />,
+      },
+      {
+        path: "company/:companyId",
+        element: <CompanyDetail />,
       },
       {
         path: "dashboard",

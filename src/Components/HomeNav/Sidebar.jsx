@@ -43,6 +43,7 @@ const Sidebar = ({ onToggle }) => {
       icon: <Building size={20} />,
       label: "Company",
       path: "/home/company",
+      roles: ["Admin", "Super Consultant"],
     },
     {
       key: "consultant-team",
