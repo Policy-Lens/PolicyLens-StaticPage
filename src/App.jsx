@@ -33,6 +33,7 @@ import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
 import ISO4217 from "./Components/HomeNav/Database/ISO4217";
+import ISO3166 from "./Components/HomeNav/Database/ISO3166";
 import GICS from "./Components/HomeNav/Database/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
@@ -127,6 +128,10 @@ const router = createBrowserRouter([
           {
             path: "iso4217",
             element: <ISO4217 />,
+          },
+          {
+            path: "countries",
+            element: <ISO3166 />,
           },
           {
             path: "gics",

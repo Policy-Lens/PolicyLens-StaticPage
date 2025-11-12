@@ -46,6 +46,13 @@ const Sidebar = ({ onToggle }) => {
       roles: ["Admin", "Super Consultant"],
     },
     {
+      key: "my-company",
+      icon: <Building size={20} />,
+      label: "My Company",
+      path: user?.company?.id ? `/home/company/${user.company.id}` : "/home/dashboard",
+      roles: ["Company"],
+    },
+    {
       key: "consultant-team",
       icon: <Users size={20} />,
       label: "Consultant Team",

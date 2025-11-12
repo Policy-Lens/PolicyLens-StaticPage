@@ -22,7 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-*.md
+.specstory/
 
 
 # Environment variables
@@ -32,5 +32,6 @@ dist-ssr
 
 #Feature testing folders
 test
+ignore/
 
 API_OPTIMIZATION_REPORT.md

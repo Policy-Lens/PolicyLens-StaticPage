@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../../utils/api'
 import { Button, Flex, Typography, Table, Tag, Space, Modal, Form, Input, message, Badge, Spin } from 'antd'
 import { AuthContext } from '../../../AuthContext'
@@ -6,6 +7,7 @@ import Unauthorized from '../../Common/Unauthorized'
 const { Title } = Typography;
 
 const CompanyList = () => {
+    const navigate = useNavigate()
     const [companies, setCompanies] = useState([])
     const [isLoading, setIsLoading] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -98,8 +100,7 @@ const CompanyList = () => {
     }
 
     const handleCompleteOnboarding = (company) => {
-        // TODO: Implement onboarding completion logic
-        message.info('Onboarding completion feature coming soon!')
+        navigate(`/home/company/${company.id}`)
     }
 
     const columns = [
@@ -162,7 +163,7 @@ const CompanyList = () => {
             align: 'center',
             render: (_, record) => (
                 <Space size="small">
-                    {isSuperConsultant && record.onboarding_status==='completed' && <Button type="link" onClick={() => message.info("View Feature Coming Soon")}>
+                    {isSuperConsultant && record.onboarding_status==='completed' && <Button type="link" onClick={() => navigate(`/home/company/${record.id}`)}>
                         View
                     </Button>}
                     {isSuperConsultant && record.onboarding_status === 'pending' && (
