@@ -1369,12 +1369,19 @@ const PolicyLibrary = () => {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold mb-4 text-gray-800">Policy Library</h1>
-        <Button 
-          type="primary" 
-          onClick={() => navigate(`/project/${projectid}/editor`)}
-        >
-          Open Editor
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => navigate(`/project/${projectid}/policy-editor`)}
+          >
+            Create Policy
+          </Button>
+          <Button 
+            type="primary" 
+            onClick={() => navigate(`/project/${projectid}/editor`)}
+          >
+            Open Editor
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
