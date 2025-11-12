@@ -44,6 +44,7 @@ import ConsultantTeamPage from "./Components/HomeNav/ConsultantTeamPage";
 import VaptQuestions from "./Components/AdminView/ProjectTabs/VaptQuestions";
 import VaptForm from "./Components/AdminView/ProjectTabs/VaptForm";
 import EditorView from "./Components/EditorView/EditorView";
+import PolicyEditor from "./Components/PolicyEditor/PolicyEditor";
 
 const router = createBrowserRouter([
   {
@@ -213,6 +214,10 @@ const router = createBrowserRouter([
       {
         path: "editor",
         element: <EditorView />,
+      },
+      {
+        path: "policy-editor/:policyId?",
+        element: <PolicyEditor />,
       },
     ],
   },
