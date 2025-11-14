@@ -261,7 +261,11 @@ const CompanyDetail = () => {
     if (activeTab === 'representatives') {
       fetchRepresentatives();
     }
+    if(activeTab === 'profile'){
+      fetchProfilePreview();
+    }
   }, [activeTab]);
+
 
   // Check if user can edit
   const canEdit = () => {
@@ -659,7 +663,6 @@ const CompanyDetail = () => {
 
   
   const ProfilePreview = () => {
-    fetchProfilePreview();
     return (
         <div>
             {previewLoading ? (
