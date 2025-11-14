@@ -7,14 +7,12 @@ import { LoadingOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 
-const ISO4217 = () => {
+const ISO3166 = () => {
   const { user } = useContext(AuthContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currencies, setCurrencies] = useState([]);
+  const [countries, setCountries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedAlphabeticCode, setSelectedAlphabeticCode] = useState("");
-  const [selectedNumericCode, setSelectedNumericCode] = useState("");
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -29,13 +27,12 @@ const ISO4217 = () => {
   const [partialErrors, setPartialErrors] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
-  const [activeCurrency, setActiveCurrency] = useState(null);
-  const [currencyForm, setCurrencyForm] = useState({
-    entity: "",
-    currency: "",
-    alphabetic_code: "",
+  const [activeCountry, setActiveCountry] = useState(null);
+  const [countryForm, setCountryForm] = useState({
+    country: "",
+    alpha2_code: "",
+    alpha3_code: "",
     numeric_code: "",
-    minor_unit: "",
   });
   const [form] = Form.useForm();
 
@@ -45,19 +42,13 @@ const ISO4217 = () => {
     }
   }, [user]);
 
-  const fetchCurrencies = useCallback(async () => {
+  const fetchCountries = useCallback(async () => {
     try {
       setIsLoading(true);
-      let url = "/api/policylens/iso4217/";
+      let url = "/api/policylens/iso3166/";
       const params = new URLSearchParams();
       if (searchQuery) {
         params.append("search", searchQuery);
-      }
-      if (selectedAlphabeticCode) {
-        params.append("alphabetic_code", selectedAlphabeticCode);
-      }
-      if (selectedNumericCode) {
-        params.append("numeric_code", selectedNumericCode);
       }
       params.append("page", pagination.current);
       params.append("page_size", pagination.pageSize);
@@ -84,21 +75,21 @@ const ISO4217 = () => {
         message.warning("Unexpected response format from server");
       }
 
-      setCurrencies(results);
+      setCountries(results);
       setPagination((prev) => ({
         ...prev,
         total: totalCount,
       }));
     } catch (error) {
-      console.error("Error fetching currencies:", {
+      console.error("Error fetching countries:", {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
         url,
       });
-      const errorMessage = error.response?.data?.error || error.message || "Failed to fetch currencies";
-      message.error(`Failed to fetch currencies: ${errorMessage}`);
-      setCurrencies([]);
+      const errorMessage = error.response?.data?.error || error.message || "Failed to fetch countries";
+      message.error(`Failed to fetch countries: ${errorMessage}`);
+      setCountries([]);
       setPagination((prev) => ({
         ...prev,
         total: 0,
@@ -106,11 +97,11 @@ const ISO4217 = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedAlphabeticCode, selectedNumericCode, pagination.current, pagination.pageSize]);
+  }, [searchQuery, pagination.current, pagination.pageSize]);
 
   useEffect(() => {
-    fetchCurrencies();
-  }, [fetchCurrencies]);
+    fetchCountries();
+  }, [fetchCountries]);
 
   const handleTableChange = (paginationConfig) => {
     setPagination(prev => ({
@@ -125,22 +116,14 @@ const ISO4217 = () => {
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
-  const handleFilterChange = useCallback((filterType, value) => {
-    if (filterType === "alphabetic_code") setSelectedAlphabeticCode(value);
-    if (filterType === "numeric_code") setSelectedNumericCode(value);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  }, []);
-
   const handleClearFilters = useCallback(() => {
-    setSelectedAlphabeticCode("");
-    setSelectedNumericCode("");
     setSearchQuery("");
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setCurrencyForm((prev) => ({
+    setCountryForm((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -149,32 +132,29 @@ const ISO4217 = () => {
   const openAddModal = useCallback(() => {
     setModalType("add");
     setShowModal(true);
-    setCurrencyForm({
-      entity: "",
-      currency: "",
-      alphabetic_code: "",
+    setCountryForm({
+      country: "",
+      alpha2_code: "",
+      alpha3_code: "",
       numeric_code: "",
-      minor_unit: "",
     });
     form.resetFields();
   }, []);
 
-  const openEditModal = useCallback((currency) => {
+  const openEditModal = useCallback((country) => {
     setModalType("edit");
-    setActiveCurrency(currency);
-    setCurrencyForm({
-      entity: currency.entity,
-      currency: currency.currency,
-      alphabetic_code: currency.alphabetic_code,
-      numeric_code: currency.numeric_code,
-      minor_unit: currency.minor_unit,
+    setActiveCountry(country);
+    setCountryForm({
+      country: country.country,
+      alpha2_code: country.alpha2_code,
+      alpha3_code: country.alpha3_code,
+      numeric_code: country.numeric_code,
     });
     form.setFieldsValue({
-      entity: currency.entity,
-      currency: currency.currency,
-      alphabetic_code: currency.alphabetic_code,
-      numeric_code: currency.numeric_code,
-      minor_unit: currency.minor_unit,
+      country: country.country,
+      alpha2_code: country.alpha2_code,
+      alpha3_code: country.alpha3_code,
+      numeric_code: country.numeric_code,
     });
     setShowModal(true);
   }, [form]);
@@ -182,13 +162,12 @@ const ISO4217 = () => {
   const closeModal = useCallback(() => {
     setShowModal(false);
     setModalType("");
-    setActiveCurrency(null);
-    setCurrencyForm({
-      entity: "",
-      currency: "",
-      alphabetic_code: "",
+    setActiveCountry(null);
+    setCountryForm({
+      country: "",
+      alpha2_code: "",
+      alpha3_code: "",
       numeric_code: "",
-      minor_unit: "",
     });
     setSelectedFile(null);
     setPartialErrors([]);
@@ -205,17 +184,17 @@ const ISO4217 = () => {
   const handleSubmit = useCallback(async (values) => {
     try {
       let response;
-      if (modalType === "edit" && activeCurrency) {
+      if (modalType === "edit" && activeCountry) {
         response = await apiRequest(
           "PUT",
-          `/api/policylens/iso4217/${activeCurrency.id}/update/`,
+          `/api/policylens/iso3166/${activeCountry.id}/update/`,
           values,
           true
         );
       } else {
         response = await apiRequest(
           "POST",
-          `/api/policylens/iso4217/create/`,
+          `/api/policylens/iso3166/create/`,
           values,
           true
         );
@@ -223,17 +202,17 @@ const ISO4217 = () => {
 
       if (response.status === 200 || response.status === 201) {
         message.success(
-          `Currency ${modalType === "edit" ? "updated" : "created"} successfully`
+          `Country ${modalType === "edit" ? "updated" : "created"} successfully`
         );
-        fetchCurrencies();
+        fetchCountries();
         closeModal();
       }
     } catch (error) {
-      console.error("Error submitting currency:", error);
-      const errorMessage = error.response?.data?.error || "Failed to save currency";
-      message.error(`Failed to ${modalType} currency: ${errorMessage}`);
+      console.error("Error submitting country:", error);
+      const errorMessage = error.response?.data?.error || "Failed to save country";
+      message.error(`Failed to ${modalType} country: ${errorMessage}`);
     }
-  }, [modalType, activeCurrency, fetchCurrencies, closeModal]);
+  }, [modalType, activeCountry, fetchCountries, closeModal]);
 
   const handleFileUpload = useCallback(async () => {
     if (!selectedFile) return;
@@ -245,7 +224,7 @@ const ISO4217 = () => {
 
       const response = await apiRequest(
         "POST",
-        "/api/policylens/iso4217/upload/",
+        "/api/policylens/iso3166/upload/",
         formData,
         true,
         true
@@ -253,12 +232,12 @@ const ISO4217 = () => {
 
       if (response.status === 201 || response.status === 207) {
         message.success(
-          `Successfully created ${response.data.currencies_created || 0} currencies`
+          `Successfully created ${response.data.countries_created || 0} countries`
         );
         if (response.data.errors?.length > 0) {
           setPartialErrors(response.data.errors);
         }
-        fetchCurrencies();
+        fetchCountries();
         closeModal();
         setSelectedFile(null);
       }
@@ -272,51 +251,50 @@ const ISO4217 = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, fetchCurrencies, closeModal]);
+  }, [selectedFile, fetchCountries, closeModal]);
 
   const handleDelete = useCallback(async (id) => {
     try {
       const response = await apiRequest(
         "DELETE",
-        `/api/policylens/iso4217/${id}/delete/`,
+        `/api/policylens/iso3166/${id}/delete/`,
         null,
         true
       );
       if (response.status === 204) {
-        message.success("Currency deleted successfully");
-        fetchCurrencies();
+        message.success("Country deleted successfully");
+        fetchCountries();
       }
     } catch (error) {
-      console.error("Error deleting currency:", error);
-      const errorMessage = error.response?.data?.error || "Failed to delete currency";
+      console.error("Error deleting country:", error);
+      const errorMessage = error.response?.data?.error || "Failed to delete country";
       message.error(errorMessage);
     }
-  }, [fetchCurrencies]);
+  }, [fetchCountries]);
 
   const columns = [
-    { title: 'Entity', dataIndex: 'entity', key: 'entity' },
-    { title: 'Currency', dataIndex: 'currency', key: 'currency' },
-    { title: 'Alphabetic Code', dataIndex: 'alphabetic_code', key: 'alphabetic_code' },
+    { title: 'Country', dataIndex: 'country', key: 'country' },
+    { title: 'Alpha-2 Code', dataIndex: 'alpha2_code', key: 'alpha2_code' },
+    { title: 'Alpha-3 Code', dataIndex: 'alpha3_code', key: 'alpha3_code' },
     { title: 'Numeric Code', dataIndex: 'numeric_code', key: 'numeric_code' },
-    { title: 'Minor Unit', dataIndex: 'minor_unit', key: 'minor_unit' },
     ...(isAdmin ? [{
       title: 'Actions',
       key: 'actions',
       align: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Edit Currency">
+          <Tooltip title="Edit Country">
             <Button type="text" icon={<Edit size={18} />} onClick={() => openEditModal(record)} />
           </Tooltip>
           <Popconfirm
-            title="Delete this currency?"
+            title="Delete this country?"
             description="This action cannot be undone."
             onConfirm={() => handleDelete(record.id)}
             okText="Yes"
             cancelText="No"
             okButtonProps={{ danger: true }}
           >
-            <Tooltip title="Delete Currency">
+            <Tooltip title="Delete Country">
               <Button type="text" danger icon={<Trash2 size={18} />} />
             </Tooltip>
           </Popconfirm>
@@ -333,38 +311,13 @@ const ISO4217 = () => {
             <Input
               value={searchQuery}
               onChange={handleSearchChange}
-              placeholder="Search currencies..."
+              placeholder="Search countries..."
               prefix={<Search size={20} />}
               allowClear
             />
           </div>
-          <Select
-            value={selectedAlphabeticCode}
-            onChange={(value) => handleFilterChange("alphabetic_code", value || "")}
-            style={{ width: 200 }}
-            placeholder="All Alphabetic Codes"
-            allowClear
-          >
-            {[...new Set(currencies.map((c) => c.alphabetic_code))].sort().map((code) => (
-              <Option key={code} value={code}>
-                {code}
-              </Option>
-            ))}
-          </Select>
-          <Select
-            value={selectedNumericCode}
-            onChange={(value) => handleFilterChange("numeric_code", value || "")}
-            style={{ width: 200 }}
-            placeholder="All Numeric Codes"
-            allowClear
-          >
-            {[...new Set(currencies.map((c) => c.numeric_code))].sort().map((code) => (
-              <Option key={code} value={code}>
-                {code}
-              </Option>
-            ))}
-          </Select>
-          {(selectedAlphabeticCode || selectedNumericCode || searchQuery) && (
+          
+          {(searchQuery) && (
             <Button
               type="link"
               onClick={handleClearFilters}
@@ -386,7 +339,7 @@ const ISO4217 = () => {
                 Upload Excel
               </Button>
               <Button type="primary" icon={<Plus size={18} />} onClick={openAddModal}>
-                Add Currency
+                Add Country
               </Button>
             </Space>
           )}
@@ -395,7 +348,7 @@ const ISO4217 = () => {
       <div className="flex-1 m-4 bg-white overflow-x-auto">
         <Table
           columns={columns}
-          dataSource={currencies}
+          dataSource={countries}
           rowKey="id"
           loading={isLoading}
           pagination={pagination}
@@ -407,28 +360,25 @@ const ISO4217 = () => {
       </div>
       {showModal && modalType !== "excel" && (
         <Modal
-          title={modalType === "add" ? "Add New Currency" : "Edit Currency"}
+          title={modalType === "add" ? "Add New Country" : "Edit Country"}
           open={showModal && modalType !== "excel"}
           onCancel={closeModal}
           footer={null}
           width={800}
         >
-          <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={currencyForm}>
+          <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={countryForm}>
               <div className="grid grid-cols-2 gap-4">
-                <Form.Item name="entity" label="Entity" rules={[{ required: true }]}>
-                  <Input />
+                <Form.Item name="country" label="Country Name" rules={[{ required: true, message: 'Please enter country name' }]}>
+                  <Input placeholder="e.g., United States" />
                 </Form.Item>
-                <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
-                  <Input />
+                <Form.Item name="alpha2_code" label="Alpha-2 Code" rules={[{ required: true, message: 'Please enter alpha-2 code' }]}>
+                  <Input placeholder="e.g., US" maxLength={2} />
                 </Form.Item>
-                <Form.Item name="alphabetic_code" label="Alphabetic Code">
-                  <Input />
+                <Form.Item name="alpha3_code" label="Alpha-3 Code" rules={[{ required: true, message: 'Please enter alpha-3 code' }]}>
+                  <Input placeholder="e.g., USA" maxLength={3} />
                 </Form.Item>
-                <Form.Item name="numeric_code" label="Numeric Code">
-                  <Input />
-                </Form.Item>
-                <Form.Item name="minor_unit" label="Minor Unit">
-                  <Input />
+                <Form.Item name="numeric_code" label="Numeric Code" rules={[{ required: true, message: 'Please enter numeric code' }]}>
+                  <Input placeholder="e.g., 840" />
                 </Form.Item>
               </div>
               <div className="mt-6 flex justify-end gap-3">
@@ -436,7 +386,7 @@ const ISO4217 = () => {
                   Cancel
                 </Button>
                 <Button type="primary" htmlType="submit">
-                  {modalType === "add" ? "Add Currency" : "Save Changes"}
+                  {modalType === "add" ? "Add Country" : "Save Changes"}
                 </Button>
               </div>
           </Form>
@@ -444,7 +394,7 @@ const ISO4217 = () => {
       )}
       {showModal && modalType === "excel" && (
         <Modal
-          title="Upload Currencies Excel File"
+          title="Upload Countries Excel File"
           open={showModal && modalType === "excel"}
           onCancel={closeModal}
           footer={[
@@ -457,6 +407,9 @@ const ISO4217 = () => {
         >
               <div className="space-y-4">
                 <div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Required columns: <strong>country, alpha2_code, alpha3_code, numeric_code</strong>
+                  </p>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -491,4 +444,4 @@ const ISO4217 = () => {
   );
 };
 
-export default ISO4217;
+export default ISO3166;
