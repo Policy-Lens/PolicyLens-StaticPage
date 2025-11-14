@@ -4,7 +4,7 @@ import { AuthContext } from "../../AuthContext";
 import Sidebar from "./Sidebar";
 
 const HomeLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const { checkLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 

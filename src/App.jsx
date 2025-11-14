@@ -9,7 +9,9 @@ import AdminDashboard from "./Components/AdminView/DashboardComponents/AdminDash
 import ProjectTeam from "./Components/AdminView/ProjectTeam";
 import AdminPreview from "./Components/AdminView/AdminPreview";
 import AuditorsPage from "./Components/HomeNav/Auditors";
-import CompaniesPage from "./Components/HomeNav/Company";
+import CompaniesPage from "./Components/HomeNav/Company/CompanyList";
+import CompanyDetail from "./Components/HomeNav/Company/CompanyDetail";
+import AccountActivation from "./Components/Auth/AccountActivation";
 import DashboardPage from "./Components/HomeNav/Dashboard";
 import DocumentsPage from "./Components/HomeNav/Documents";
 import SettingsPage from "./Components/HomeNav/Settings";
@@ -31,12 +33,14 @@ import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
 import ISO4217 from "./Components/HomeNav/Database/ISO4217";
+import ISO3166 from "./Components/HomeNav/Database/ISO3166";
 import GICS from "./Components/HomeNav/Database/GICS";
 import Database from "./Components/HomeNav/Database";
 import SupportChat from "./wstest/SupportChat";
 import AdminDashboardRouter from "./Components/AdminView/DashboardComponents/AdminDashboardRouter";
 import Regulations from "./Components/HomeNav/Database/Regulations";
 import ISO27001 from "./Components/HomeNav/Database/ISO27001";
+import PolicyLibraryTemplates from "./Components/HomeNav/Database/PolicyLibraryTemplates";
 import HomeLayout from "./Components/HomeNav/HomeLayout";
 import { NotificationProvider } from "./Context/NotificationContext";
 import NotificationToast from "./Components/Common/NotificationToast";
@@ -44,6 +48,7 @@ import ConsultantTeamPage from "./Components/HomeNav/ConsultantTeamPage";
 import VaptQuestions from "./Components/AdminView/ProjectTabs/VaptQuestions";
 import VaptForm from "./Components/AdminView/ProjectTabs/VaptForm";
 import EditorView from "./Components/EditorView/EditorView";
+import PolicyEditor from "./Components/PolicyEditor/PolicyEditor";
 
 const router = createBrowserRouter([
   {
@@ -57,6 +62,10 @@ const router = createBrowserRouter([
   {
     path: "/register",
     element: <LoginPage />,
+  },
+  {
+    path: "/activateaccount",
+    element: <AccountActivation />,
   },
   {
     path: "home",
@@ -77,6 +86,10 @@ const router = createBrowserRouter([
       {
         path: "company",
         element: <CompaniesPage />,
+      },
+      {
+        path: "company/:companyId",
+        element: <CompanyDetail />,
       },
       {
         path: "dashboard",
@@ -119,8 +132,16 @@ const router = createBrowserRouter([
             element: <ISO4217 />,
           },
           {
+            path: "countries",
+            element: <ISO3166 />,
+          },
+          {
             path: "gics",
             element: <GICS />,
+          },
+          {
+            path: "policy-library-templates",
+            element: <PolicyLibraryTemplates />,
           },
         ],
       },
@@ -213,6 +234,10 @@ const router = createBrowserRouter([
       {
         path: "editor",
         element: <EditorView />,
+      },
+      {
+        path: "policy-editor/:policyId?",
+        element: <PolicyEditor />,
       },
     ],
   },

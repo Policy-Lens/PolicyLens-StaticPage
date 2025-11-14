@@ -61,7 +61,7 @@ const Projects = () => {
     if (res.status == 200) {
       setCompanies(res.data);
     }
-    setSelectedCompany(res.data[0].id);
+    // setSelectedCompany(res.data[0].id);
   };
 
   function formatDate(dateString) {
@@ -212,38 +212,53 @@ const Projects = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
+          
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
             <h2 className="text-xl font-bold mb-4">Create Project</h2>
-            <input
-              type="text"
-              placeholder="Project Name"
-              className="w-full border border-gray-300 p-2 rounded-md mb-4"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-            />
+            <div className="mb-4 flex items-center">
+            <label htmlFor="company" className="mr-3 no-wrap"><span className="text-red-500">*</span>Company</label>
             <select
-              className="w-full border border-gray-300 p-2 rounded-md mb-4"
+              className="w-full border border-gray-300 p-2 rounded-md"
               value={selectedCompany}
               onChange={(e) => setSelectedCompany(e.target.value)}
+              required
             >
+              <option value="">Select Company</option>
               {companies.map((company, index) => (
-                <option key={index} value={company.id}>
-                  {company.name}
+                <option className={`cursor-not-allowed ${company.onboarding_status !== "completed" ? "text-red-500" : ""}`} key={index} value={company.id} disabled={company.onboarding_status !== "completed"}>
+                  {company.name} {company.onboarding_status !== "completed" ? "(Onboarding Not Completed)" : ""}
                 </option>
               ))}
             </select>
-            <button
-              className="w-full bg-blue-600 text-white py-2 rounded-md mb-2"
-              onClick={handleCreateProject}
-            >
-              Create
-            </button>
-            <button
-              className="w-full bg-gray-400 text-white py-2 rounded-md"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancel
-            </button>
+            </div>
+            <div className="mb-4 flex items-center">
+            <label htmlFor="project_id" className="mr-3 whitespace-nowrap"><span className="text-red-500">*</span>Project ID</label>
+            <input
+              type="text"
+              id="project_id"
+              placeholder="Project Id"
+              className="w-full border border-gray-300 p-2 rounded-md"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              required
+            />
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                className={`w-full bg-blue-600 text-white py-2 rounded-md ${selectedCompany === "" || projectName === "" ? "bg-gray-400 cursor-not-allowed" : ""}`}
+                onClick={handleCreateProject}
+                disabled={selectedCompany === "" || projectName === ""}
+              >
+                Create
+              </button>
+              <button
+                className="w-full border border-black py-2 rounded-md"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

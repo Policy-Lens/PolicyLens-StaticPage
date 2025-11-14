@@ -61,7 +61,7 @@ const ISO27001 = () => {
   ];
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "Admin") {
       setIsAdmin(true);
     }
   }, [user]);
@@ -539,6 +539,7 @@ const ISO27001 = () => {
           onChange={handleTableChange}
           scroll={{ x: 1800 }}
           size="middle"
+          sticky={true}
         />
       </div>
 

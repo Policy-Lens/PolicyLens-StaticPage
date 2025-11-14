@@ -43,7 +43,7 @@ const Regulations = () => {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "Admin") {
       setIsAdmin(true);
     }
   }, [user]);

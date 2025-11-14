@@ -17,7 +17,7 @@ import { useNotifications } from "../../Context/NotificationContext";
 
 const AdminLayout = () => {
   const { checkLogin, user } = useContext(AuthContext);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState("");
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [chatTicketId, setChatTicketId] = useState(null);
