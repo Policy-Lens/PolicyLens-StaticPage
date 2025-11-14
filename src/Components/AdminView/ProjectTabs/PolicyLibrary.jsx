@@ -763,18 +763,23 @@ const PolicyLibrary = () => {
     try {
       let queryParams = new URLSearchParams();
       if (currentSearch) queryParams.append("search", currentSearch);
-      if (currentControl) queryParams.append("control", currentControl);
+      // Note: control filter doesn't apply to policy templates, but keeping for compatibility
+      // Don't filter by active - show all templates (both active and inactive)
+      queryParams.append("page", "1");
+      queryParams.append("page_size", "100"); // Get all templates
       const queryString = queryParams.toString()
         ? `?${queryParams.toString()}`
         : "";
       const response = await apiRequest(
         "GET",
-        `/api/controlfiles/all-control-files/${queryString}`,
+        `/api/plc_workflow/templates/${queryString}`,
         null,
         true
       );
+      // Handle paginated response from policy templates API
+      const results = response.data?.results || [];
       setTemplatesData(
-        response.data && Array.isArray(response.data) ? response.data : []
+        Array.isArray(results) ? results : []
       );
     } catch (error) {
       console.error("Error fetching templates:", error);
@@ -818,6 +823,7 @@ const PolicyLibrary = () => {
       setIsLoading(false);
     }
   };
+
 
   // Fetch data when tab or filters change
   useEffect(() => {
@@ -919,18 +925,15 @@ const PolicyLibrary = () => {
     }
   };
 
-  // Column headers configuration for templates
+  // Column headers configuration for policy templates
   const templateColumns = [
     { key: "select", label: "" },
-    { key: "category", label: "Category" },
-    { key: "sub_category", label: "Sub-Category" },
-    // { key: "id", label: "No." },
-    { key: "file_name", label: "File Name" },
-    { key: "file_type", label: "File Type" },
-    { key: "regulation_standard", label: "Regulation Standard" },
-    { key: "regulation_control_no", label: "Regulation Control No." },
-    { key: "regulation_control_name", label: "Regulation Control Name" },
-    { key: "parent_control", label: "Parent Control" },
+    { key: "template_id", label: "Template ID" },
+    { key: "template_name", label: "Template Name" },
+    { key: "template_type", label: "Template Type" },
+    { key: "version", label: "Version" },
+    { key: "active", label: "Status" },
+    { key: "created_date", label: "Created Date" },
   ];
 
   // Column headers for project files
@@ -948,6 +951,16 @@ const PolicyLibrary = () => {
     { key: "assigned_to", label: "Assigned To" },
     { key: "created_at", label: "Created At" },
     { key: "updated_at", label: "Updated At" },
+  ];
+
+  // Column headers for policies
+  const policyColumns = [
+    { key: "policy_id", label: "Policy ID" },
+    { key: "template_name", label: "Template Name" },
+    { key: "template_type", label: "Template Type" },
+    { key: "status", label: "Status" },
+    { key: "created_date", label: "Created Date" },
+    { key: "modified_date", label: "Last Modified" },
   ];
 
   // Toggle file selection
@@ -994,25 +1007,45 @@ const PolicyLibrary = () => {
   const handleAssignment = async (assignmentData) => {
     setAssignmentLoading(true);
     try {
-      await apiRequest(
-        "POST",
-        `/api/controlfiles/projects/${projectid}/control-files/`,
-        assignmentData,
-        true
-      );
-      message.success("Files assigned successfully!");
+      // Check if we're assigning templates (from templates tab) or control files (from other tabs)
+      if (activeTab === "templates") {
+        // Use the new PolicyTemplate assignment endpoint
+        await apiRequest(
+          "POST",
+          `/api/plc_workflow/projects/${projectid}/assign-templates/`,
+          {
+            template_ids: assignmentData.file_ids,
+            assign_to: assignmentData.assign_to,
+          },
+          true
+        );
+        message.success("Templates assigned successfully!");
+      } else {
+        // Use the existing control files assignment endpoint
+        await apiRequest(
+          "POST",
+          `/api/controlfiles/projects/${projectid}/control-files/`,
+          assignmentData,
+          true
+        );
+        message.success("Files assigned successfully!");
+      }
       // Success - clear selections and close modal
       setSelectedFileIds([]);
       closeConsultantModal();
-      // Refresh data if in templates tab
+      // Refresh data based on active tab
       if (activeTab === "templates") {
         fetchTemplates();
+      } else {
+        refreshCurrentTabData();
       }
     } catch (error) {
       console.error("Error assigning files:", error);
-      message.error(
-        error.detail || "Failed to assign files. Please try again."
-      );
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.detail || 
+                          error.detail || 
+                          "Failed to assign files. Please try again.";
+      message.error(errorMessage);
     } finally {
       setAssignmentLoading(false);
     }
@@ -1128,6 +1161,74 @@ const PolicyLibrary = () => {
   const handleDownload = (file) => {
     if (file.file_path) {
       window.open(file.file_path, "_blank");
+    }
+  };
+
+  // Handle opening policy editor for a control file
+  const handleOpenPolicyEditor = async (file) => {
+    try {
+      // First, try to find a template matching the regulation_control_no
+      let templateId = file.regulation_control_no;
+      
+      if (!templateId) {
+        // If no regulation_control_no, navigate to template selection
+        navigate(`/project/${projectid}/policy-editor`);
+        return;
+      }
+
+      // Try to find an existing policy for this template in the project
+      try {
+        const policiesResponse = await apiRequest(
+          "GET",
+          `/api/plc_workflow/policies/?project_id=${projectid}`,
+          null,
+          true
+        );
+        
+        const policies = policiesResponse.data?.data || [];
+        // Find policy that matches the template
+        const matchingPolicy = policies.find(
+          (policy) => policy.template?.template_id === templateId
+        );
+        
+        if (matchingPolicy) {
+          // Navigate to existing policy
+          navigate(`/project/${projectid}/policy-editor/${matchingPolicy.policy_id}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching policies:", error);
+      }
+
+      // If no existing policy found, try to create one from the template
+      try {
+        const createResponse = await apiRequest(
+          "POST",
+          "/api/plc_workflow/policies/create/",
+          {
+            template_id: templateId,
+            project_id: parseInt(projectid),
+          },
+          true
+        );
+        
+        const newPolicyId = createResponse.data?.data?.policy_id;
+        if (newPolicyId) {
+          navigate(`/project/${projectid}/policy-editor/${newPolicyId}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Error creating policy:", error);
+        // If creation fails, navigate to template selection
+        message.warning("Could not create policy automatically. Please select a template.");
+      }
+
+      // Fallback: navigate to template selection
+      navigate(`/project/${projectid}/policy-editor`);
+    } catch (error) {
+      console.error("Error opening policy editor:", error);
+      // Fallback: navigate to template selection
+      navigate(`/project/${projectid}/policy-editor`);
     }
   };
 
@@ -1414,6 +1515,7 @@ const PolicyLibrary = () => {
           )}
         </button>
 
+
         {/* Removed Assigned By Me Tab */}
         {/* {isAdmin && (
           <button
@@ -1479,8 +1581,7 @@ const PolicyLibrary = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder={`Search ${activeTab === "templates" ? "templates" : "files"
-                    }...`}
+                  placeholder={`Search ${activeTab === "templates" ? "templates" : "files"}...`}
                   className="pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-72"
                   value={searchTerm}
                   onChange={handleSearchChange}
@@ -1578,84 +1679,68 @@ const PolicyLibrary = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {templatesData.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {projectRole === "consultant admin" && (
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          checked={selectedFileIds.includes(item.id)}
-                          onChange={() => toggleFileSelection(item.id)}
-                        />
-                      )}
-                    </td>
-                    {/* <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.id}
-                    </td> */}
-                    <td className="px-3 py-2.5 text-sm font-medium">
-                      {item.category}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm font-medium">
-                      {item.sub_category}
-                    </td>
-                    <td
-                      className="px-3 py-2.5 text-sm font-medium text-blue-600 cursor-pointer hover:underline"
-                      onClick={() => openFileViewer(item)}
+                {templatesData.map((item) => {
+                  const formatDate = (dateString) => {
+                    if (!dateString) return "N/A";
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    });
+                  };
+                  
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition-colors"
                     >
-                      {item.file_name}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {item.file_type}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.regulation_standard}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.regulation_control_no}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.regulation_control_name}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      {item.parent_control || "None"}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900">
-                      <div className="flex space-x-2">
-                        <button
-                          className="p-1 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
-                          title="View Details"
-                          onClick={() =>
-                            setDetailsModal({ isOpen: true, file: item })
-                          }
-                        >
-                          <Eye size={16} className="text-blue-600" />
-                        </button>
-                        <button
-                          className="p-1 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
-                          title="Download File"
-                          onClick={() => handleDownload(item)}
-                        >
-                          <Download size={16} className="text-green-600" />
-                        </button>
+                      <td className="px-3 py-2.5 text-sm text-gray-900">
                         {projectRole === "consultant admin" && (
-                          <button
-                            className="p-1 bg-purple-100 rounded-md hover:bg-purple-200 transition-colors"
-                            title="Assign File"
-                            onClick={() => openConsultantModal([item.id])}
-                          >
-                            <Users size={16} className="text-purple-600" />
-                          </button>
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            checked={selectedFileIds.includes(item.id)}
+                            onChange={() => toggleFileSelection(item.id)}
+                          />
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                        {item.template_id || "N/A"}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                        {item.template_name || "N/A"}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-900">
+                        {item.template_type ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {item.template_type}
+                          </span>
+                        ) : (
+                          "N/A"
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-900">
+                        {item.version || "N/A"}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-900">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.active 
+                            ? "bg-green-100 text-green-800" 
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {item.active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-900">
+                        {formatDate(item.created_date)}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-900">
+                        {/* Actions removed */}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1699,7 +1784,7 @@ const PolicyLibrary = () => {
                     </td>
                     <td
                       className="px-3 py-2.5 text-sm font-medium text-blue-600 cursor-pointer hover:underline"
-                      onClick={() => openFileViewer(item)}
+                      onClick={() => handleOpenPolicyEditor(item)}
                     >
                       {item.file_name}
                     </td>
@@ -1746,25 +1831,6 @@ const PolicyLibrary = () => {
                         >
                           <Eye size={16} className="text-blue-600" />
                         </button>
-                        <button
-                          className="p-1 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
-                          title="Download File"
-                          onClick={() => handleDownload(item)}
-                        >
-                          <Download size={16} className="text-green-600" />
-                        </button>
-                        {/* Show Upload for Consultants and Consultant Admins (if assigned), Delete for Admins in My Files tab */}
-                        {activeTab === "myFiles" &&
-                          ((projectRole === "consultant") ||
-                            (projectRole === "consultant admin" && isCurrentUserAssigned(item.assigned_to_details))) && (
-                            <button
-                              className="p-1 bg-orange-100 rounded-md hover:bg-orange-200 transition-colors"
-                              title="Upload New Version"
-                              onClick={() => openUploadModal(item)}
-                            >
-                              <Upload size={16} className="text-orange-600" />
-                            </button>
-                          )}
                         {activeTab === "myFiles" &&
                           projectRole === "consultant admin" && (
                             <button
@@ -1784,6 +1850,7 @@ const PolicyLibrary = () => {
           </div>
         )}
 
+
         {/* AI Document Workshop View */}
         {activeTab === "aiWorkshop" && (
           <div className="mt-4 border-t border-slate-200">
@@ -1795,7 +1862,8 @@ const PolicyLibrary = () => {
         {!isLoading && activeTab !== "aiWorkshop" &&
           ((activeTab === "templates" && templatesData.length === 0) ||
             (activeTab === "myFiles" && projectFilesData.length === 0)) &&
-          !((activeTab === "templates" && templatesData.length > 0) || (activeTab === "myFiles" && projectFilesData.length > 0)) && (
+          !((activeTab === "templates" && templatesData.length > 0) || 
+            (activeTab === "myFiles" && projectFilesData.length > 0)) && (
             <div className="flex flex-col items-center justify-center p-10 text-center border-t border-slate-200 rounded-lg bg-white shadow min-h-[300px]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1818,10 +1886,10 @@ const PolicyLibrary = () => {
                 {activeTab === "templates"
                   ? "No templates are available at the moment."
                   : projectRole === "consultant admin"
-                    ? "You have not assigned any files yet."
-                    : projectRole === "consultant"
-                      ? "You have no files assigned to you yet."
-                      : "No files are available for you in this project."}
+                      ? "You have not assigned any files yet."
+                      : projectRole === "consultant"
+                        ? "You have no files assigned to you yet."
+                        : "No files are available for you in this project."}
               </p>
               {(searchTerm || controlNameFilter) && (
                 <button

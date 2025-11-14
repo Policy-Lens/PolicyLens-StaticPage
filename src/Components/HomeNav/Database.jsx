@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { BookCheck, Building, Globe, Scale,Factory,MapPin,CoinsIcon } from "lucide-react";
+import { BookCheck, Building, Globe, Scale,Factory,MapPin,CoinsIcon,FileText } from "lucide-react";
 
 const Database = () => {
   const location = useLocation();
@@ -8,6 +8,7 @@ const Database = () => {
   const tabs = [
     { name: "Regulations", href: "/home/database/regulations", icon: Scale },
     { name: "ISO27001", href: "/home/database/iso27001", icon: BookCheck },
+    { name: "Policy Library Templates", href: "/home/database/policy-library-templates", icon: FileText },
     { name: "ISO4217", href: "/home/database/iso4217", icon: CoinsIcon },
     { name: "Countries", href: "/home/database/countries", icon: MapPin },
     { name: "GICS", href: "/home/database/gics", icon: Factory },
