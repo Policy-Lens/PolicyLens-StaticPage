@@ -19,7 +19,7 @@ import { useNotifications } from "../../Context/NotificationContext";
 import React from "react";
 
 const Sidebar = ({ onToggle }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const location = useLocation();
   const { user, handleLogout } = useContext(AuthContext);
   const navigate = useNavigate();

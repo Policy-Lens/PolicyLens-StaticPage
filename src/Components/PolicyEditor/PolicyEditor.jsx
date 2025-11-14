@@ -505,8 +505,8 @@ const PolicyEditor = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Metadata */}
-        <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto p-3">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Metadata
           </h2>
@@ -518,15 +518,14 @@ const PolicyEditor = () => {
         </div>
 
         {/* Center Panel - Rich Text Editor */}
-        <div className="flex-1 flex flex-col overflow-hidden p-6">
-          <h2 className="text-lg font-semibold mb-4">Policy Content</h2>
+        <div className="flex-1 flex flex-col overflow-hidden p-3">
           <div className="flex-1 overflow-y-auto">
             <RichTextEditor
               content={mainContent.html || ""}
               onChange={handleContentChange}
               placeholder="Start writing your policy content..."
             />
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="mt-3 text-sm text-gray-500">
               Words: {mainContent.word_count || 0} | Characters:{" "}
               {mainContent.char_count || 0}
             </div>
@@ -535,7 +534,7 @@ const PolicyEditor = () => {
 
         {/* Right Panel - AI Assistant */}
         {showAIPanel && (
-          <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto p-6">
+          <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto p-3">
             <AIPanel
               policyId={policyId}
               policyText={mainContent.plain_text || ""}

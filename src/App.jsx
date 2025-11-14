@@ -37,6 +37,7 @@ import SupportChat from "./wstest/SupportChat";
 import AdminDashboardRouter from "./Components/AdminView/DashboardComponents/AdminDashboardRouter";
 import Regulations from "./Components/HomeNav/Database/Regulations";
 import ISO27001 from "./Components/HomeNav/Database/ISO27001";
+import PolicyLibraryTemplates from "./Components/HomeNav/Database/PolicyLibraryTemplates";
 import HomeLayout from "./Components/HomeNav/HomeLayout";
 import { NotificationProvider } from "./Context/NotificationContext";
 import NotificationToast from "./Components/Common/NotificationToast";
@@ -122,6 +123,10 @@ const router = createBrowserRouter([
           {
             path: "gics",
             element: <GICS />,
+          },
+          {
+            path: "policy-library-templates",
+            element: <PolicyLibraryTemplates />,
           },
         ],
       },
