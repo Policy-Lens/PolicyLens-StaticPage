@@ -6,7 +6,7 @@ import {
 } from "react-router-dom";
 import CarouselHorizontalStepper from "./Components/WorkFlow/VertStepper";
 import AdminDashboard from "./Components/AdminView/DashboardComponents/AdminDashboard";
-import ProjectTeam from "./Components/AdminView/ProjectTeam";
+import ProjectTeam from "./Components/ProjectView/Manage Team/ProjectTeam";
 import AdminPreview from "./Components/AdminView/AdminPreview";
 import AuditorsPage from "./Components/HomeNav/Auditors";
 import CompaniesPage from "./Components/HomeNav/Company/CompanyList";
@@ -27,6 +27,7 @@ import MyReports from "./Components/AdminView/ProjectTabs/MyReports/MyReports";
 import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import { WorkflowProvider } from "./Context/WorkflowContext";
+import { ScopingProvider } from "./Context/ScopingContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
@@ -49,6 +50,8 @@ import VaptQuestions from "./Components/AdminView/ProjectTabs/VaptQuestions";
 import VaptForm from "./Components/AdminView/ProjectTabs/VaptForm";
 import EditorView from "./Components/EditorView/EditorView";
 import PolicyEditor from "./Components/PolicyEditor/PolicyEditor";
+import WorkflowOverview from "./Components/ProjectView/Workflow/WorkflowOverview";
+import Scoping from "./Components/ProjectView/Workflow/Scoping/Scoping";
 
 const router = createBrowserRouter([
   {
@@ -239,6 +242,14 @@ const router = createBrowserRouter([
         path: "policy-editor/:policyId?",
         element: <PolicyEditor />,
       },
+      {
+        path: "workflow",
+        element: <WorkflowOverview />,
+      },
+      {
+        path: "workflow/scoping",
+        element: <Scoping />,
+      },
     ],
   },
 ]);
@@ -248,12 +259,12 @@ const AppLayout = () => {
     <AuthProvider>
       <NotificationProvider>
         <WorkflowProvider>
-          <ProjectProvider>
-            <div className="font-sans"> {/* Add this wrapper */}
-              <RouterProvider router={router} />
-              <NotificationToast />
-            </div>
-          </ProjectProvider>
+          <ScopingProvider>
+            <ProjectProvider>
+                <RouterProvider router={router} />
+                <NotificationToast />
+            </ProjectProvider>
+          </ScopingProvider>
         </WorkflowProvider>
       </NotificationProvider>
     </AuthProvider>
