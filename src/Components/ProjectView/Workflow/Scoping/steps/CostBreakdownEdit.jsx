@@ -305,7 +305,7 @@ const CostBreakdownEdit = ({ projectId, onCancel, onSave }) => {
       title="Cost Breakdown - Edit Mode"
       extra={
         <Space>
-          <Button onClick={onCancel}>Cancel</Button>
+          {/* <Button onClick={onCancel}>Cancel</Button> */}
           <Button
             type="primary"
             onClick={() => (hasChanges ? onSave() : onCancel())}

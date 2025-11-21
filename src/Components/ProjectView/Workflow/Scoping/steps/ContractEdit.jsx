@@ -15,7 +15,7 @@ const ContractEdit = ({
   saving,
   hasChanges,
 }) => {
-  const [activeKeys, setActiveKeys] = useState([]);
+  const [activeKey, setActiveKey] = useState(null); // Single active key for accordion
 
   const clauseLabels = [
     { key: "c1_services", label: "Clause 1. SERVICES" },
@@ -90,19 +90,16 @@ const ContractEdit = ({
   return (
     <Card
       style={{
-        border: "1px solid #d9d9d9",
+        border: "2px solid #d9d9d9",
         background: "#fff",
-        height: "100%",
+        maxHeight: "calc(100vh - 350px)",
         display: "flex",
         flexDirection: "column",
-        width: 450,
-        minHeight: 450,
-        height: "60dvh",
       }}
       bodyStyle={{
         padding: 0,
-        flex: 1,
         overflow: "auto",
+        flex: 1,
       }}
       title={
         <div style={{ fontSize: 14, fontWeight: 600 }}>
@@ -132,9 +129,9 @@ const ContractEdit = ({
       }
     >
       <Collapse
-        activeKey={activeKeys}
-        onChange={setActiveKeys}
-        accordion={false}
+        activeKey={activeKey}
+        onChange={setActiveKey}
+        accordion={true}
         style={{ border: "none" }}
       >
         {clauseLabels.map(({ key, label }) => (

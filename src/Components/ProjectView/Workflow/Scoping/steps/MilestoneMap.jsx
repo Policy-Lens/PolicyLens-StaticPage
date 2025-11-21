@@ -37,7 +37,7 @@ const MilestoneMap = ({ projectId }) => {
   // Get max week from timeline data
   const maxWeek = Math.max(
     ...milestoneData.flatMap((item) => item.timeline_weeks || []),
-    12
+    0
   );
 
   return (
@@ -104,7 +104,7 @@ const MilestoneMap = ({ projectId }) => {
                 <Text strong>Key Deliverable(s)</Text>
               </th>
               <th style={{ padding: "12px 8px", textAlign: "center" }}>
-                <Text strong>Timeline (12 Weeks)</Text>
+                <Text strong>Timeline</Text>
                 <div
                   style={{
                     display: "flex",

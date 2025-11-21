@@ -12,6 +12,8 @@ import {
   Tag,
   Alert,
   Select,
+  Segmented,
+  Tooltip,
 } from "antd";
 import {
   LeftOutlined,
@@ -26,6 +28,10 @@ import {
   CloseCircleOutlined,
   InfoCircleOutlined,
   UserOutlined,
+  ColumnHeightOutlined,
+  ColumnWidthOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 import { ScopingContext } from "../../../../Context/ScopingContext";
 import { ProjectContext } from "../../../../Context/ProjectContext";
@@ -65,14 +71,15 @@ const Scoping = () => {
     useState(false);
   const [signatureImage, setSignatureImage] = useState(null);
   const [feedbackText, setFeedbackText] = useState("");
-  const [actionType, setActionType] = useState(null); // 'approve' or 'reject'
+  const [actionType, setActionType] = useState(null);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [reviewers, setReviewers] = useState([]);
   const [selectedAssignee, setSelectedAssignee] = useState(null);
+  const [layoutDirection, setLayoutDirection] = useState("horizontal");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const displayStatus = getStatusConfig(scopingData?.status);
 
-  // Load scoping data once
   useEffect(() => {
     loadScopingData();
   }, [projectid]);
@@ -102,7 +109,6 @@ const Scoping = () => {
     setAssignModalVisible(true);
     const members = await getMembers(projectid);
     if (members) {
-      console.log(members);
       const company_representatives = members.filter(
         (member) => member.project_role === "company representative"
       );
@@ -129,7 +135,6 @@ const Scoping = () => {
     }
   };
 
-  // Check permissions for updates
   const canEdit = () => {
     return (
       projectRole === "consultant admin" &&
@@ -175,7 +180,6 @@ const Scoping = () => {
     );
   };
 
-  // Step definitions
   const steps = [
     {
       title: "Scope of Work",
@@ -209,7 +213,6 @@ const Scoping = () => {
     },
   ];
 
-  // Navigation handlers
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
@@ -222,7 +225,6 @@ const Scoping = () => {
     }
   };
 
-  // Approval workflow handlers
   const handleSendForApproval = () => {
     setSignModalVisible(true);
     setActionType("approve");
@@ -268,7 +270,6 @@ const Scoping = () => {
     if (action === "reject" || projectRole === "company representative") {
       setFeedbackModalVisible(true);
     } else {
-      // Company admin approval with signature
       setSignModalVisible(true);
     }
   };
@@ -297,7 +298,7 @@ const Scoping = () => {
         setFeedbackModalVisible(false);
         setFeedbackText("");
         if (actionType === "reject") {
-          loadScopingData(); // Reload to get updated status
+          loadScopingData();
         }
       } else {
         message.error(`Failed to ${actionType} scoping`);
@@ -332,18 +333,10 @@ const Scoping = () => {
     }
   };
 
-  //   // Handle signature image upload
-  //   const handleSignatureChange = (e) => {
-  //     const file = e.target.files;
-  //     setSignatureImage(file);
-  //   };
-
-  // Handle feedback modal visibility
   const handleFeedbackViewModalVisible = () => {
     setFeedbackViewModalVisible(!feedbackViewModalVisible);
   };
 
-  // Render step component
   const CurrentStepComponent = steps[currentStep].component;
 
   if (loading) {
@@ -368,37 +361,101 @@ const Scoping = () => {
   return (
     <div
       style={{
-        height: "91dvh",
+        height: "calc(100vh - 68px)", // Subtract navbar height
         display: "flex",
         flexDirection: "column",
         background: "#f0f2f5",
+        overflow: "hidden",
       }}
     >
       {/* Sticky Header */}
       <Card
         size="small"
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 1,
           borderRadius: 0,
           borderBottom: "1px solid #e8e8e8",
-          backgroundColor: "primary",
+          flexShrink: 0,
         }}
-        bodyStyle={{ padding: "10px 0" }}
+        bodyStyle={{ padding: "10px 16px" }}
       >
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            width: "100%",
             alignItems: "start",
-            padding: "0 10px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "start" }}>
+          <div style={{ display: "flex", alignItems: "start", gap: 20 }}>
+            <Segmented
+              value={layoutDirection}
+              onChange={setLayoutDirection}
+              vertical
+              options={[
+                {
+                  value: "horizontal",
+                  icon: (
+                    <svg
+                      width="20"
+                      height="28"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        x="4"
+                        y="3"
+                        width="12"
+                        height="4"
+                        rx="1"
+                        stroke="black"
+                      />
+                      <rect
+                        x="4"
+                        y="9"
+                        width="12"
+                        height="8"
+                        rx="1"
+                        stroke="black"
+                      />
+                    </svg>
+                  ),
+                },
+                {
+                  value: "vertical",
+                  icon: (
+                    <svg
+                      width="20"
+                      height="23"
+                      viewBox="0 0 20 25"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        x="3"
+                        y="21"
+                        width="12"
+                        height="4"
+                        rx="1"
+                        transform="rotate(-90 3 21)"
+                        stroke="black"
+                      />
+                      <rect
+                        x="9"
+                        y="21"
+                        width="12"
+                        height="8"
+                        rx="1"
+                        transform="rotate(-90 9 21)"
+                        stroke="black"
+                      />
+                    </svg>
+                  ),
+                },
+              ]}
+              style={{ marginTop: 4 }}
+            />
             <div>
-              <Title level={4} style={{ margin: 0 }}>
+              <Title level={4} style={{ margin: 0, marginBottom: 4 }}>
                 Project Scoping Wizard
                 <Tag style={{ marginLeft: "10px" }} color={displayStatus.color}>
                   {displayStatus.text}
@@ -408,80 +465,75 @@ const Scoping = () => {
                 Define your project scope, resources, timeline, and pricing
               </Text>
               {scopingData?.reviewer && (
-                <div style={{ marginLeft: "20px" }}>
-                  <Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
                     Reviewer: {scopingData.reviewer_details?.name || "Assigned"}
                   </Text>
                 </div>
               )}
             </div>
-            <div style={{ marginLeft: "20px" }}>
-              {scopingData?.latest_feedback &&
-                (scopingData?.status === "in_progress" ||
-                  scopingData?.status === "awaiting_approval") &&
-                !(
-                  scopingData?.latest_feedback.status === "approved" &&
-                  projectRole === "consultant admin"
-                ) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                    onMouseOver={() => setFeedbackViewModalVisible(true)}
-                    onMouseOut={() => setFeedbackViewModalVisible(false)}
+            {scopingData?.latest_feedback &&
+              (scopingData?.status === "in_progress" ||
+                scopingData?.status === "awaiting_approval") &&
+              !(
+                scopingData?.latest_feedback.status === "approved" &&
+                projectRole === "consultant admin"
+              ) && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    position: "relative",
+                  }}
+                  onMouseEnter={() => setFeedbackViewModalVisible(true)}
+                  onMouseLeave={() => setFeedbackViewModalVisible(false)}
+                >
+                  <InfoCircleOutlined
+                    style={{ marginRight: "8px", fontSize: "18px" }}
+                  />
+                  <Tag
+                    color={
+                      scopingData.latest_feedback.status === "approved"
+                        ? "green"
+                        : "red"
+                    }
+                    icon={
+                      scopingData.latest_feedback.status === "approved" ? (
+                        <CheckCircleOutlined />
+                      ) : (
+                        <CloseCircleOutlined />
+                      )
+                    }
                   >
-                    <InfoCircleOutlined
-                      style={{ marginRight: "8px", fontSize: "18px" }}
-                    />
-                    <Tag
-                      color={
-                        scopingData.latest_feedback.status === "approved"
-                          ? "green"
-                          : "red"
-                      }
-                      icon={
-                        scopingData.latest_feedback.status === "approved" ? (
-                          <CheckCircleOutlined />
-                        ) : (
-                          <CloseCircleOutlined />
-                        )
-                      }
+                    {scopingData.latest_feedback.status === "approved"
+                      ? `Approved by ${scopingData.reviewer_details.name}`
+                      : "Rejected"}
+                  </Tag>
+                  {feedbackViewModalVisible && (
+                    <Card
+                      style={{
+                        position: "absolute",
+                        top: 40,
+                        left: 0,
+                        zIndex: 1000,
+                        width: 250,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      }}
+                      size="small"
                     >
-                      {scopingData.latest_feedback.status === "approved"
-                        ? `Approved by ${scopingData.reviewer_details.name}`
-                        : "Rejected"}
-                    </Tag>
-                    {feedbackViewModalVisible && (
-                      <Card
-                        style={{
-                          display: "flex",
-                          position: "absolute",
-                          top: 40,
-                          left: "410px",
-                          zIndex: 40,
-                          width: "250px",
-                        }}
-                        size="small"
-                      >
-                        <Title level={5}>Feedback: </Title>
-                        <Text
-                          color={
-                            scopingData.latest_feedback.status === "approved"
-                              ? "green"
-                              : "red"
-                          }
-                        >
-                          {scopingData.latest_feedback.status === "approved"
-                            ? `Now Company SPOC can sign and approve`
-                            : scopingData.latest_feedback.feedback}
-                        </Text>
-                      </Card>
-                    )}
-                  </div>
-                )}
-            </div>
+                      <Title level={5} style={{ marginBottom: 8 }}>
+                        Feedback:
+                      </Title>
+                      <Text>
+                        {scopingData.latest_feedback.status === "approved"
+                          ? "Now Company SPOC can sign and approve"
+                          : scopingData.latest_feedback.feedback}
+                      </Text>
+                    </Card>
+                  )}
+                </div>
+              )}
           </div>
           <Space>
             {canSendForApproval() && (
@@ -519,48 +571,136 @@ const Scoping = () => {
             )}
           </Space>
         </div>
-        <div
-          style={{
-            height: "3px",
-            background: "#F0F2F5",
-            margin: "10px 0",
-          }}
-        />
-        {/* Stepper */}
-        <div style={{ marginTop: 12, padding: "0 20px" }}>
-          <Steps
-            current={currentStep}
-            onChange={setCurrentStep}
-            items={steps.map((step, index) => ({
-              title: step.title,
-              icon: step.icon,
-            }))}
-          />
-        </div>
       </Card>
 
-      {/* Body - Scrollable */}
-      <div style={{ flex: 1, overflow: "auto", padding: "20px" }}>
-        <Card>
-          <CurrentStepComponent
-            projectId={projectid}
-            canEdit={canEdit()}
-            scopingData={scopingData}
-            reloadData={loadScopingData}
-          />
+      {/* Main Content Area */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: layoutDirection === "vertical" ? "row" : "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* Stepper Section */}
+        <Card
+          size="small"
+          style={{
+            flexShrink: 0,
+            borderRadius: 0,
+            ...(layoutDirection === "vertical"
+              ? {
+                  width: sidebarCollapsed ? 70 : 280,
+                  height: "100%",
+                  borderRight: "1px solid #e8e8e8",
+                }
+              : {
+                  width: "100%",
+                  borderBottom: "1px solid #e8e8e8",
+                }),
+          }}
+          bodyStyle={{
+            padding: 0,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {layoutDirection === "vertical" && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: sidebarCollapsed ? "center" : "flex-end",
+                padding: 10,
+                borderBottom: "1px solid #f0f0f0",
+              }}
+            >
+              <Button
+                type="text"
+                icon={
+                  sidebarCollapsed ? (
+                    <MenuUnfoldOutlined />
+                  ) : (
+                    <MenuFoldOutlined />
+                  )
+                }
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                size="small"
+              />
+            </div>
+          )}
+
+          <div
+            style={{
+              flex: 1,
+              overflow: "auto",
+              alignItems:"center",
+              padding:
+                layoutDirection === "vertical"
+                  ? "20px"
+                  : "16px 20px",
+              height:"100%"
+            }}
+          >
+            <Steps
+              current={currentStep}
+              onChange={setCurrentStep}
+              direction={layoutDirection}
+              items={steps.map((step) =>
+                layoutDirection === "vertical" && sidebarCollapsed
+                  ? {
+                      icon: (
+                        <Tooltip title={step.title} placement="right">
+                          <span>{step.icon}</span>
+                        </Tooltip>
+                      ),
+                    }
+                  : {
+                      title: step.title,
+                      icon: step.icon,
+                    }
+              )}
+              style={{height:"100%"}}
+            />
+          </div>
         </Card>
+
+        {/* Content Section */}
+        <div
+          style={{
+            flex: 1,
+            overflow: "auto",
+            padding: 16,
+            background: "#f0f2f5",
+          }}
+        >
+          <Card
+            style={{
+              minHeight: "100%",
+            }}
+            bodyStyle={{
+              padding: 24,
+            }}
+          >
+            <CurrentStepComponent
+              projectId={projectid}
+              canEdit={canEdit()}
+              scopingData={scopingData}
+              reloadData={loadScopingData}
+            />
+          </Card>
+        </div>
       </div>
 
-      {/*Sticky Footer */}
+      {/* Sticky Footer */}
       <Card
         size="small"
         style={{
-          position: "sticky",
-          bottom: 0,
-          zIndex: 1,
           borderRadius: 0,
           borderTop: "1px solid #e8e8e8",
+          flexShrink: 0,
         }}
+        bodyStyle={{ padding: "8px 16px" }}
       >
         <div
           style={{
@@ -592,7 +732,7 @@ const Scoping = () => {
         </div>
       </Card>
 
-      {/* Signature Modal */}
+      {/* Modals */}
       <Modal
         title="Signature Required"
         open={signModalVisible}
@@ -616,17 +756,9 @@ const Scoping = () => {
             onChange={(e) => setSignatureImage(e.target.files[0])}
             style={{ display: "block", marginTop: 16, marginBottom: 16 }}
           />
-          {/* {signatureImage && (
-            <img 
-              src={signatureImage} 
-              alt="Signature preview" 
-              style={{ maxWidth: '100%', maxHeight: 200, marginTop: 16 }}
-            />
-          )} */}
         </div>
       </Modal>
 
-      {/* Feedback Modal */}
       <Modal
         title={
           actionType === "approve" ? "Approval Feedback" : "Rejection Feedback"
@@ -656,7 +788,7 @@ const Scoping = () => {
           />
         </div>
       </Modal>
-      {/* Reviewer Assignment Modal */}
+
       <Modal
         title="Assign Reviewer"
         open={assignModalVisible}
@@ -701,9 +833,9 @@ const Scoping = () => {
             }
           >
             {reviewers.map((member) => (
-              <Option key={member.id} value={member.id}>
+              <Select.Option key={member.id} value={member.id}>
                 {member.name} ({member.email})
-              </Option>
+              </Select.Option>
             ))}
           </Select>
         </div>

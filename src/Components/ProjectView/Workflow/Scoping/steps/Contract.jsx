@@ -7,10 +7,8 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import ContractPreview from "./ContractPreview";
-// import ContractEdit from './ContractEdit';
 const ContractEdit = lazy(() => import("./ContractEdit"));
 import html2pdf from "html2pdf.js";
-import { motion, AnimatePresence } from "framer-motion";
 import { ScopingContext } from "../../../../../Context/ScopingContext";
 import { ProjectContext } from "../../../../../Context/ProjectContext";
 
@@ -177,6 +175,25 @@ const Contract = ({ projectId }) => {
     }
   };
 
+  const handleToggleEdit = () => {
+    if (isEdit && hasChanges()) {
+      Modal.confirm({
+        title: "Unsaved Changes",
+        icon: <ExclamationCircleOutlined />,
+        content:
+          "Closing this edit panel will revert all changes back to before. You will lose all the edited data.",
+        okText: "Yes, Close",
+        cancelText: "No",
+        onOk: () => {
+          setClauses(originalClauses); // Revert changes
+          setIsEdit(false);
+        },
+      });
+    } else {
+      setIsEdit(!isEdit);
+    }
+  };
+
   const handleCloseEdit = () => {
     if (hasChanges()) {
       Modal.confirm({
@@ -220,12 +237,25 @@ const Contract = ({ projectId }) => {
     <div>
       <Title
         level={4}
-        style={{ display: "flex", justifyContent: "space-between" }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
       >
         <div>
           <FileProtectOutlined /> Contract
         </div>
         <Space>
+          {canEdit && (
+            <Button
+              onClick={handleToggleEdit}
+              type={isEdit ? "default" : "primary"}
+              icon={<EditOutlined />}
+            >
+              {isEdit ? "Close Editor" : "Edit Clauses"}
+            </Button>
+          )}
           <Tooltip
             title={hasChanges() ? "Please save changes before downloading" : ""}
           >
@@ -250,57 +280,58 @@ const Contract = ({ projectId }) => {
           display: "flex",
           flexDirection: "row",
           marginTop: 20,
-          gap: 10,
+          gap: 20,
+          position: "relative",
         }}
       >
-        {canEdit && (
-          <AnimatePresence mode="wait">
-            {isEdit ? (
-              <Suspense
-                fallback={
-                  <div style={{ textAlign: "center", padding: "50px" }}>
-                    <Spin size="large" />
-                  </div>
-                }
+        {canEdit && isEdit && (
+          <Suspense
+            fallback={
+              <div
+                style={{
+                  width: 450,
+                  textAlign: "center",
+                  padding: "50px",
+                  position: "sticky",
+                  top: 20,
+                  alignSelf: "flex-start",
+                }}
               >
-                <motion.div
-                  key="edit-panel"
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 450, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  style={{
-                    overflow: "hidden",
-                    position: "sticky",
-                    top: 0,
-                    alignSelf: "flex-start",
-                    maxHeight: "calc(100vh - 100px)",
-                  }}
-                >
-                  <ContractEdit
-                    clauses={clauses}
-                    originalClauses={originalClauses}
-                    onClauseChange={handleClauseChange}
-                    onClose={handleCloseEdit}
-                    onSave={handleSave}
-                    saving={saving}
-                    hasChanges={hasChanges()}
-                  />
-                </motion.div>
-              </Suspense>
-            ) : (
-              <motion.div key="edit-button">
-                <Button
-                  style={{ margin: 10, borderRadius: "20px" }}
-                  onClick={() => setIsEdit(true)}
-                  icon={<EditOutlined />}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <Spin size="large" tip="Loading editor..." />
+              </div>
+            }
+          >
+            <div
+              style={{
+                width: 450,
+                flexShrink: 0,
+                position: "sticky",
+                top: 20,
+                alignSelf: "flex-start",
+                maxHeight: "calc(100vh - 140px)",
+                overflow: "hidden",
+              }}
+            >
+              <ContractEdit
+                clauses={clauses}
+                originalClauses={originalClauses}
+                onClauseChange={handleClauseChange}
+                onClose={handleCloseEdit}
+                onSave={handleSave}
+                saving={saving}
+                hasChanges={hasChanges()}
+              />
+            </div>
+          </Suspense>
         )}
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "auto",
+          }}
+        >
           <ContractPreview
             clauses={clauses}
             totalPrice={totalPrice}
