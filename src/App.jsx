@@ -172,7 +172,8 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <CarouselHorizontalStepper />,
+        element: <Navigate to="workflow" replace />,
+        // element: <CarouselHorizontalStepper />,
       },
       {
         path: "projectdashboard/*",

@@ -174,10 +174,8 @@
   margin-bottom: 20px;
 }
 
-/* Allow clause sections to break naturally, but keep header with first line */
 .contract-clause-section {
   margin-bottom: 25px;
-  /* Remove page-break-inside: avoid to allow natural breaking */
 }
 
 /* Ensure tables don't break */
@@ -196,6 +194,8 @@
 .contract-clause-content p {
   orphans: 2;
   widows: 2;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 /* Prevent list items from breaking across pages when possible */

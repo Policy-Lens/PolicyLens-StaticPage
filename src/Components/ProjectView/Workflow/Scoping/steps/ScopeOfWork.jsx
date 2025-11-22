@@ -141,7 +141,7 @@ const ScopeOfWork = ({ projectId }) => {
             {
               key: 3,
               type: "Headcount",
-              count: companyData.num_employees || 0,
+              count: companyData.company_headcount || 0,
             },
           ]}
           columns={[
@@ -189,56 +189,30 @@ const ScopeOfWork = ({ projectId }) => {
               type="secondary"
               style={{ display: "block", marginBottom: 16 }}
             >
-              Location details and infrastructure
+              Location details
             </Text>
-
-            <Descriptions
-              bordered
-              column={2}
-              size="small"
-              style={{ marginBottom: 16 }}
-            >
-              <Descriptions.Item label="Location Name">
-                {location.name || "N/A"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Address">
-                {location.address || "N/A"}
-              </Descriptions.Item>
-              <Descriptions.Item label="City">
-                {location.city || "N/A"}
-              </Descriptions.Item>
-              <Descriptions.Item label="State/Province">
-                {location.state || "N/A"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Country">
-                {location.country || "N/A"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Postal Code">
-                {location.postal_code || "N/A"}
-              </Descriptions.Item>
-            </Descriptions>
 
             <Table
               dataSource={[
                 {
-                  key: 1,
-                  category: "Headcount",
-                  count: location.headcount || 0,
-                },
-                {
                   key: 2,
-                  category: "IT Assets",
-                  count: location.it_assets || 0,
+                  category: "Country",
+                  count: location.country || 0,
                 },
                 {
                   key: 3,
-                  category: "Cloud Services",
-                  count: location.cloud_services || 0,
+                  category: "City",
+                  count: location.city || 0,
                 },
                 {
                   key: 4,
-                  category: "Applications",
-                  count: location.applications || 0,
+                  category: "Zip Code",
+                  count: location.zipcode || 0,
+                },
+                {
+                  key: 1,
+                  category: "Headcount",
+                  count: location.headcount || 0,
                 },
               ]}
               columns={locationColumns}
