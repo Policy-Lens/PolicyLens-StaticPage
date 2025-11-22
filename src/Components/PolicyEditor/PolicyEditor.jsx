@@ -7,9 +7,11 @@ import {
   ArrowLeft,
   Sparkles,
   FileText,
+  FileDown,
 } from "lucide-react";
 import { Button, message, Form, Input, Select, Upload, Spin, Alert } from "antd";
 const { useWatch } = Form;
+import html2pdf from "html2pdf.js";
 import { apiRequest } from "../../utils/api";
 import RichTextEditor from "./RichTextEditor";
 import AIPanel from "./AIPanel";
@@ -240,6 +242,43 @@ const PolicyEditor = () => {
         }
       });
 
+      // Replace placeholders
+      const metadataValues = {};
+      Object.keys(updatedPolicyData.metadata).forEach((key) => {
+        const field = updatedPolicyData.metadata[key];
+        if (field.value) {
+          metadataValues[key] = field.value;
+        }
+      });
+
+      // Replace placeholders in content
+      const mainContent = updatedPolicyData.content?.main_content;
+      if (mainContent) {
+        let html = mainContent.html || "";
+        let plainText = mainContent.plain_text || "";
+
+        Object.keys(metadataValues).forEach((key) => {
+          const value = metadataValues[key];
+          const patterns = [
+            `<${key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}>`,
+            `<${key.replace(/_/g, " ").toUpperCase()}>`,
+            `<${key.replace(/_/g, " ")}>`,
+            `<${key}>`,
+            `{${key}}`,
+          ];
+
+          patterns.forEach((pattern) => {
+            html = html.replace(new RegExp(pattern, "g"), value);
+            plainText = plainText.replace(new RegExp(pattern, "g"), value);
+          });
+        });
+
+        updatedPolicyData.content.main_content.html = html;
+        updatedPolicyData.content.main_content.plain_text = plainText;
+        updatedPolicyData.content.main_content.word_count = plainText.split(/\s+/).length;
+        updatedPolicyData.content.main_content.char_count = plainText.length;
+      }
+
       await apiRequest(
         "POST",
         `/api/plc_workflow/policies/${policyId}/save-draft/`,
@@ -296,6 +335,134 @@ const PolicyEditor = () => {
     setPolicyData({ ...policyData, policy_data: updatedPolicyData });
     hasUnsavedChanges.current = true;
   }, [policyData]);
+
+  const handleGeneratePDF = async () => {
+    if (!policyData) {
+      message.warning("No policy data available");
+      return;
+    }
+
+    try {
+      message.loading({ content: "Generating PDF...", key: "pdf-generation" });
+
+      // Create a temporary container for PDF generation
+      const pdfContainer = document.createElement("div");
+      pdfContainer.style.padding = "40px";
+      pdfContainer.style.fontFamily = "Arial, sans-serif";
+      pdfContainer.style.fontSize = "12pt";
+      pdfContainer.style.lineHeight = "1.6";
+      pdfContainer.style.color = "#000";
+
+      // Add title
+      const title = document.createElement("h1");
+      title.textContent = policyData.template_details?.template_name || "Policy Document";
+      title.style.fontSize = "24pt";
+      title.style.fontWeight = "bold";
+      title.style.marginBottom = "20px";
+      title.style.textAlign = "center";
+      pdfContainer.appendChild(title);
+
+      // Add metadata section
+      const metadata = policyData.policy_data?.metadata || {};
+      if (Object.keys(metadata).length > 0) {
+        const metadataSection = document.createElement("div");
+        metadataSection.style.marginBottom = "30px";
+        metadataSection.style.padding = "15px";
+        metadataSection.style.backgroundColor = "#f5f5f5";
+        metadataSection.style.borderRadius = "5px";
+
+        const metadataTitle = document.createElement("h2");
+        metadataTitle.textContent = "Metadata";
+        metadataTitle.style.fontSize = "18pt";
+        metadataTitle.style.fontWeight = "bold";
+        metadataTitle.style.marginBottom = "15px";
+        metadataSection.appendChild(metadataTitle);
+
+        Object.keys(metadata).forEach((key) => {
+          const field = metadata[key];
+          if (field.value) {
+            const metadataItem = document.createElement("div");
+            metadataItem.style.marginBottom = "10px";
+            const label = document.createElement("strong");
+            label.textContent = `${key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}: `;
+            const value = document.createTextNode(field.value);
+            metadataItem.appendChild(label);
+            metadataItem.appendChild(value);
+            metadataSection.appendChild(metadataItem);
+          }
+        });
+
+        pdfContainer.appendChild(metadataSection);
+      }
+
+      // Add content section
+      const contentSection = document.createElement("div");
+      contentSection.style.marginTop = "20px";
+      const mainContent = policyData.policy_data?.content?.main_content || {};
+      
+      if (mainContent.html) {
+        // Create a temporary div to parse HTML
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = mainContent.html;
+        contentSection.appendChild(tempDiv);
+      } else {
+        const noContent = document.createElement("p");
+        noContent.textContent = "No content available.";
+        noContent.style.fontStyle = "italic";
+        noContent.style.color = "#666";
+        contentSection.appendChild(noContent);
+      }
+
+      pdfContainer.appendChild(contentSection);
+
+      // Add footer with policy ID
+      const footer = document.createElement("div");
+      footer.style.marginTop = "40px";
+      footer.style.paddingTop = "20px";
+      footer.style.borderTop = "1px solid #ddd";
+      footer.style.fontSize = "10pt";
+      footer.style.color = "#666";
+      footer.textContent = `Policy ID: ${policyData.policy_id} | Generated on ${new Date().toLocaleString()}`;
+      pdfContainer.appendChild(footer);
+
+      // Append to body temporarily
+      document.body.appendChild(pdfContainer);
+
+      // Generate PDF
+      const opt = {
+        margin: [15, 15, 15, 15],
+        filename: `${policyData.template_details?.template_name || "Policy"}_${policyData.policy_id}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          scrollY: 0,
+          scrollX: 0,
+          windowHeight: pdfContainer.scrollHeight,
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait",
+        },
+        pagebreak: {
+          mode: ["avoid-all", "css", "legacy"],
+        },
+      };
+
+      await html2pdf().set(opt).from(pdfContainer).save();
+
+      // Clean up
+      document.body.removeChild(pdfContainer);
+
+      message.success({ content: "PDF generated successfully!", key: "pdf-generation" });
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      message.error({ content: "Failed to generate PDF", key: "pdf-generation" });
+    }
+  };
 
   const renderMetadataField = (key, field) => {
     if (field.field_type === "readonly") {
@@ -471,6 +638,12 @@ const PolicyEditor = () => {
               loading={isSaving}
             >
               Save
+            </Button>
+            <Button
+              icon={<FileDown />}
+              onClick={handleGeneratePDF}
+            >
+              Generate PDF
             </Button>
             <Button
               icon={<Sparkles />}
