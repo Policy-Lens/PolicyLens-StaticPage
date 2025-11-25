@@ -35,7 +35,8 @@ const AdminLayout = () => {
     location.pathname.includes("/myevidences") ||
     location.pathname.includes("/askforhelp") ||
     location.pathname.includes("/myreports") ||
-    location.pathname.includes("/policylibrary");
+    location.pathname.includes("/policylibrary") ||
+    location.pathname.includes("/workflow");
 
   // Define tabs with their icons
   const tabIcons = {
@@ -67,7 +68,7 @@ const AdminLayout = () => {
     else if (path.includes("askforhelp")) setActiveTab("Ask for Help");
     else if (path.includes("myreports")) setActiveTab("My Reports");
     else if (path.includes("policylibrary")) setActiveTab("Policy Library");
-    else setActiveTab("Workflow");
+    else if (path.includes("workflow")) setActiveTab("Workflow");
   }, [window.location.pathname]);
 
   useEffect(() => {
@@ -98,7 +99,7 @@ const AdminLayout = () => {
     } else if (tab === "Policy Library") {
       navigate(`/project/${projectid}/policylibrary`);
     } else if (tab === "Workflow") {
-      navigate(`/project/${projectid}`);
+      navigate(`/project/${projectid}/workflow`);
     }
   };
 
