@@ -1,12 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
-import { apiRequest } from "../../utils/api";
-import { ProjectContext } from "../../Context/ProjectContext";
+import { apiRequest } from "../../../utils/api";
+import { ProjectContext } from "../../../Context/ProjectContext";
 import { useParams } from "react-router-dom";
-import { Pointer } from "lucide-react";
 import { Spin } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
 import { Trash2 } from "lucide-react";
-import { AuthContext } from "../../AuthContext";
+import { AuthContext } from "../../../AuthContext";
 
 const ProjectTeamPage = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -14,10 +12,8 @@ const ProjectTeamPage = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newMemberName, setNewMemberName] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState();
-  const [addedMembers, setAddedMembers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const { projectid } = useParams();
   const roles = ["Consultant", "Auditor", "Company Representative", "Manager"];
@@ -29,7 +25,12 @@ const ProjectTeamPage = () => {
   const [userSearch, setUserSearch] = useState("");
   const [companyId, setCompanyId] = useState(null);
   const { user } = useContext(AuthContext);
-  const canManageTeam = ["consultant admin", "admin", "Super Consultant"].includes(user?.role);
+  const canManageTeam = [
+    "consultant admin",
+    "admin",
+    "Super Consultant",
+    "Company",
+  ].includes(user?.role);
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
@@ -76,7 +77,7 @@ const ProjectTeamPage = () => {
           alert("already added this member");
         }
         break;
-      case "consultant": 
+      case "consultant":
         if (
           !consultants.some((consultant) => consultant.id === user.id) &&
           !admins.some((admin) => admin.id === user.id)
@@ -130,22 +131,20 @@ const ProjectTeamPage = () => {
     if (role === "") return;
     setUsersLoading(true);
     try {
-      let endpoint = `/api/auth/users/?role=${role === "consultant admin" ? "consultant" : role}`;
+      let endpoint = `/api/auth/users/?role=${
+        role === "consultant admin" ? "consultant" : role
+      }`;
       let fetchCompanyId = null;
       if (role === "consultant" || role === "auditor") {
-        fetchCompanyId = project?.consultant_company?.id || project?.consultant_company_id;
+        fetchCompanyId =
+          project?.consultant_company?.id || project?.consultant_company_id;
       } else if (role === "company_representative") {
         fetchCompanyId = companyId;
       }
       if (fetchCompanyId) {
         endpoint += `&company_id=${fetchCompanyId}`;
       }
-      const res = await apiRequest(
-        "GET",
-        endpoint,
-        null,
-        true
-      );
+      const res = await apiRequest("GET", endpoint, null, true);
       console.log(res);
       if (res.status == 200) {
         setUsers(res.data);
@@ -159,9 +158,19 @@ const ProjectTeamPage = () => {
 
   // Delete member handler
   const handleDeleteMember = async (userId) => {
-    if (!window.confirm("Are you sure you want to remove this member from the project?")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to remove this member from the project?"
+      )
+    )
+      return;
     try {
-      await apiRequest("DELETE", `/api/project/${projectid}/members/${userId}/`, null, true);
+      await apiRequest(
+        "DELETE",
+        `/api/project/${projectid}/members/${userId}/`,
+        null,
+        true
+      );
       getMembers();
     } catch (error) {
       alert("Failed to remove member");
@@ -173,11 +182,19 @@ const ProjectTeamPage = () => {
     if (!selectedRole || selectedUsers.length === 0) return;
     const usersToAdd = users.filter((u) => selectedUsers.includes(u.id));
     let payload = {};
-    if (selectedRole === "consultant") payload = { consultants: usersToAdd.map((u) => u.id) };
-    else if (selectedRole === "auditor") payload = { auditors: usersToAdd.map((u) => u.id) };
-    else if (selectedRole === "company_representative") payload = { company_representatives: usersToAdd.map((u) => u.id) };
+    if (selectedRole === "consultant")
+      payload = { consultants: usersToAdd.map((u) => u.id) };
+    else if (selectedRole === "auditor")
+      payload = { auditors: usersToAdd.map((u) => u.id) };
+    else if (selectedRole === "company_representative")
+      payload = { company_representatives: usersToAdd.map((u) => u.id) };
     else payload = { admins: usersToAdd.map((u) => u.id) };
-    await apiRequest("POST", `/api/project/${projectid}/add-members/`, payload, true);
+    await apiRequest(
+      "POST",
+      `/api/project/${projectid}/add-members/`,
+      payload,
+      true
+    );
     setIsModalOpen(false);
     setSelectedUsers([]);
     setSelectedRole("");
@@ -488,9 +505,12 @@ const ProjectTeamPage = () => {
                     }}
                   >
                     <option value="">Select Role</option>
-                    <option value="consultant">Consultant</option>
-                    <option value="auditor">Auditor</option>
-                    <option value="company_representative">Company Representative</option>
+                    {user?.role == "Super Consultant" && (
+                      <option value="consultant">Consultant</option>
+                    )}
+                    <option value="company_representative">
+                      Company Representative
+                    </option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
                     <svg
@@ -512,7 +532,9 @@ const ProjectTeamPage = () => {
 
               {/* User Search */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Search Members</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Members
+                </label>
                 <input
                   className="w-full border border-gray-300 rounded px-3 py-2"
                   placeholder="Search by name or email"
@@ -524,15 +546,24 @@ const ProjectTeamPage = () => {
 
               {/* User Multi-Select */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Members</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Members
+                </label>
                 <div className="max-h-48 overflow-y-auto border rounded-lg bg-gray-50">
                   {usersLoading ? (
-                    <div className="flex items-center justify-center py-6"><Spin /></div>
+                    <div className="flex items-center justify-center py-6">
+                      <Spin />
+                    </div>
                   ) : filteredUsers.length === 0 ? (
-                    <div className="text-gray-500 text-sm p-4">No users found.</div>
+                    <div className="text-gray-500 text-sm p-4">
+                      No users found.
+                    </div>
                   ) : (
                     filteredUsers.map((user) => (
-                      <label key={user.id} className="flex items-center px-4 py-2 cursor-pointer hover:bg-blue-50">
+                      <label
+                        key={user.id}
+                        className="flex items-center px-4 py-2 cursor-pointer hover:bg-blue-50"
+                      >
                         <input
                           type="checkbox"
                           className="mr-3 accent-blue-600"
@@ -546,9 +577,13 @@ const ProjectTeamPage = () => {
                           }}
                           disabled={members.some((m) => m.id === user.id)}
                         />
-                        <span className="flex-1">{user.name} - {user.email}</span>
+                        <span className="flex-1">
+                          {user.name} - {user.email}
+                        </span>
                         {members.some((m) => m.id === user.id) && (
-                          <span className="text-xs text-gray-400 ml-2">Already in project</span>
+                          <span className="text-xs text-gray-400 ml-2">
+                            Already in project
+                          </span>
                         )}
                       </label>
                     ))
