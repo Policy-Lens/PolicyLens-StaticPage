@@ -7,13 +7,17 @@ import {
   ArrowLeft,
   Sparkles,
   FileText,
+  FileDown,
 } from "lucide-react";
 import { Button, message, Form, Input, Select, Upload, Spin, Alert } from "antd";
 const { useWatch } = Form;
+import html2pdf from "html2pdf.js";
 import { apiRequest } from "../../utils/api";
+import { getDefaultBranding, createBrandedPDFHTML } from "../../utils/branding";
 import RichTextEditor from "./RichTextEditor";
 import AIPanel from "./AIPanel";
 import PolicyTemplateList from "./PolicyTemplateList";
+import PDFPreviewModal from "./PDFPreviewModal";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -28,9 +32,13 @@ const PolicyEditor = () => {
   const [lastSaved, setLastSaved] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [companyBranding, setCompanyBranding] = useState(null);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
   const autoSaveIntervalRef = useRef(null);
   const hasUnsavedChanges = useRef(false);
   const originalContentRef = useRef(null); // Store original template content
+  const contentManuallyEditedRef = useRef(false); // Track if content has been manually edited
+  const lastMetadataHashRef = useRef(""); // Track metadata state to detect changes
 
   // Watch form values for real-time placeholder replacement
   const formValues = useWatch([], form);
@@ -44,6 +52,14 @@ const PolicyEditor = () => {
         plain_text: policyData.template_details?.template_data?.content?.main_content?.plain_text || 
                     policyData.policy_data.content.main_content.plain_text,
       };
+      // Reset manual edit flag when loading a new policy
+      contentManuallyEditedRef.current = false;
+      // Check if current content differs from original (indicating manual edits)
+      const currentHtml = policyData.policy_data.content.main_content.html || "";
+      const originalHtml = originalContentRef.current.html || "";
+      if (currentHtml !== originalHtml) {
+        contentManuallyEditedRef.current = true;
+      }
     }
   }, [policyData?.policy_id]); // Only when policy ID changes
 
@@ -62,11 +78,32 @@ const PolicyEditor = () => {
       }
     });
 
-    // Replace placeholders in content using original template content
-    if (Object.keys(metadataValues).length > 0) {
-      let html = originalContentRef.current.html || "";
-      let plainText = originalContentRef.current.plain_text || "";
+    // Create hash of metadata values to detect changes
+    const metadataHash = JSON.stringify(metadataValues);
+    
+    // Skip if metadata hasn't changed
+    if (metadataHash === lastMetadataHashRef.current) {
+      return;
+    }
+    lastMetadataHashRef.current = metadataHash;
 
+    // Replace placeholders in content
+    if (Object.keys(metadataValues).length > 0) {
+      // If content has been manually edited, replace placeholders in the current content
+      // Otherwise, use original template content
+      let html, plainText;
+      
+      if (contentManuallyEditedRef.current) {
+        // Use current content and replace placeholders in it (preserve user edits)
+        html = policyData.policy_data?.content?.main_content?.html || "";
+        plainText = policyData.policy_data?.content?.main_content?.plain_text || "";
+      } else {
+        // Use original template content for placeholder replacement
+        html = originalContentRef.current.html || "";
+        plainText = originalContentRef.current.plain_text || "";
+      }
+
+      // Replace placeholders
       Object.keys(metadataValues).forEach((key) => {
         const value = metadataValues[key];
         const patterns = [
@@ -98,7 +135,7 @@ const PolicyEditor = () => {
         hasUnsavedChanges.current = true;
       }
     }
-  }, [formValues]); // Only depend on formValues
+  }, [formValues, policyData]); // Include policyData to access current content
 
   // Auto-save every 10 seconds
   useEffect(() => {
@@ -136,12 +173,40 @@ const PolicyEditor = () => {
       if (response.data) {
         setPolicyData(response.data);
         populateForm(response.data.policy_data);
+        // Fetch branding data if company exists
+        if (response.data.company) {
+          fetchCompanyBranding(response.data.policy_id);
+        } else {
+          // Use default branding if no company
+          setCompanyBranding(getDefaultBranding());
+        }
       }
     } catch (error) {
       console.error("Error fetching policy:", error);
       message.error("Failed to load policy");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchCompanyBranding = async (policyId) => {
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/plc_workflow/policies/${policyId}/branding/`,
+        null,
+        true
+      );
+
+      if (response.data) {
+        setCompanyBranding(response.data);
+      } else {
+        setCompanyBranding(getDefaultBranding());
+      }
+    } catch (error) {
+      console.error("Error fetching company branding:", error);
+      // Use default branding on error
+      setCompanyBranding(getDefaultBranding());
     }
   };
 
@@ -164,7 +229,7 @@ const PolicyEditor = () => {
 
     try {
       const formValues = form.getFieldsValue();
-      const updatedPolicyData = { ...policyData.policy_data };
+      const updatedPolicyData = JSON.parse(JSON.stringify(policyData.policy_data));
 
       // Update metadata values
       Object.keys(formValues).forEach((key) => {
@@ -173,39 +238,12 @@ const PolicyEditor = () => {
         }
       });
 
-      // Replace placeholders
-      const metadataValues = {};
-      Object.keys(updatedPolicyData.metadata).forEach((key) => {
-        const field = updatedPolicyData.metadata[key];
-        if (field.value) {
-          metadataValues[key] = field.value;
-        }
-      });
-
-      // Replace placeholders in content
+      // Get current content (preserve user edits)
       const mainContent = updatedPolicyData.content?.main_content;
       if (mainContent) {
-        let html = mainContent.html || "";
-        let plainText = mainContent.plain_text || "";
-
-        Object.keys(metadataValues).forEach((key) => {
-          const value = metadataValues[key];
-          const patterns = [
-            `<${key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}>`,
-            `<${key.replace(/_/g, " ").toUpperCase()}>`,
-            `<${key.replace(/_/g, " ")}>`,
-            `<${key}>`,
-            `{${key}}`,
-          ];
-
-          patterns.forEach((pattern) => {
-            html = html.replace(new RegExp(pattern, "g"), value);
-            plainText = plainText.replace(new RegExp(pattern, "g"), value);
-          });
-        });
-
-        updatedPolicyData.content.main_content.html = html;
-        updatedPolicyData.content.main_content.plain_text = plainText;
+        // Use the current content as-is (already has user edits and placeholder replacements from useEffect)
+        // Only update word/char counts if needed
+        const plainText = mainContent.plain_text || "";
         updatedPolicyData.content.main_content.word_count = plainText.split(/\s+/).length;
         updatedPolicyData.content.main_content.char_count = plainText.length;
       }
@@ -231,7 +269,7 @@ const PolicyEditor = () => {
     setIsSaving(true);
     try {
       const formValues = form.getFieldsValue();
-      const updatedPolicyData = { ...policyData.policy_data };
+      const updatedPolicyData = JSON.parse(JSON.stringify(policyData.policy_data));
 
       // Update metadata values
       Object.keys(formValues).forEach((key) => {
@@ -239,6 +277,16 @@ const PolicyEditor = () => {
           updatedPolicyData.metadata[key].value = formValues[key] || "";
         }
       });
+
+      // Get current content (preserve user edits)
+      const mainContent = updatedPolicyData.content?.main_content;
+      if (mainContent) {
+        // Use the current content as-is (already has user edits and placeholder replacements from useEffect)
+        // Only update word/char counts if needed
+        const plainText = mainContent.plain_text || "";
+        updatedPolicyData.content.main_content.word_count = plainText.split(/\s+/).length;
+        updatedPolicyData.content.main_content.char_count = plainText.length;
+      }
 
       await apiRequest(
         "POST",
@@ -287,6 +335,9 @@ const PolicyEditor = () => {
   const handleContentChange = useCallback(({ html, text }) => {
     if (!policyData) return;
 
+    // Mark content as manually edited
+    contentManuallyEditedRef.current = true;
+
     const updatedPolicyData = { ...policyData.policy_data };
     updatedPolicyData.content.main_content.html = html;
     updatedPolicyData.content.main_content.plain_text = text;
@@ -296,6 +347,21 @@ const PolicyEditor = () => {
     setPolicyData({ ...policyData, policy_data: updatedPolicyData });
     hasUnsavedChanges.current = true;
   }, [policyData]);
+
+  const handleGeneratePDF = () => {
+    if (!policyData) {
+      message.warning("No policy data available");
+      return;
+    }
+
+    // Ensure we have branding (use default if not loaded yet)
+    if (!companyBranding) {
+      setCompanyBranding(getDefaultBranding());
+    }
+
+    // Show preview modal
+    setShowPDFPreview(true);
+  };
 
   const renderMetadataField = (key, field) => {
     if (field.field_type === "readonly") {
@@ -473,6 +539,12 @@ const PolicyEditor = () => {
               Save
             </Button>
             <Button
+              icon={<FileDown />}
+              onClick={handleGeneratePDF}
+            >
+              Generate PDF
+            </Button>
+            <Button
               icon={<Sparkles />}
               onClick={() => setShowAIPanel(!showAIPanel)}
             >
@@ -543,6 +615,18 @@ const PolicyEditor = () => {
           </div>
         )}
       </div>
+
+      {/* PDF Preview Modal */}
+      <PDFPreviewModal
+        visible={showPDFPreview}
+        onClose={() => setShowPDFPreview(false)}
+        policyData={policyData}
+        companyBranding={companyBranding || getDefaultBranding()}
+        onDownload={() => {
+          setShowPDFPreview(false);
+          message.success("PDF downloaded successfully!");
+        }}
+      />
     </div>
   );
 };

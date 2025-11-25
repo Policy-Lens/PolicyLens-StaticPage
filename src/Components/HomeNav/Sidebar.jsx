@@ -16,6 +16,7 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext";
 import { useNotifications } from "../../Context/NotificationContext";
+import { Tooltip } from "antd";
 import React from "react";
 
 const Sidebar = ({ onToggle }) => {
@@ -123,22 +124,36 @@ const Sidebar = ({ onToggle }) => {
     >
       {/* Sidebar Header */}
       <div className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 py-4 flex items-center justify-between px-4">
-        <Link 
-          to="/home/dashboard"
-          className="flex items-center gap-3 cursor-pointer group"
-        >
-          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-md text-white">
-            <Home
-              size={18}
-              className="shrink-0 transition-transform group-hover:scale-110"
-            />
-          </div>
-          {!collapsed && (
+        {collapsed ? (
+          <Tooltip title="Home" placement="right" mouseEnterDelay={0.3}>
+            <Link 
+              to="/home/dashboard"
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-md text-white">
+                <Home
+                  size={18}
+                  className="shrink-0 transition-transform group-hover:scale-110"
+                />
+              </div>
+            </Link>
+          </Tooltip>
+        ) : (
+          <Link 
+            to="/home/dashboard"
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-md text-white">
+              <Home
+                size={18}
+                className="shrink-0 transition-transform group-hover:scale-110"
+              />
+            </div>
             <span className="font-semibold text-base text-gray-800 group-hover:text-blue-700 transition-colors">
               Home
             </span>
-          )}
-        </Link>
+          </Link>
+        )}
 
         {/* Collapse Button */}
         <div
@@ -161,7 +176,7 @@ const Sidebar = ({ onToggle }) => {
           }
 
           const active = isActive(item.path);
-          return (
+          const menuItemContent = (
             <Link key={item.key} to={item.path}>
               <div
                 className={`flex items-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group
@@ -205,6 +220,19 @@ const Sidebar = ({ onToggle }) => {
               </div>
             </Link>
           );
+
+          return collapsed ? (
+            <Tooltip
+              key={item.key}
+              title={item.label}
+              placement="right"
+              mouseEnterDelay={0.3}
+            >
+              {menuItemContent}
+            </Tooltip>
+          ) : (
+            menuItemContent
+          );
         })}
       </nav>
 
@@ -233,23 +261,32 @@ const Sidebar = ({ onToggle }) => {
         </div>
 
         {/* Logout Button */}
-        <button
-          onClick={() => {
-            handleLogout();
-            navigate("/");
-          }}
-          className={`flex items-center w-full rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600 mb-2
-            ${
-              collapsed
-                ? "justify-center p-2"
-                : "px-3 py-2 border border-red-200 hover:border-red-300"
-            }`}
-        >
-          <LogOut size={collapsed ? 20 : 18} className="shrink-0" />
-          {!collapsed && (
+        {collapsed ? (
+          <Tooltip title="Logout" placement="right" mouseEnterDelay={0.3}>
+            <button
+              onClick={() => {
+                handleLogout();
+                navigate("/");
+              }}
+              className={`flex items-center w-full rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600 mb-2
+                justify-center p-2`}
+            >
+              <LogOut size={20} className="shrink-0" />
+            </button>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={() => {
+              handleLogout();
+              navigate("/");
+            }}
+            className={`flex items-center w-full rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600 mb-2
+              px-3 py-2 border border-red-200 hover:border-red-300`}
+          >
+            <LogOut size={18} className="shrink-0" />
             <span className="ml-2 text-sm font-medium">Logout</span>
-          )}
-        </button>
+          </button>
+        )}
       </div>
 
       {/* Footer */}
