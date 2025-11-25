@@ -197,17 +197,17 @@ const ScopeOfWork = ({ projectId }) => {
                 {
                   key: 2,
                   category: "Country",
-                  count: location.country || 0,
+                  count: location.country || "-",
                 },
                 {
                   key: 3,
                   category: "City",
-                  count: location.city || 0,
+                  count: location.city || "-",
                 },
                 {
                   key: 4,
                   category: "Zip Code",
-                  count: location.zipcode || 0,
+                  count: location.zipcode || "-",
                 },
                 {
                   key: 1,

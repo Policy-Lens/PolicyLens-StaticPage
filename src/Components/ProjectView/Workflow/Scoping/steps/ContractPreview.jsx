@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import "./ContractPreview.css";
+import { ScopingContext } from "../../../../../Context/ScopingContext";
 
 const ContractPreview = ({
   clauses,
@@ -19,6 +20,8 @@ const ContractPreview = ({
     company: null,
     consultant: null,
   });
+
+  const { scopingData } = useContext(ScopingContext);
 
   // Convert image URLs to base64 for PDF export
   useEffect(() => {
@@ -75,27 +78,21 @@ const ContractPreview = ({
     loadImages();
   }, [signatures, companyDetails, consultantDetails]);
 
-  // Convert image URL to base64
-  const convertImageToBase64 = (url) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        try {
-          const dataURL = canvas.toDataURL("image/png");
-          resolve(dataURL);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
+  const convertImageToBase64 = async (url) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error converting image:", error);
+      return null;
+    }
   };
 
   // Format date
@@ -112,7 +109,6 @@ const ContractPreview = ({
     <div
       style={{
         padding: 10,
-        width: "100%",
         border: "1px solid #ccc",
         borderRadius: 8,
         lineHeight: 1.8,
@@ -802,10 +798,11 @@ const ContractPreview = ({
               paddingBottom: 5,
             }}
           >
-            Exhibit A: SCOPE OF SERVICE
+            Exhibit A: SCOPE OF SERVICE FOR PROJECT BEARING ID -{" "}
+            {scopingData.project_name}
           </h3>
 
-          <div className="no-page-break" style={{ marginBottom: 20 }}>
+          {/* <div className="no-page-break" style={{ marginBottom: 20 }}>
             <h4
               className="contract-header"
               style={{ fontSize: 13, fontWeight: "bold", marginBottom: 3 }}
@@ -815,7 +812,7 @@ const ContractPreview = ({
             <p style={{ fontSize: 12, color: "#666" }}>
               Auto-populated from Scope of Work step
             </p>
-          </div>
+          </div> */}
 
           <div className="no-page-break" style={{ marginBottom: 20 }}>
             <h4
