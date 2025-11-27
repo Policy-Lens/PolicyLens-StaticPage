@@ -1,52 +1,11 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Table, Tag, Button, Typography, message, Flex, Card } from "antd";
-import {
-  CheckCircleOutlined,
-  SyncOutlined,
-  DashOutlined,
-  ExclamationCircleFilled,
-  EyeOutlined,
-} from "@ant-design/icons";
+import { EyeOutlined } from "@ant-design/icons";
 import { ScopingContext } from "../../../Context/ScopingContext";
+import { getStatusConfig } from "../../../utils/statusConfig.jsx";
 
 const { Title } = Typography;
-
-// Get status display configuration
-const getStatusConfig = (status) => {
-  switch (status) {
-    case "completed":
-      return {
-        color: "green",
-        icon: <CheckCircleOutlined />,
-        text: "Completed",
-      };
-    case "in_progress":
-      return {
-        color: "blue",
-        icon: <SyncOutlined spin />,
-        text: "In Progress",
-      };
-    case "not_started":
-      return {
-        color: "default",
-        icon: <DashOutlined />,
-        text: "Not Started",
-      };
-    case "awaiting_approval":
-      return {
-        color: "purple",
-        icon: <ExclamationCircleFilled />,
-        text: "Awaiting Approval",
-      };
-    default:
-      return {
-        color: "default",
-        icon: null,
-        text: status || "Unknown",
-      };
-  }
-};
 
 const WorkflowOverview = () => {
   const { projectid } = useParams();
@@ -96,7 +55,7 @@ const WorkflowOverview = () => {
 
     // Navigate to the specific workflow step
     // Using current_phase from the step data
-    const phase = step.step.toLowerCase().replace(/\s+/g, "_");
+    const phase = step.step.toLowerCase().replace(/\s+/g, "-");
     navigate(`/project/${projectid}/workflow/${phase}`);
   };
 
@@ -194,4 +153,3 @@ const WorkflowOverview = () => {
 };
 
 export default WorkflowOverview;
-export { getStatusConfig };

@@ -36,7 +36,7 @@ import {
 import { ScopingContext } from "../../../../Context/ScopingContext";
 import { ProjectContext } from "../../../../Context/ProjectContext";
 import Unauthorized from "../../../Common/Unauthorized";
-import { getStatusConfig } from "../WorkflowOverview";
+import { getStatusConfig } from "../../../../utils/statusConfig.jsx";
 
 const { Title, Text } = Typography;
 
@@ -385,7 +385,12 @@ const Scoping = () => {
             alignItems: "start",
           }}
         >
-          <div style={{ display: "flex", alignItems: "start", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "start", gap: 10 }}>
+            <Button
+              style={{ marginTop: 4,borderRadius:20 }}
+              icon={<LeftOutlined />}
+              onClick={() => navigate(-1)}
+            ></Button>
             <Segmented
               value={layoutDirection}
               onChange={setLayoutDirection}
@@ -634,12 +639,9 @@ const Scoping = () => {
             style={{
               flex: 1,
               overflow: "auto",
-              alignItems:"center",
-              padding:
-                layoutDirection === "vertical"
-                  ? "20px"
-                  : "16px 20px",
-              height:"100%"
+              alignItems: "center",
+              padding: layoutDirection === "vertical" ? "20px" : "16px 20px",
+              height: "100%",
             }}
           >
             <Steps
@@ -660,7 +662,7 @@ const Scoping = () => {
                       icon: step.icon,
                     }
               )}
-              style={{height:"100%"}}
+              style={{ height: "100%" }}
             />
           </div>
         </Card>

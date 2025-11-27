@@ -12,6 +12,7 @@ import {
   UserCircle,
   Library,
   Database,
+  ShieldAlert,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext";
@@ -102,7 +103,14 @@ const Sidebar = ({ onToggle }) => {
       label: "Question Library",
       path: "/home/questionlibrary",
     };
+    const issuebank = {
+      key: "issuebank",
+      icon: <ShieldAlert size={20} />,
+      label: "Issue Bank",
+      path: "/home/issuebank",
+    };
     menuItems.push(policyLib);
+    menuItems.push(issuebank);
   }
 
   const handleToggle = () => {

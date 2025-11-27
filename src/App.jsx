@@ -28,11 +28,13 @@ import { AuthProvider } from "./AuthContext";
 import { ProjectProvider } from "./Context/ProjectContext";
 import { WorkflowProvider } from "./Context/WorkflowContext";
 import { ScopingProvider } from "./Context/ScopingContext";
+import { OnboardingProvider } from "./Context/OnboardingContext";
 import AdminLayout from "./Components/AdminView/AdminLayout";
 import InternalAuditProcess from "./Components/WorkFlow/InternalAuditProcess";
 import PolicyLibrary from "./Components/AdminView/ProjectTabs/PolicyLibrary";
 import NewQuestionnaire from "./Components/AdminView/ProjectTabs/NewQuestionnaire";
 import QuestionLibrary from "./Components/HomeNav/QuestionLibrary";
+import IssueBank from "./Components/HomeNav/IssueBank";
 import ISO4217 from "./Components/HomeNav/Database/ISO4217";
 import ISO3166 from "./Components/HomeNav/Database/ISO3166";
 import GICS from "./Components/HomeNav/Database/GICS";
@@ -52,6 +54,7 @@ import EditorView from "./Components/EditorView/EditorView";
 import PolicyEditor from "./Components/PolicyEditor/PolicyEditor";
 import WorkflowOverview from "./Components/ProjectView/Workflow/WorkflowOverview";
 import Scoping from "./Components/ProjectView/Workflow/Scoping/Scoping";
+import ProjectOnboarding from "./Components/ProjectView/Workflow/Project Onboarding/ProjectOnboarding";
 
 const router = createBrowserRouter([
   {
@@ -113,6 +116,10 @@ const router = createBrowserRouter([
       {
         path: "questionlibrary",
         element: <QuestionLibrary />,
+      },
+      {
+        path: "issuebank",
+        element: <IssueBank />,
       },
       {
         path: "database",
@@ -177,6 +184,7 @@ const router = createBrowserRouter([
       },
       {
         path: "projectdashboard/*",
+        element: <AdminDashboardRouter />,
         element: <AdminDashboardRouter />,
       },
       {
@@ -251,6 +259,10 @@ const router = createBrowserRouter([
         path: "workflow/scoping",
         element: <Scoping />,
       },
+      {
+        path: "workflow/project-onboarding",
+        element: <ProjectOnboarding />,
+      },
     ],
   },
 ]);
@@ -261,10 +273,12 @@ const AppLayout = () => {
       <NotificationProvider>
         <WorkflowProvider>
           <ScopingProvider>
-            <ProjectProvider>
+            <OnboardingProvider>
+              <ProjectProvider>
                 <RouterProvider router={router} />
                 <NotificationToast />
-            </ProjectProvider>
+              </ProjectProvider>
+            </OnboardingProvider>
           </ScopingProvider>
         </WorkflowProvider>
       </NotificationProvider>

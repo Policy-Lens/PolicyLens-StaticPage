@@ -23,40 +23,40 @@ import {
   Dropdown,
   Menu,
 } from "antd";
-import { MoreOutlined, PlusOutlined } from "@ant-design/icons";
+import { MoreOutlined } from "@ant-design/icons";
 import { useLocation } from "react-router-dom";
 
-const QuestionLibrary = () => {
+const IssueBank = () => {
   const { user } = useContext(AuthContext);
   const location = useLocation();
 
-  // Question list state
-  const [questions, setQuestions] = useState([]);
-  const [isQuestionsLoading, setIsQuestionsLoading] = useState(true);
+  // Issue list state
+  const [issues, setIssues] = useState([]);
+  const [isIssuesLoading, setIsIssuesLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [filters, setFilters] = useState({
-    domain: "",
+    category: "",
   });
   const [pendingFilters, setPendingFilters] = useState({
-    domain: "",
+    category: "",
   });
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
-  const [activeQuestion, setActiveQuestion] = useState(null);
+  const [activeIssue, setActiveIssue] = useState(null);
 
   // Form state
-  const [newQuestion, setNewQuestion] = useState({
-    q_no: "",
-    question: "",
-    domain: "organization",
-    iso_control: "",
-    parent_question: null,
+  const [newIssue, setNewIssue] = useState({
+    category: "internal",
+    text: "",
+    description: "",
+    impact: "medium",
+    mitigation: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,38 +67,41 @@ const QuestionLibrary = () => {
 
   // Delete confirmation state
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [questionToDelete, setQuestionToDelete] = useState(null);
+  const [issueToDelete, setIssueToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Domain choices
-  const domainChoices = ["organization", "it", "people", "physical"];
+  // Category choices
+  const categoryChoices = ["internal", "external", "risk", "opportunity"];
 
-  // Domain labels
-  const getDomainLabel = (domain) => {
+  // Category labels
+  const getCategoryLabel = (category) => {
     const labels = {
-      organization: "Organization",
-      it: "IT/IT Enabled",
-      people: "People",
-      physical: "Physical",
+      internal: "Internal Issues",
+      external: "External Issues",
+      risk: "Risks and Threats",
+      opportunity: "Opportunities",
     };
-    return labels[domain] || domain;
+    return labels[category] || category;
   };
 
-  // Fetch questions
-  const handleGetQuestions = async () => {
-    setIsQuestionsLoading(true);
-    let endpoint = `/api/new-questionnaire/library/?`;
+  // Impact choices
+  const impactChoices = ["low", "medium", "high"];
+
+  // Fetch issues
+  const handleGetIssues = async () => {
+    setIsIssuesLoading(true);
+    let endpoint = `/api/policylens/issues/?`;
     const params = new URLSearchParams();
 
     if (searchQuery) params.append("search", searchQuery);
-    if (filters.domain) params.append("domain", filters.domain);
+    if (filters.category) params.append("category", filters.category);
 
     endpoint += params.toString();
 
     try {
       const response = await apiRequest("GET", endpoint, null, true);
       if (response.status === 200) {
-        setQuestions(response.data);
+        setIssues(response.data.issues || response.data);
         setUnauthorized(false);
       } else {
         throw new Error(`Failed with status: ${response.status}`);
@@ -107,12 +110,12 @@ const QuestionLibrary = () => {
       if (error.status === 403) {
         setUnauthorized(true);
       } else {
-        console.error("Failed to fetch questions:", error);
-        message.error("Failed to fetch questions.");
-        setQuestions([]);
+        console.error("Failed to fetch issues:", error);
+        message.error("Failed to fetch issues.");
+        setIssues([]);
       }
     } finally {
-      setIsQuestionsLoading(false);
+      setIsIssuesLoading(false);
     }
   };
 
@@ -122,10 +125,10 @@ const QuestionLibrary = () => {
     setFilterDropdownOpen(!filterDropdownOpen);
   };
 
-  // Update pendingFilters in the dropdown
+  // Update pendingFilters
   const handlePendingFilterChange = (value) => {
     setPendingFilters({
-      domain: value === pendingFilters.domain ? "" : value,
+      category: value === pendingFilters.category ? "" : value,
     });
   };
 
@@ -137,54 +140,47 @@ const QuestionLibrary = () => {
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({ domain: "" });
-    setPendingFilters({ domain: "" });
+    setFilters({ category: "" });
+    setPendingFilters({ category: "" });
     setSearchQuery("");
   };
 
   // Handle input changes
-  const handleQuestionInputChange = (e) => {
+  const handleIssueInputChange = (e) => {
     const { name, value } = e.target;
-    setNewQuestion((prev) => ({
+    setNewIssue((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // Reset question form
-  const resetQuestionForm = () => {
-    setNewQuestion({
-      q_no: "",
-      question: "",
-      domain: "organization",
-      iso_control: "",
-      parent_question: null,
+  // Reset issue form
+  const resetIssueForm = () => {
+    setNewIssue({
+      category: "internal",
+      text: "",
+      description: "",
+      impact: "medium",
+      mitigation: "",
     });
-    setActiveQuestion(null);
+    setActiveIssue(null);
   };
 
   // Open modal functions
-  const openAddModal = (parentQuestion = null) => {
-    resetQuestionForm();
-    if (parentQuestion) {
-      setNewQuestion((prev) => ({
-        ...prev,
-        parent_question: parentQuestion.id,
-        domain: parentQuestion.domain,
-      }));
-    }
+  const openAddModal = () => {
+    resetIssueForm();
     setModalType("add");
     setShowModal(true);
   };
 
-  const openEditModal = (question) => {
-    setActiveQuestion(question);
-    setNewQuestion({
-      q_no: question.q_no,
-      question: question.question,
-      domain: question.domain,
-      iso_control: question.iso_control || "",
-      parent_question: question.parent_question,
+  const openEditModal = (issue) => {
+    setActiveIssue(issue);
+    setNewIssue({
+      category: issue.category,
+      text: issue.text,
+      description: issue.description,
+      impact: issue.impact,
+      mitigation: issue.mitigation || "",
     });
     setModalType("edit");
     setShowModal(true);
@@ -200,35 +196,30 @@ const QuestionLibrary = () => {
   const closeModal = () => {
     setShowModal(false);
     setModalType("");
-    resetQuestionForm();
+    resetIssueForm();
     setSelectedFile(null);
   };
 
-  // Submit question form
-  const handleSubmitQuestion = async (e) => {
+  // Submit issue form
+  const handleSubmitIssue = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       let response;
-      const payload = {
-        ...newQuestion,
-        iso_control: newQuestion.iso_control || null,
-        parent_question: newQuestion.parent_question || null,
-      };
 
-      if (modalType === "edit" && activeQuestion) {
+      if (modalType === "edit" && activeIssue) {
         response = await apiRequest(
           "PATCH",
-          `/api/new-questionnaire/library/${activeQuestion.id}/update/`,
-          payload,
+          `/api/policylens/issues/${activeIssue.id}/`,
+          newIssue,
           true
         );
       } else {
         response = await apiRequest(
           "POST",
-          `/api/new-questionnaire/library/create/`,
-          payload,
+          `/api/policylens/issues/create/`,
+          newIssue,
           true
         );
       }
@@ -236,16 +227,16 @@ const QuestionLibrary = () => {
       if (response.status === 200 || response.status === 201) {
         message.success(
           modalType === "edit"
-            ? "Question updated successfully"
-            : "Question created successfully"
+            ? "Issue updated successfully"
+            : "Issue created successfully"
         );
 
         if (modalType === "edit") {
-          setQuestions((prev) =>
-            prev.map((q) => (q.id === activeQuestion.id ? response.data : q))
+          setIssues((prev) =>
+            prev.map((i) => (i.id === activeIssue.id ? response.data : i))
           );
         } else {
-          setQuestions((prev) => [...prev, response.data]);
+          setIssues((prev) => [...prev, response.data]);
         }
 
         closeModal();
@@ -253,9 +244,9 @@ const QuestionLibrary = () => {
         throw new Error(`Failed with status: ${response.status}`);
       }
     } catch (error) {
-      console.error("Error submitting question:", error);
+      console.error("Error submitting issue:", error);
       message.error(
-        `Failed to ${modalType === "edit" ? "update" : "create"} question: ${
+        `Failed to ${modalType === "edit" ? "update" : "create"} issue: ${
           error.message || "Unknown error"
         }`
       );
@@ -289,7 +280,7 @@ const QuestionLibrary = () => {
 
       const response = await apiRequest(
         "POST",
-        "/api/new-questionnaire/library/upload/",
+        "/api/policylens/issues/upload/",
         formData,
         true
       );
@@ -300,11 +291,13 @@ const QuestionLibrary = () => {
         response.status === 207
       ) {
         message.success(
-          `Successfully created ${response.data.questions_created} questions`
+          `Successfully created ${
+            response.data.issues_created || response.data.count
+          } issues`
         );
 
-        if (response.data.questions && response.data.questions.length > 0) {
-          setQuestions((prev) => [...prev, ...response.data.questions]);
+        if (response.data.issues && response.data.issues.length > 0) {
+          setIssues((prev) => [...prev, ...response.data.issues]);
         }
 
         if (response.data.errors && response.data.errors.length > 0) {
@@ -333,74 +326,52 @@ const QuestionLibrary = () => {
     }
   };
 
-  // Delete question
-  const confirmDeleteQuestion = (question) => {
-    setQuestionToDelete(question);
+  // Delete issue
+  const confirmDeleteIssue = (issue) => {
+    setIssueToDelete(issue);
     setShowDeleteConfirmation(true);
   };
 
-  const cancelDeleteQuestion = () => {
+  const cancelDeleteIssue = () => {
     setShowDeleteConfirmation(false);
-    setQuestionToDelete(null);
+    setIssueToDelete(null);
   };
 
-  const handleDeleteQuestion = async () => {
-    if (!questionToDelete) return;
+  const handleDeleteIssue = async () => {
+    if (!issueToDelete) return;
 
     setIsDeleting(true);
 
     try {
       const response = await apiRequest(
         "DELETE",
-        `/api/new-questionnaire/library/${questionToDelete.id}/delete/`,
+        `/api/policylens/issues/${issueToDelete.id}/delete/`,
         null,
         true
       );
 
       if (response.status === 204 || response.status === 200) {
-        message.success("Question deleted successfully");
-        setQuestions((prev) =>
-          prev.filter((q) => q.id !== questionToDelete.id)
-        );
+        message.success("Issue deleted successfully");
+        setIssues((prev) => prev.filter((i) => i.id !== issueToDelete.id));
         setShowDeleteConfirmation(false);
-        setQuestionToDelete(null);
+        setIssueToDelete(null);
       } else {
         throw new Error(`Failed with status: ${response.status}`);
       }
     } catch (error) {
-      console.error("Error deleting question:", error);
+      console.error("Error deleting issue:", error);
       message.error(
-        `Failed to delete question: ${error.message || "Unknown error"}`
+        `Failed to delete issue: ${error.message || "Unknown error"}`
       );
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Effect to refetch questions
+  // Effect to refetch issues
   useEffect(() => {
-    handleGetQuestions();
+    handleGetIssues();
   }, [searchQuery, filters, user, location.pathname]);
-
-  // Flatten questions with follow-ups for table display
-  const flattenQuestions = (questions) => {
-    const flattened = [];
-    questions.forEach((question) => {
-      flattened.push({ ...question, isParent: true });
-      if (question.follow_ups && question.follow_ups.length > 0) {
-        question.follow_ups.forEach((followUp) => {
-          flattened.push({
-            ...followUp,
-            isFollowUp: true,
-            parentId: question.id,
-          });
-        });
-      }
-    });
-    return flattened;
-  };
-
-  const tableData = flattenQuestions(questions);
 
   // If unauthorized, show 403 page
   if (unauthorized) {
@@ -426,13 +397,11 @@ const QuestionLibrary = () => {
         {/* Top Bar */}
         <div className="flex flex-col border-b border-slate-200 bg-white sticky top-0 z-10">
           <div className="flex items-center p-4">
-            <h2 className="text-lg font-semibold text-slate-700">
-              Question Library
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-700">Issue Bank</h2>
 
             <Space className="ml-auto" size="middle">
               <Input
-                placeholder="Search questions..."
+                placeholder="Search issues..."
                 prefix={<Search size={16} className="text-slate-400" />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -447,7 +416,7 @@ const QuestionLibrary = () => {
                   icon={<Filter size={16} />}
                 >
                   <span>Filter</span>
-                  {filters.domain && (
+                  {filters.category && (
                     <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-0.5 rounded-full">
                       1 Active
                     </span>
@@ -463,8 +432,8 @@ const QuestionLibrary = () => {
                     <div className="overflow-y-auto">
                       <div className="p-3 border-b border-slate-200">
                         <h4 className="text-sm font-medium text-slate-700 mb-2 flex justify-between">
-                          <span>Domain</span>
-                          {pendingFilters.domain && (
+                          <span>Category</span>
+                          {pendingFilters.category && (
                             <button
                               onClick={() => handlePendingFilterChange("")}
                               className="text-xs text-slate-500 hover:text-slate-700"
@@ -474,34 +443,36 @@ const QuestionLibrary = () => {
                           )}
                         </h4>
                         <div className="space-y-1">
-                          {domainChoices.map((domain) => (
+                          {categoryChoices.map((category) => (
                             <button
-                              key={domain}
-                              onClick={() => handlePendingFilterChange(domain)}
+                              key={category}
+                              onClick={() =>
+                                handlePendingFilterChange(category)
+                              }
                               className={`w-full text-left px-2 py-1.5 rounded text-sm ${
-                                pendingFilters.domain === domain
+                                pendingFilters.category === category
                                   ? "bg-indigo-50 text-indigo-700 font-medium"
                                   : "text-slate-600 hover:bg-slate-50"
                               }`}
                             >
-                              {getDomainLabel(domain)}
+                              {getCategoryLabel(category)}
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {filters.domain && (
+                      {filters.category && (
                         <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
                           <h4 className="text-xs font-medium text-slate-600 mb-1">
                             Active Filters:
                           </h4>
                           <div className="flex flex-wrap gap-1">
                             <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                              Domain: {getDomainLabel(filters.domain)}
+                              Category: {getCategoryLabel(filters.category)}
                               <button
                                 onClick={() => {
-                                  setFilters({ domain: "" });
-                                  setPendingFilters({ domain: "" });
+                                  setFilters({ category: "" });
+                                  setPendingFilters({ category: "" });
                                 }}
                                 className="ml-1 hover:text-indigo-900"
                               >
@@ -543,17 +514,17 @@ const QuestionLibrary = () => {
                 onClick={openAddModal}
                 icon={<Plus size={16} />}
               >
-                Add Question
+                Add Issue
               </Button>
             </Space>
           </div>
         </div>
 
-        {/* Questions Table */}
+        {/* Issues Table */}
         <div className="flex-1 overflow-auto p-4">
           <Table
-            dataSource={tableData}
-            loading={isQuestionsLoading}
+            dataSource={issues}
+            loading={isIssuesLoading}
             rowKey="id"
             pagination={{
               pageSize: 50,
@@ -563,68 +534,85 @@ const QuestionLibrary = () => {
             scroll={{ x: 1200 }}
             columns={[
               {
-                title: "Q No.",
-                dataIndex: "q_no",
-                key: "q_no",
-                width: 120,
-                sorter: (a, b) =>
-                  a.q_no.localeCompare(b.q_no, undefined, { numeric: true }),
-                render: (text, record) => (
-                  <span
-                    className={`font-semibold ${
-                      record.isFollowUp
-                        ? "text-slate-500 ml-8"
-                        : "text-indigo-600"
-                    }`}
-                  >
-                    {text}
-                  </span>
-                ),
-              },
-              {
-                title: "Question",
-                dataIndex: "question",
-                key: "question",
-                ellipsis: true,
-                render: (text, record) => (
-                  <div
-                    className={
-                      record.isFollowUp
-                        ? "ml-8 text-slate-600"
-                        : "text-slate-700"
+                title: "Category",
+                dataIndex: "category",
+                key: "category",
+                width: 180,
+                filters: categoryChoices.map((c) => ({
+                  text: getCategoryLabel(c),
+                  value: c,
+                })),
+                onFilter: (value, record) => record.category === value,
+                render: (category) => (
+                  <Tag
+                    color={
+                      category === "internal"
+                        ? "blue"
+                        : category === "external"
+                        ? "green"
+                        : category === "risk"
+                        ? "red"
+                        : "purple"
                     }
                   >
-                    {text}
-                  </div>
+                    {getCategoryLabel(category)}
+                  </Tag>
                 ),
               },
               {
-                title: "Domain",
-                dataIndex: "domain",
-                key: "domain",
-                width: 150,
+                title: "Issue",
+                dataIndex: "text",
+                key: "text",
+                ellipsis: true,
+                render: (text) => (
+                  <span className="font-semibold text-slate-700">{text}</span>
+                ),
+              },
+              {
+                title: "Description",
+                dataIndex: "description",
+                key: "description",
+                ellipsis: true,
+                render: (text) => (
+                  <span className="text-slate-600">{text}</span>
+                ),
+              },
+              {
+                title: "Impact",
+                dataIndex: "impact",
+                key: "impact",
+                width: 100,
                 align: "center",
-                filters: domainChoices.map((d) => ({
-                  text: getDomainLabel(d),
-                  value: d,
+                filters: impactChoices.map((i) => ({
+                  text: i.toUpperCase(),
+                  value: i,
                 })),
-                onFilter: (value, record) => record.domain === value,
-                render: (domain) => (
-                  <Tag color="blue">{getDomainLabel(domain)}</Tag>
+                onFilter: (value, record) => record.impact === value,
+                render: (impact) => (
+                  <Tag
+                    color={
+                      impact === "high"
+                        ? "red"
+                        : impact === "medium"
+                        ? "orange"
+                        : "green"
+                    }
+                  >
+                    {impact?.toUpperCase()}
+                  </Tag>
                 ),
               },
               {
-                title: "ISO Control",
-                dataIndex: "iso_control",
-                key: "iso_control",
-                width: 120,
-                align: "center",
+                title: "Mitigation",
+                dataIndex: "mitigation",
+                key: "mitigation",
+                ellipsis: true,
                 render: (text) => text || "-",
               },
               {
                 title: "Actions",
                 key: "actions",
-                width: 120,
+                width: 100,
                 align: "center",
                 render: (_, record) => (
                   <Dropdown
@@ -637,20 +625,11 @@ const QuestionLibrary = () => {
                         >
                           Edit
                         </Menu.Item>
-                        {record.isParent && (
-                          <Menu.Item
-                            key="add-followup"
-                            icon={<PlusOutlined />}
-                            onClick={() => openAddModal(record)}
-                          >
-                            Add Follow-up
-                          </Menu.Item>
-                        )}
                         <Menu.Item
                           key="delete"
                           icon={<Trash2 size={14} />}
                           danger
-                          onClick={() => confirmDeleteQuestion(record)}
+                          onClick={() => confirmDeleteIssue(record)}
                         >
                           Delete
                         </Menu.Item>
@@ -667,13 +646,13 @@ const QuestionLibrary = () => {
         </div>
       </div>
 
-      {/* Add/Edit Question Modal */}
+      {/* Add/Edit Issue Modal */}
       {showModal && (modalType === "add" || modalType === "edit") && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-t-lg">
               <h3 className="text-lg font-medium">
-                {modalType === "edit" ? "Edit Question" : "Add New Question"}
+                {modalType === "edit" ? "Edit Issue" : "Add New Issue"}
               </h3>
               <button
                 className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
@@ -683,79 +662,97 @@ const QuestionLibrary = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitQuestion} className="p-6">
+            <form onSubmit={handleSubmitIssue} className="p-6">
               <div className="space-y-4">
-                {/* Q No */}
+                {/* Category */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Question Number *
+                    Category *
+                  </label>
+                  <select
+                    name="category"
+                    value={newIssue.category}
+                    onChange={handleIssueInputChange}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
+                    required
+                  >
+                    {categoryChoices.map((category) => (
+                      <option key={category} value={category}>
+                        {getCategoryLabel(category)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Text */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Issue *
                   </label>
                   <input
                     type="text"
-                    name="q_no"
-                    value={newQuestion.q_no}
-                    onChange={handleQuestionInputChange}
+                    name="text"
+                    value={newIssue.text}
+                    onChange={handleIssueInputChange}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
-                    placeholder="e.g., 1.0"
+                    placeholder="Enter the issue"
                     required
                   />
                 </div>
 
-                {/* Question */}
+                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Question *
+                    Description *
                   </label>
                   <textarea
-                    name="question"
-                    value={newQuestion.question}
-                    onChange={handleQuestionInputChange}
-                    rows="5"
+                    name="description"
+                    value={newIssue.description}
+                    onChange={handleIssueInputChange}
+                    rows="3"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
-                    placeholder="Enter the question text..."
+                    placeholder="Enter the description..."
                     required
                   ></textarea>
                 </div>
 
-                {/* Domain */}
+                {/* Impact */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Domain *
+                    Impact *
                   </label>
                   <select
-                    name="domain"
-                    value={newQuestion.domain}
-                    onChange={handleQuestionInputChange}
+                    name="impact"
+                    value={newIssue.impact}
+                    onChange={handleIssueInputChange}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
                     required
-                    disabled={!!newQuestion.parent_question}
                   >
-                    {domainChoices.map((domain) => (
-                      <option key={domain} value={domain}>
-                        {getDomainLabel(domain)}
+                    {impactChoices.map((impact) => (
+                      <option
+                        key={impact}
+                        value={impact}
+                        className="capitalize"
+                      >
+                        {impact.toUpperCase()}
                       </option>
                     ))}
                   </select>
-                  {newQuestion.parent_question && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Domain is inherited from parent question
-                    </p>
-                  )}
                 </div>
 
-                {/* ISO Control */}
+                {/* Mitigation */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    ISO Control (Optional)
+                    Mitigation (Optional)
                   </label>
-                  <input
-                    type="text"
-                    name="iso_control"
-                    value={newQuestion.iso_control}
-                    onChange={handleQuestionInputChange}
+                  <textarea
+                    name="mitigation"
+                    value={newIssue.mitigation}
+                    onChange={handleIssueInputChange}
+                    rows="3"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all"
-                    placeholder="e.g., A.5.1"
-                  />
+                    placeholder="Enter mitigation strategy..."
+                  ></textarea>
                 </div>
               </div>
 
@@ -775,7 +772,7 @@ const QuestionLibrary = () => {
                   {isSubmitting && (
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
                   )}
-                  {modalType === "edit" ? "Update Question" : "Add Question"}
+                  {modalType === "edit" ? "Update Issue" : "Add Issue"}
                 </button>
               </div>
             </form>
@@ -788,9 +785,7 @@ const QuestionLibrary = () => {
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-t-lg">
-              <h3 className="text-lg font-medium">
-                Upload Questions from Excel
-              </h3>
+              <h3 className="text-lg font-medium">Upload Issues from Excel</h3>
               <button
                 className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                 onClick={closeModal}
@@ -802,12 +797,12 @@ const QuestionLibrary = () => {
             <div className="p-6">
               <div className="mb-6">
                 <p className="text-slate-600 mb-4">
-                  Upload an Excel file with questions to add to the library. The
-                  file should follow the required format.
+                  Upload an Excel file with issues to add to the bank. The file
+                  should follow the required format.
                 </p>
 
                 <a
-                  href="/QuestionLibraryTemplate.xlsx"
+                  href="/IssuesBankTemplate.xlsx"
                   className="flex items-center text-indigo-600 hover:text-indigo-800 mb-6"
                   download
                 >
@@ -898,38 +893,37 @@ const QuestionLibrary = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirmation && questionToDelete && (
+      {showDeleteConfirmation && issueToDelete && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4">
             <div className="flex items-center text-red-600 mb-4">
               <AlertCircle size={24} className="mr-3" />
-              <h3 className="text-lg font-medium">Delete Question</h3>
+              <h3 className="text-lg font-medium">Delete Issue</h3>
             </div>
             <p className="text-slate-600 mb-2">
-              Are you sure you want to delete this question?
+              Are you sure you want to delete this issue?
             </p>
             <p className="text-sm text-slate-500 mb-5">
-              Q No.:{" "}
-              <span className="font-medium">{questionToDelete.q_no}</span>
+              Issue: <span className="font-medium">{issueToDelete.text}</span>
               <br />
               This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                onClick={cancelDeleteQuestion}
+                onClick={cancelDeleteIssue}
               >
                 Cancel
               </button>
               <button
                 className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center disabled:opacity-70"
-                onClick={handleDeleteQuestion}
+                onClick={handleDeleteIssue}
                 disabled={isDeleting}
               >
                 {isDeleting && (
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
                 )}
-                {isDeleting ? "Deleting..." : "Delete Question"}
+                {isDeleting ? "Deleting..." : "Delete Issue"}
               </button>
             </div>
           </div>
@@ -979,4 +973,4 @@ const QuestionLibrary = () => {
   );
 };
 
-export default QuestionLibrary;
+export default IssueBank;
