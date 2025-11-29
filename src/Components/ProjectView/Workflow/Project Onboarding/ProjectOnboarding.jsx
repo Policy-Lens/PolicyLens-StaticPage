@@ -54,6 +54,7 @@ const ProjectOnboarding = () => {
     getIssuesByCategory,
     getRiskRatingSetup,
     riskRatingSetup,
+    getDDPEntries,
   } = useContext(OnboardingContext);
 
   const [questionsData, setQuestionsData] = useState({
@@ -69,6 +70,8 @@ const ProjectOnboarding = () => {
     risk: [],
     opportunity: [],
   });
+
+  const [ddpData, setDdpData] = useState([]);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -117,11 +120,12 @@ const ProjectOnboarding = () => {
       const data = await getOnboardingDetails(projectid);
       if (data) {
         setOnboardingData(data);
-        // Load questions, issues, and risk rating setup
+        // Load questions, issues, risk rating setup, and DDP data
         await Promise.all([
           loadAllQuestions(),
           loadAllIssues(),
           getRiskRatingSetup(projectid),
+          loadDDPData(),
         ]);
       }
     } catch (error) {
@@ -178,6 +182,16 @@ const ProjectOnboarding = () => {
     } catch (error) {
       console.error("Error loading issues:", error);
       message.error("Failed to load issues");
+    }
+  };
+
+  const loadDDPData = async () => {
+    try {
+      const data = await getDDPEntries(projectid);
+      setDdpData(data);
+    } catch (error) {
+      console.error("Error loading DDP data:", error);
+      message.error("Failed to load DDP data");
     }
   };
 
@@ -593,6 +607,8 @@ const ProjectOnboarding = () => {
               issuesData={issuesData}
               loadAllIssues={loadAllIssues}
               riskRatingSetup={riskRatingSetup}
+              ddpData={ddpData}
+              loadDDPData={loadDDPData}
             />
           </div>
         </div>

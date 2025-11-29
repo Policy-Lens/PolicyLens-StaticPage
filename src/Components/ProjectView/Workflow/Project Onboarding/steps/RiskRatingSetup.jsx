@@ -283,12 +283,7 @@ const RiskRatingSetup = ({
 
   return (
     <div>
-      <Title level={4}>Risk Rating Setup</Title>
-      <Text type="secondary">
-        Configure risk rating scale and view associated tables
-      </Text>
-
-      <Card style={{ marginTop: 24 }}>
+      <Card>
         <Title level={5}>Select Risk Rating Scale</Title>
         {!selectedScale && !isReadOnly && (
           <Alert

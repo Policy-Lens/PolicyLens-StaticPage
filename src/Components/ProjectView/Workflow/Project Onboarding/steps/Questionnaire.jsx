@@ -18,7 +18,7 @@ const Questionnaire = ({
       <Space
         direction="vertical"
         size="large"
-        style={{ width: "100%", marginTop: 24 }}
+        style={{ width: "100%"}}
       >
         {/* Section 1: Organization */}
         <QuestionSection

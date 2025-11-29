@@ -325,6 +325,141 @@ export const OnboardingProvider = ({ children }) => {
     }
   };
 
+  // DDP APIs
+  const getDDPEntries = async (projectId) => {
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/project/${projectId}/ddp/`,
+        null,
+        true
+      );
+
+      if (response.status === 200) {
+        return response.data;
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching DDP entries:", error);
+      throw error;
+    }
+  };
+
+  const updateDDPEntry = async (projectId, ddpId, data) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/project/${projectId}/ddp/${ddpId}/update/`,
+        data,
+        true
+      );
+
+      if (response.status === 200) {
+        return { success: true, data: response.data };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error("Error updating DDP entry:", error);
+      throw error;
+    }
+  };
+
+  const createDDPEntry = async (projectId, data) => {
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/project/${projectId}/ddp/create/`,
+        data,
+        true
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        return { success: true, data: response.data };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error("Error creating DDP entry:", error);
+      throw error;
+    }
+  };
+
+  const deleteDDPEntry = async (projectId, ddpId) => {
+    try {
+      const response = await apiRequest(
+        "DELETE",
+        `/api/project/${projectId}/ddp/${ddpId}/delete/`,
+        null,
+        true
+      );
+
+      if (response.status === 200 || response.status === 204) {
+        return { success: true };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error("Error deleting DDP entry:", error);
+      throw error;
+    }
+  };
+
+  const bulkCreateRecipients = async (projectId, ddpId, recipients) => {
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/project/${projectId}/ddp/${ddpId}/recipients/bulk-create/`,
+        { recipients },
+        true
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        return { success: true, data: response.data };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error("Error creating recipients:", error);
+      throw error;
+    }
+  };
+
+  const deleteRecipient = async (projectId, recipientId) => {
+    try {
+      const response = await apiRequest(
+        "DELETE",
+        `/api/project/${projectId}/ddp-recipients/${recipientId}/delete/`,
+        null,
+        true
+      );
+
+      if (response.status === 200 || response.status === 204) {
+        return { success: true };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error("Error deleting recipient:", error);
+      throw error;
+    }
+  };
+
+  const updateDocumentNomenclature = async (projectId, nomenclature) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/project/${projectId}/setup/update/`,
+        { document_nomenclature: nomenclature },
+        true
+      );
+
+      if (response.status === 200) {
+        setRiskRatingSetup(response.data);
+        return { success: true, data: response.data };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error("Error updating document nomenclature:", error);
+      throw error;
+    }
+  };
+
   return (
     <OnboardingContext.Provider
       value={{
@@ -348,6 +483,13 @@ export const OnboardingProvider = ({ children }) => {
         unselectIssue,
         getRiskRatingSetup,
         updateRiskRatingScale,
+        getDDPEntries,
+        createDDPEntry,
+        updateDDPEntry,
+        deleteDDPEntry,
+        bulkCreateRecipients,
+        deleteRecipient,
+        updateDocumentNomenclature,
       }}
     >
       {children}
