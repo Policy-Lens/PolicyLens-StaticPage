@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Tabs,
   Card,
@@ -12,8 +12,9 @@ import {
   Tag,
   Modal,
   Table,
-  Input
-} from 'antd';
+  Input,
+  Popconfirm,
+} from "antd";
 import {
   EditOutlined,
   SaveOutlined,
@@ -24,26 +25,27 @@ import {
   PlusOutlined,
   DeleteOutlined,
   ExclamationCircleOutlined,
-  DownloadOutlined
-} from '@ant-design/icons';
-import { AuthContext } from '../../../AuthContext';
-import { apiRequest } from '../../../utils/api';
-import Unauthorized from '../../Common/Unauthorized';
-import html2pdf from 'html2pdf.js';
+  DownloadOutlined,
+} from "@ant-design/icons";
+import { AuthContext } from "../../../AuthContext";
+import { apiRequest } from "../../../utils/api";
+import Unauthorized from "../../Common/Unauthorized";
+import html2pdf from "html2pdf.js";
 
 // Import section components
-import BasicInformationSection from './sections/BasicInformationSection';
-import ContractualInformationSection from './sections/ContractualInformationSection';
-import LegalInformationSection from './sections/LegalInformationSection';
-import ITInformationSection from './sections/ITInformationSection';
-import LocationsSection from './sections/LocationsSection';
-import ColorPaletteSection from './sections/ColorPaletteSection';
-import FontsSection from './sections/FontsSection';
-import ClientsSection from './sections/ClientsSection';
-import VendorsSection from './sections/VendorsSection';
-import CloudServicesSection from './sections/CloudServicesSection';
-import OtherInformationSection from './sections/OtherInformationSection';
-import { div } from 'framer-motion/client';
+import BasicInformationSection from "./sections/BasicInformationSection";
+import ContractualInformationSection from "./sections/ContractualInformationSection";
+import LegalInformationSection from "./sections/LegalInformationSection";
+import ITInformationSection from "./sections/ITInformationSection";
+import LocationsSection from "./sections/LocationsSection";
+import ColorPaletteSection from "./sections/ColorPaletteSection";
+import FontsSection from "./sections/FontsSection";
+import ClientsSection from "./sections/ClientsSection";
+import VendorsSection from "./sections/VendorsSection";
+import CloudServicesSection from "./sections/CloudServicesSection";
+import OtherInformationSection from "./sections/OtherInformationSection";
+import CompanyProfileEdit from "./CompanyProfileEdit";
+import { div } from "framer-motion/client";
 
 const { Title, Text } = Typography;
 
@@ -59,12 +61,20 @@ const CompanyDetail = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [originalData, setOriginalData] = useState({});
   const [changedFields, setChangedFields] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState("details");
   const [unauthorized, setUnauthorized] = useState(false);
 
   // Profile preview state
-  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [isProfileEditMode, setIsProfileEditMode] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  const [requirements, setRequirements] = useState([]);
+  const [requirementModalVisible, setRequirementModalVisible] = useState(false);
+  const [editingRequirement, setEditingRequirement] = useState(null);
+  const [requirementForm] = Form.useForm();
+  const [executiveSummaryValue, setExecutiveSummaryValue] = useState("");
+  const [orgStructureValue, setOrgStructureValue] = useState("");
 
   // Representatives state
   const [representatives, setRepresentatives] = useState([]);
@@ -92,7 +102,7 @@ const CompanyDetail = () => {
     add_font: [],
     add_client: [],
     add_vendor: [],
-    add_cloud_service: []
+    add_cloud_service: [],
   });
   const [itemsToRemove, setItemsToRemove] = useState({
     remove_assets: [],
@@ -101,20 +111,20 @@ const CompanyDetail = () => {
     remove_fonts: [],
     remove_clients: [],
     remove_vendors: [],
-    remove_cloud_services: []
+    remove_cloud_services: [],
   });
 
   // File uploads
   const [fileUploads, setFileUploads] = useState({});
 
-  const isSuperConsultant = user?.role === 'Super Consultant' || user?.is_staff;
-  const isCompanyRole = user?.role === 'Company';
+  const isSuperConsultant = user?.role === "Super Consultant" || user?.is_staff;
+  const isCompanyRole = user?.role === "Company";
 
   // Handle file change
   const handleFileChange = (fieldName, file) => {
-    setFileUploads(prev => ({
+    setFileUploads((prev) => ({
       ...prev,
-      [fieldName]: file
+      [fieldName]: file,
     }));
     message.success(`${file.name} selected. Will be uploaded on save.`);
   };
@@ -123,7 +133,12 @@ const CompanyDetail = () => {
   const fetchCompanyDetails = async () => {
     try {
       setLoading(true);
-      const response = await apiRequest('GET', `/api/company/${companyId}/details/`, null, true);
+      const response = await apiRequest(
+        "GET",
+        `/api/company/${companyId}/details/`,
+        null,
+        true
+      );
       if (response.status === 200) {
         const data = response.data;
         setCompanyData(data);
@@ -141,11 +156,11 @@ const CompanyDetail = () => {
         setCloudServices(data.cloud_service || []);
       }
     } catch (error) {
-      console.error('Error fetching company details:', error);
+      console.error("Error fetching company details:", error);
       if (error.status === 403) {
         setUnauthorized(true);
       } else {
-        message.error('Failed to load company details');
+        message.error("Failed to load company details");
       }
     } finally {
       setLoading(false);
@@ -156,15 +171,45 @@ const CompanyDetail = () => {
   const fetchRepresentatives = async () => {
     try {
       setRepsLoading(true);
-      const response = await apiRequest('GET', `/api/auth/companies/${companyId}/representatives/`, null, true);
+      const response = await apiRequest(
+        "GET",
+        `/api/auth/companies/${companyId}/representatives/`,
+        null,
+        true
+      );
       if (response.status === 200) {
         setRepresentatives(response.data || []);
       }
     } catch (error) {
-      console.error('Error fetching representatives:', error);
+      console.error("Error fetching representatives:", error);
       setRepresentatives([]);
     } finally {
       setRepsLoading(false);
+    }
+  };
+
+  // Fetch profile data for editing
+  const fetchProfileData = async () => {
+    try {
+      setPreviewLoading(true);
+      const response = await apiRequest(
+        "GET",
+        `/api/company/${companyId}/profile/`,
+        null,
+        true
+      );
+      if (response.status === 200) {
+        setProfileData(response.data);
+        setRequirements(response.data.applicable_requirements || []);
+        // Initialize text values
+        setExecutiveSummaryValue(response.data.executive_summary || "");
+        setOrgStructureValue(response.data.org_structure || "");
+      }
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+      message.error("Failed to load profile data");
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -172,37 +217,161 @@ const CompanyDetail = () => {
   const fetchProfilePreview = async () => {
     try {
       setPreviewLoading(true);
-      const response = await apiRequest('GET', `/api/company/${companyId}/profile/preview/`, null, true);
+      const response = await apiRequest(
+        "GET",
+        `/api/company/${companyId}/profile/preview/`,
+        null,
+        true
+      );
       if (response.status === 200) {
         setPreviewHtml(response.data);
       }
     } catch (error) {
-      console.error('Error fetching profile preview:', error);
-      message.error('Failed to load profile preview');
+      console.error("Error fetching profile preview:", error);
+      message.error("Failed to load profile preview");
     } finally {
       setPreviewLoading(false);
     }
   };
 
+  // Update executive summary
+  const updateExecutiveSummary = async (value) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/company/${companyId}/profile/update/`,
+        { executive_summary: value },
+        true
+      );
+      if (response.status === 200) {
+        message.success("Executive summary updated successfully");
+        setProfileData({ ...profileData, executive_summary: value });
+      }
+    } catch (error) {
+      console.error("Error updating executive summary:", error);
+      message.error("Failed to update executive summary");
+    }
+  };
+
+  // Update org structure
+  const updateOrgStructure = async (value) => {
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/company/${companyId}/profile/update/`,
+        { org_structure: value },
+        true
+      );
+      if (response.status === 200) {
+        message.success("Organization structure updated successfully");
+        setProfileData({ ...profileData, org_structure: value });
+      }
+    } catch (error) {
+      console.error("Error updating org structure:", error);
+      message.error("Failed to update organization structure");
+    }
+  };
+
+  // Create requirement
+  const createRequirement = async (values) => {
+    try {
+      const response = await apiRequest(
+        "POST",
+        `/api/company/${companyId}/profile/requirements/`,
+        values,
+        true
+      );
+      if (response.status === 201) {
+        message.success("Requirement added successfully");
+        // Extract requirement from response
+        const newRequirement = response.data.requirement || response.data;
+        setRequirements([...requirements, newRequirement]);
+        setRequirementModalVisible(false);
+        requirementForm.resetFields();
+      }
+    } catch (error) {
+      console.error("Error creating requirement:", error);
+      message.error("Failed to add requirement");
+    }
+  };
+
+  // Update requirement
+  const updateRequirement = async (id, values) => {
+    try {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/company/${companyId}/profile/requirements/${id}/`,
+        values,
+        true
+      );
+      if (response.status === 200) {
+        message.success("Requirement updated successfully");
+        setRequirements(
+          requirements.map((req) => (req.id === id ? response.data : req))
+        );
+        setRequirementModalVisible(false);
+        setEditingRequirement(null);
+        requirementForm.resetFields();
+      }
+    } catch (error) {
+      console.error("Error updating requirement:", error);
+      message.error("Failed to update requirement");
+    }
+  };
+
+  // Delete requirement
+  const deleteRequirement = async (id) => {
+    try {
+      const response = await apiRequest(
+        "DELETE",
+        `/api/company/${companyId}/profile/requirements/${id}/delete/`,
+        null,
+        true
+      );
+      if (response.status === 200 || response.status === 204) {
+        message.success("Requirement deleted successfully");
+        setRequirements(requirements.filter((req) => req.id !== id));
+      }
+    } catch (error) {
+      console.error("Error deleting requirement:", error);
+      message.error("Failed to delete requirement");
+    }
+  };
+
+  // Handle edit profile
+  const handleEditProfile = async () => {
+    setIsProfileEditMode(true);
+    await fetchProfileData();
+  };
+
+  // Handle close edit mode
+  const handleCloseEditMode = () => {
+    setIsProfileEditMode(false);
+    setProfileData(null);
+    setExecutiveSummaryValue("");
+    setOrgStructureValue("");
+    fetchProfilePreview();
+  };
+
   // Download profile as PDF
   const downloadProfileAsPDF = async () => {
-    message.loading({ content: 'Preparing PDF...', key: 'pdf-download' });
-    
-    const element = document.getElementById('profile-preview-content');
-    
+    message.loading({ content: "Preparing PDF...", key: "pdf-download" });
+
+    const element = document.getElementById("profile-preview-content");
+
     // Store original styles
     const originalStyles = {
       maxHeight: element.style.maxHeight,
-      overflow: element.style.overflow
+      overflow: element.style.overflow,
     };
-    
+
     // Remove scroll constraints temporarily for PDF generation
-    element.style.maxHeight = 'none';
-    element.style.overflow = 'visible';
-    
+    element.style.maxHeight = "none";
+    element.style.overflow = "visible";
+
     // Wait for all images to load
-    const images = element.getElementsByTagName('img');
-    const imagePromises = Array.from(images).map(img => {
+    const images = element.getElementsByTagName("img");
+    const imagePromises = Array.from(images).map((img) => {
       return new Promise((resolve) => {
         if (img.complete) {
           resolve();
@@ -212,38 +381,41 @@ const CompanyDetail = () => {
         }
       });
     });
-    
+
     try {
       await Promise.all(imagePromises);
-      
+
       const opt = {
         margin: [10, 10, 10, 10],
-        filename: `${companyData?.company_name || 'Company'}_Profile.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
+        filename: `${companyData?.company_name || "Company"}_Profile.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
           scale: 2,
           useCORS: true,
           logging: false,
           allowTaint: true,
           scrollY: 0,
           scrollX: 0,
-          windowHeight: element.scrollHeight
+          windowHeight: element.scrollHeight,
         },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait'
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait",
         },
-        pagebreak: { 
-          mode: ['avoid-all', 'css', 'legacy']
-        }
+        pagebreak: {
+          mode: ["avoid-all", "css", "legacy"],
+        },
       };
-      
+
       await html2pdf().set(opt).from(element).save();
-      message.success({ content: 'PDF downloaded successfully!', key: 'pdf-download' });
+      message.success({
+        content: "PDF downloaded successfully!",
+        key: "pdf-download",
+      });
     } catch (error) {
-      console.error('PDF generation error:', error);
-      message.error({ content: 'Failed to generate PDF', key: 'pdf-download' });
+      console.error("PDF generation error:", error);
+      message.error({ content: "Failed to generate PDF", key: "pdf-download" });
     } finally {
       // Restore original styles
       element.style.maxHeight = originalStyles.maxHeight;
@@ -258,110 +430,211 @@ const CompanyDetail = () => {
   }, [companyId]);
 
   useEffect(() => {
-    if (activeTab === 'representatives') {
+    if (activeTab === "representatives") {
       fetchRepresentatives();
     }
-    if(activeTab === 'profile'){
+    if (activeTab === "profile") {
       fetchProfilePreview();
     }
   }, [activeTab]);
 
-
   // Check if user can edit
   const canEdit = () => {
     if (!companyData) return false;
-    
+
     // Super Consultant can edit only if status is pending
-    if (isSuperConsultant && companyData.onboarding_status === 'pending') {
+    if (isSuperConsultant && companyData.onboarding_status === "pending") {
       return true;
     }
-    
+
     // Company role can edit in other statuses
-    if (isCompanyRole && companyData.onboarding_status !== 'pending') {
+    if (isCompanyRole && companyData.onboarding_status !== "pending") {
       return true;
     }
-    
+
     return false;
   };
 
   // Track field changes
   const handleFieldChange = (changedValues, allValues) => {
     const newChangedFields = new Set(changedFields);
-    
-    Object.keys(changedValues).forEach(field => {
+
+    Object.keys(changedValues).forEach((field) => {
       const currentValue = allValues[field];
       const originalValue = originalData[field];
-      
-      const normalizedCurrent = currentValue === undefined || currentValue === null ? '' : String(currentValue).trim();
-      const normalizedOriginal = originalValue === undefined || originalValue === null ? '' : String(originalValue).trim();
-      
+
+      const normalizedCurrent =
+        currentValue === undefined || currentValue === null
+          ? ""
+          : String(currentValue).trim();
+      const normalizedOriginal =
+        originalValue === undefined || originalValue === null
+          ? ""
+          : String(originalValue).trim();
+
       if (normalizedCurrent !== normalizedOriginal) {
         newChangedFields.add(field);
       } else {
         newChangedFields.delete(field);
       }
     });
-    
+
     setChangedFields(newChangedFields);
   };
 
   // Save changes
   const handleSave = async (values) => {
     if (!canEdit()) {
-      message.error('You do not have permission to edit');
+      message.error("You do not have permission to edit");
       return;
+    }
+
+    // If status is completed, validate required fields before saving
+    if (companyData.onboarding_status === "completed") {
+      const requiredFields = [
+        { field: "company_abbreviation", label: "Company abbreviation" },
+        { field: "about_company", label: "About company" },
+        { field: "sector", label: "Sector (GICS)" },
+        { field: "industry_group", label: "Industry Group (GICS)" },
+        { field: "industry", label: "Industry (GICS)" },
+        { field: "sub_industry", label: "Sub-Industry (GICS)" },
+        { field: "year_of_inception", label: "Company year of inception" },
+        { field: "reporting_currency", label: "Reporting Currency" },
+        { field: "hq_country", label: "HQ Country" },
+        { field: "hq_city", label: "HQ City" },
+        { field: "cin_number", label: "CIN number" },
+        { field: "gst_number", label: "GST number" },
+        { field: "pan_number", label: "PAN number" },
+        { field: "legal_status_of_company", label: "Legal Status of Company" },
+        { field: "trading_name", label: "Trading name" },
+        { field: "statutory_obligations", label: "Statutory Obligations" },
+        { field: "rugulatory_obligations", label: "Regulatory Obligations" },
+        {
+          field: "standards_to_be_followed",
+          label: "Standards to be followed",
+        },
+        { field: "billing_address", label: "Billing Address" },
+        { field: "bill_to_person_name", label: "Bill to person name" },
+        { field: "bill_to_department", label: "Bill to department" },
+        { field: "billing_currency", label: "Billing currency" },
+      ];
+
+      const missingFields = [];
+      requiredFields.forEach(({ field, label }) => {
+        const value = values[field];
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          missingFields.push(label);
+        }
+      });
+
+      if (missingFields.length > 0) {
+        Modal.error({
+          title: "Cannot Remove Required Fields",
+          content: (
+            <div>
+              <p>
+                The following required fields cannot be empty for a completed
+                setup:
+              </p>
+              <ul style={{ marginTop: "10px", paddingLeft: "20px" }}>
+                {missingFields.map((field, index) => (
+                  <li key={index} style={{ color: "red" }}>
+                    {field}
+                  </li>
+                ))}
+              </ul>
+              <p style={{ marginTop: "10px" }}>
+                Please provide values for these fields before saving.
+              </p>
+            </div>
+          ),
+          width: 600,
+        });
+        setSaving(false);
+        return;
+      }
     }
 
     try {
       setSaving(true);
-      
+
       // Only send changed fields
       let dataToSend = {};
       if (changedFields.size > 0) {
-        changedFields.forEach(field => {
+        changedFields.forEach((field) => {
           dataToSend[field] = values[field];
         });
       }
 
       const hasFiles = Object.keys(fileUploads).length > 0;
+      const hasFontFiles = itemsToAdd.add_font?.some((font) => font.font_file);
 
       let response;
-      if (hasFiles) {
+      if (hasFiles || hasFontFiles) {
         // Use FormData for file uploads
         const formData = new FormData();
-        
+
         // Add files
-        Object.keys(fileUploads).forEach(key => {
+        Object.keys(fileUploads).forEach((key) => {
           formData.append(key, fileUploads[key]);
         });
-        
+
+        // Prepare fonts data and files
+        const fontsData = [];
+        itemsToAdd.add_font.forEach((font, index) => {
+          if (font.font_file && font.font_file instanceof File) {
+            // Add font file with indexed name
+            formData.append(`font_file_${index}`, font.font_file);
+            // Add font metadata (without the file object)
+            fontsData.push({
+              font_usage: font.font_usage || "",
+            });
+          }
+        });
+
+        // Add fonts JSON array
+        if (fontsData.length > 0) {
+          formData.append("add_font", JSON.stringify(fontsData));
+        }
+
         // Add JSON data as strings
-        formData.append('companyDetails', JSON.stringify(dataToSend));
-        Object.keys(itemsToAdd).forEach(key => {
-          if (itemsToAdd[key].length > 0) {
+        formData.append("companyDetails", JSON.stringify(dataToSend));
+        Object.keys(itemsToAdd).forEach((key) => {
+          if (key !== "add_font" && itemsToAdd[key].length > 0) {
             formData.append(key, JSON.stringify(itemsToAdd[key]));
           }
         });
-        Object.keys(itemsToRemove).forEach(key => {
+        Object.keys(itemsToRemove).forEach((key) => {
           if (itemsToRemove[key].length > 0) {
             formData.append(key, JSON.stringify(itemsToRemove[key]));
           }
         });
 
-        response = await apiRequest('PATCH', `/api/company/${companyId}/details/update/`, formData, true, true);
+        response = await apiRequest(
+          "PATCH",
+          `/api/company/${companyId}/details/update/`,
+          formData,
+          true,
+          true
+        );
       } else {
         // JSON only
         const payload = {
           companyDetails: dataToSend,
           ...itemsToAdd,
-          ...itemsToRemove
+          ...itemsToRemove,
         };
-        
-        response = await apiRequest('PATCH', `/api/company/${companyId}/details/update/`, payload, true);
+
+        response = await apiRequest(
+          "PATCH",
+          `/api/company/${companyId}/details/update/`,
+          payload,
+          true
+        );
       }
-      
+
       if (response.status === 200) {
-        message.success('Company details updated successfully');
+        message.success("Company details updated successfully");
         setIsEditMode(false);
         setChangedFields(new Set());
         setFileUploads({});
@@ -373,7 +646,7 @@ const CompanyDetail = () => {
           add_font: [],
           add_client: [],
           add_vendor: [],
-          add_cloud_service: []
+          add_cloud_service: [],
         });
         setItemsToRemove({
           remove_assets: [],
@@ -382,13 +655,13 @@ const CompanyDetail = () => {
           remove_fonts: [],
           remove_clients: [],
           remove_vendors: [],
-          remove_cloud_services: []
+          remove_cloud_services: [],
         });
         fetchCompanyDetails();
       }
     } catch (error) {
-      console.error('Error saving company details:', error);
-      message.error('Failed to save company details');
+      console.error("Error saving company details:", error);
+      message.error("Failed to save company details");
     } finally {
       setSaving(false);
     }
@@ -408,7 +681,7 @@ const CompanyDetail = () => {
       add_font: [],
       add_client: [],
       add_vendor: [],
-      add_cloud_service: []
+      add_cloud_service: [],
     });
     setItemsToRemove({
       remove_assets: [],
@@ -417,7 +690,7 @@ const CompanyDetail = () => {
       remove_fonts: [],
       remove_clients: [],
       remove_vendors: [],
-      remove_cloud_services: []
+      remove_cloud_services: [],
     });
     // Restore original lists
     if (companyData) {
@@ -435,36 +708,169 @@ const CompanyDetail = () => {
   const handleSendForApproval = async () => {
     try {
       setSaving(true);
-      const response = await apiRequest('PATCH', `/api/company/${companyId}/onboarding/status/`, 
-        { status: 'in_review' }, true);
-      
+      const response = await apiRequest(
+        "PATCH",
+        `/api/company/${companyId}/onboarding/status/`,
+        { status: "in_review" },
+        true
+      );
+
       if (response.status === 200) {
-        message.success('Company sent for approval. Activation email sent to admin.');
+        message.success(
+          "Company sent for approval. Activation email sent to admin."
+        );
         navigate(`/home/company/`);
         // fetchCompanyDetails();
       }
     } catch (error) {
-      console.error('Error sending for approval:', error);
-      message.error('Failed to send for approval');
+      console.error("Error sending for approval:", error);
+      message.error("Failed to send for approval");
     } finally {
       setSaving(false);
     }
   };
 
-  // Approve (Company role, in_review status)
-  const handleApprove = async () => {
+  // Validate required fields before finishing setup
+  const validateRequiredFields = () => {
+    const requiredFields = [
+      {
+        field: "company_abbreviation",
+        label: "Company abbreviation",
+        section: "basic",
+      },
+      { field: "about_company", label: "About company", section: "basic" },
+      { field: "sector", label: "Sector (GICS)", section: "basic" },
+      {
+        field: "industry_group",
+        label: "Industry Group (GICS)",
+        section: "basic",
+      },
+      { field: "industry", label: "Industry (GICS)", section: "basic" },
+      { field: "sub_industry", label: "Sub-Industry (GICS)", section: "basic" },
+      {
+        field: "year_of_inception",
+        label: "Company year of inception",
+        section: "basic",
+      },
+      {
+        field: "reporting_currency",
+        label: "Reporting Currency",
+        section: "basic",
+      },
+      { field: "hq_country", label: "HQ Country", section: "basic" },
+      { field: "hq_city", label: "HQ City", section: "basic" },
+      { field: "cin_number", label: "CIN number", section: "legal" },
+      { field: "gst_number", label: "GST number", section: "legal" },
+      { field: "pan_number", label: "PAN number", section: "legal" },
+      {
+        field: "legal_status_of_company",
+        label: "Legal Status of Company",
+        section: "legal",
+      },
+      { field: "trading_name", label: "Trading name", section: "legal" },
+      {
+        field: "statutory_obligations",
+        label: "Statutory Obligations",
+        section: "legal",
+      },
+      {
+        field: "rugulatory_obligations",
+        label: "Regulatory Obligations",
+        section: "legal",
+      },
+      {
+        field: "standards_to_be_followed",
+        label: "Standards to be followed",
+        section: "legal",
+      },
+      {
+        field: "billing_address",
+        label: "Billing Address",
+        section: "contractual",
+      },
+      {
+        field: "bill_to_person_name",
+        label: "Bill to person name",
+        section: "contractual",
+      },
+      {
+        field: "bill_to_department",
+        label: "Bill to department",
+        section: "contractual",
+      },
+      {
+        field: "billing_currency",
+        label: "Billing currency",
+        section: "contractual",
+      },
+      {
+        field: "company_logo",
+        label: "Company Logo",
+        section: "optional",
+      },
+    ];
+
+    const missingFields = [];
+    requiredFields.forEach(({ field, label }) => {
+      const value = companyData[field];
+      if (!value || (typeof value === "string" && value.trim() === "")) {
+        missingFields.push(label);
+      }
+    });
+
+    // Check if at least one location exists
+    // if (!companyData.locations || companyData.locations.length === 0) {
+    //   missingFields.push(
+    //     "At least one location with legal status and obligations"
+    //   );
+    // }
+
+    return missingFields;
+  };
+
+  // Finish Setup (Company role, in_review status)
+  const handleFinishSetup = async () => {
+    const missingFields = validateRequiredFields();
+
+    if (missingFields.length > 0) {
+      Modal.error({
+        title: "Required Fields Missing",
+        content: (
+          <div>
+            <p>
+              Please fill in the following required fields before finishing
+              setup:
+            </p>
+            <ul style={{ marginTop: "10px", paddingLeft: "20px" }}>
+              {missingFields.map((field, index) => (
+                <li key={index} style={{ color: "red" }}>
+                  {field}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ),
+        width: 600,
+      });
+      return;
+    }
+
     try {
       setSaving(true);
-      const response = await apiRequest('PATCH', `/api/company/${companyId}/onboarding/status/`, 
-        { status: 'completed' }, true);
-      
+      const response = await apiRequest(
+        "PATCH",
+        `/api/company/${companyId}/onboarding/status/`,
+        { status: "completed" },
+        true
+      );
+
       if (response.status === 200) {
-        message.success('Onboarding completed successfully');
+        message.success("Company setup completed successfully!");
         fetchCompanyDetails();
       }
     } catch (error) {
-      console.error('Error approving:', error);
-      message.error('Failed to complete onboarding');
+      console.error("Error finishing setup:", error);
+      message.error("Failed to complete setup");
     } finally {
       setSaving(false);
     }
@@ -480,19 +886,18 @@ const CompanyDetail = () => {
     try {
       setAddingRep(true);
       const response = await apiRequest(
-        'POST',
+        "POST",
         `/api/auth/company/${companyId}/representatives/create/`,
         values,
         true
       );
-      
+
       if (response.status === 201) {
-        message.success('Representative created successfully!');
+        message.success("Representative created successfully!");
         if (response.data.email_sent) {
-          message.info('Activation email sent to the representative.');
-        }
-        else{
-            message.info('Activation email not sent to the representative.');
+          message.info("Activation email sent to the representative.");
+        } else {
+          message.info("Activation email not sent to the representative.");
         }
         // Refresh representatives list
         fetchRepresentatives();
@@ -501,14 +906,17 @@ const CompanyDetail = () => {
         repForm.resetFields();
       }
     } catch (error) {
-      console.error('Error creating representative:', error);
+      console.error("Error creating representative:", error);
       if (error.response?.status === 403) {
-        message.error('You are not authorized to add representatives.');
+        message.error("You are not authorized to add representatives.");
       } else if (error.response?.status === 400) {
-        const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Invalid data provided.';
+        const errorMsg =
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Invalid data provided.";
         message.error(errorMsg);
       } else {
-        message.error('Failed to create representative. Please try again.');
+        message.error("Failed to create representative. Please try again.");
       }
     } finally {
       setAddingRep(false);
@@ -524,25 +932,25 @@ const CompanyDetail = () => {
   const confirmDelete = async () => {
     try {
       const response = await apiRequest(
-        'DELETE',
+        "DELETE",
         `/api/auth/company/${companyId}/representatives/${selectedRepId}/`,
         null,
         true
       );
-      
+
       if (response.status === 204) {
-        message.success('Representative deleted successfully!');
+        message.success("Representative deleted successfully!");
         // Refresh representatives list
         fetchRepresentatives();
       }
     } catch (error) {
-      console.error('Error deleting representative:', error);
+      console.error("Error deleting representative:", error);
       if (error.response?.status === 403) {
-        message.error('You are not authorized to delete representatives.');
+        message.error("You are not authorized to delete representatives.");
       } else if (error.response?.status === 404) {
-        message.error('Representative not found.');
+        message.error("Representative not found.");
       } else {
-        message.error('Failed to delete representative. Please try again.');
+        message.error("Failed to delete representative. Please try again.");
       }
     } finally {
       setDeleteModalVisible(false);
@@ -552,10 +960,12 @@ const CompanyDetail = () => {
 
   // Check if we have any changes or pending adds/removes
   const hasChanges = () => {
-    return changedFields.size > 0 || 
-           Object.values(itemsToAdd).some(arr => arr.length > 0) ||
-           Object.values(itemsToRemove).some(arr => arr.length > 0) ||
-           Object.keys(fileUploads).length > 0;
+    return (
+      changedFields.size > 0 ||
+      Object.values(itemsToAdd).some((arr) => arr.length > 0) ||
+      Object.values(itemsToRemove).some((arr) => arr.length > 0) ||
+      Object.keys(fileUploads).length > 0
+    );
   };
 
   // Get form item props with visual indicator for changes
@@ -563,51 +973,55 @@ const CompanyDetail = () => {
     const isChanged = changedFields.has(fieldName);
     return {
       ...baseProps,
-      className: isChanged ? 'field-changed' : ''
+      className: isChanged ? "field-changed" : "",
     };
   };
 
   // Representatives columns
   const representativesColumns = [
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
       render: (text, record) => text || record.email,
     },
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
       render: (email) => <a href={`mailto:${email}`}>{email}</a>,
     },
     {
-      title: 'Role',
-      dataIndex: 'role',
-      key: 'role',
+      title: "Role",
+      dataIndex: "role",
+      key: "role",
       render: (role, record) => role || record.role_input,
     },
     {
-      title: 'Contact',
-      dataIndex: 'contact',
-      key: 'contact',
-      render: (contact) => contact || 'N/A',
+      title: "Contact",
+      dataIndex: "contact",
+      key: "contact",
+      render: (contact) => contact || "N/A",
     },
-    ...(isCompanyRole ? [{
-      title: 'Actions',
-      key: 'actions',
-      align: 'center',
-      render: (_, record) => (
-        <Button
-          type="link"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDeleteRepresentative(record.id)}
-        >
-          Delete
-        </Button>
-      ),
-    }] : [])
+    ...(isCompanyRole
+      ? [
+          {
+            title: "Actions",
+            key: "actions",
+            align: "center",
+            render: (_, record) => (
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteRepresentative(record.id)}
+              >
+                Delete
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   if (unauthorized) {
@@ -616,7 +1030,14 @@ const CompanyDetail = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -624,7 +1045,7 @@ const CompanyDetail = () => {
 
   if (!companyData) {
     return (
-      <div style={{ padding: '24px' }}>
+      <div style={{ padding: "24px" }}>
         <Text type="danger">Company not found</Text>
       </div>
     );
@@ -635,8 +1056,7 @@ const CompanyDetail = () => {
 
     return (
       <Space>
-        
-        {isSuperConsultant && companyData.onboarding_status === 'pending' && (
+        {isSuperConsultant && companyData.onboarding_status === "pending" && (
           <Button
             icon={<SendOutlined />}
             onClick={handleSendForApproval}
@@ -647,59 +1067,19 @@ const CompanyDetail = () => {
             Send for Approval
           </Button>
         )}
-        {isCompanyRole && companyData.onboarding_status === 'in_review' && (
+        {isCompanyRole && companyData.onboarding_status === "in_review" && (
           <Button
             type="primary"
             icon={<CheckOutlined />}
-            onClick={handleApprove}
+            onClick={handleFinishSetup}
             loading={saving}
           >
-            Approve
+            Finish Setup
           </Button>
         )}
       </Space>
     );
   };
-
-  
-  const ProfilePreview = () => {
-    return (
-        <div>
-            {previewLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <Spin size="large" />
-            <div style={{ marginTop: '16px' }}>Loading preview...</div>
-          </div>
-        ) : (
-            <div>
-                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                        key="download"
-                        type="primary"
-                        icon={<DownloadOutlined />}
-                        onClick={downloadProfileAsPDF}
-                        disabled={previewLoading}
-                        >
-                        Download as PDF
-                    </Button>
-                </div>
-                <div 
-                    id="profile-preview-content"
-                    dangerouslySetInnerHTML={{ __html: previewHtml }}
-                    style={{ 
-                    // maxHeight: '55vh', 
-                    // overflowY: 'auto',
-                    // padding: '20px',
-                    // backgroundColor: '#fff',
-                    // overflowX: 'hidden',
-                    // maxWidth: '1200px',
-                    }}
-                />
-            </div>
-        )}
-        </div>
-    )
-    }
 
   const renderEditSaveButtons = () => {
     if (isEditMode) {
@@ -738,8 +1118,8 @@ const CompanyDetail = () => {
 
   const tabItems = [
     {
-      key: 'details',
-      label: 'Company Details',
+      key: "details",
+      label: "Company Details",
       children: (
         <div>
           <style>
@@ -760,12 +1140,18 @@ const CompanyDetail = () => {
             `}
           </style>
 
-            <div style={{ marginBottom: 0, display: 'flex', justifyContent: 'flex-end' }}>
-              {renderEditSaveButtons()}
-            </div>
+          <div
+            style={{
+              marginBottom: 0,
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
+            {renderEditSaveButtons()}
+          </div>
 
           <Form
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             form={form}
             layout="vertical"
             onFinish={handleSave}
@@ -774,17 +1160,15 @@ const CompanyDetail = () => {
             disabled={!isEditMode}
           >
             {/* Basic Information */}
-            <BasicInformationSection 
-              getFormItemProps={getFormItemProps}
-            />
+            <BasicInformationSection getFormItemProps={getFormItemProps} />
 
             {/* Contractual Information */}
-            <ContractualInformationSection 
+            <ContractualInformationSection
               getFormItemProps={getFormItemProps}
             />
 
             {/* Legal Information */}
-            <LegalInformationSection 
+            <LegalInformationSection
               getFormItemProps={getFormItemProps}
               isEditMode={isEditMode}
               companyData={companyData}
@@ -792,7 +1176,7 @@ const CompanyDetail = () => {
             />
 
             {/* IT Information */}
-            <ITInformationSection 
+            <ITInformationSection
               assets={assets}
               setAssets={setAssets}
               isEditMode={isEditMode}
@@ -805,7 +1189,7 @@ const CompanyDetail = () => {
             />
 
             {/* Locations */}
-            <LocationsSection 
+            <LocationsSection
               locations={locations}
               setLocations={setLocations}
               isEditMode={isEditMode}
@@ -816,14 +1200,14 @@ const CompanyDetail = () => {
             />
 
             {/* Other Information */}
-            <OtherInformationSection 
+            <OtherInformationSection
               isEditMode={isEditMode}
               companyData={companyData}
               onFileChange={handleFileChange}
             />
 
             {/* Color Palette */}
-            <ColorPaletteSection 
+            <ColorPaletteSection
               colorPalette={colorPalette}
               setColorPalette={setColorPalette}
               isEditMode={isEditMode}
@@ -834,7 +1218,7 @@ const CompanyDetail = () => {
             />
 
             {/* Fonts */}
-            <FontsSection 
+            <FontsSection
               fonts={fonts}
               setFonts={setFonts}
               isEditMode={isEditMode}
@@ -845,7 +1229,7 @@ const CompanyDetail = () => {
             />
 
             {/* Clients */}
-            <ClientsSection 
+            <ClientsSection
               clients={clients}
               setClients={setClients}
               isEditMode={isEditMode}
@@ -856,7 +1240,7 @@ const CompanyDetail = () => {
             />
 
             {/* Vendors */}
-            <VendorsSection 
+            <VendorsSection
               vendors={vendors}
               setVendors={setVendors}
               isEditMode={isEditMode}
@@ -867,7 +1251,7 @@ const CompanyDetail = () => {
             />
 
             {/* Cloud Services */}
-            <CloudServicesSection 
+            <CloudServicesSection
               cloudServices={cloudServices}
               setCloudServices={setCloudServices}
               isEditMode={isEditMode}
@@ -878,14 +1262,22 @@ const CompanyDetail = () => {
             />
 
             {/* Hidden submit button */}
-            <Form.Item style={{ display: 'none' }}>
+            <Form.Item style={{ display: "none" }}>
               <Button htmlType="submit" />
             </Form.Item>
           </Form>
 
           {/* Save buttons at bottom (only in edit mode) */}
           {isEditMode && (
-            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
+            <div
+              style={{
+                marginTop: "16px",
+                display: "flex",
+                justifyContent: "flex-end",
+                paddingTop: "16px",
+                borderTop: "1px solid #f0f0f0",
+              }}
+            >
               {renderEditSaveButtons()}
             </div>
           )}
@@ -893,12 +1285,18 @@ const CompanyDetail = () => {
       ),
     },
     {
-      key: 'representatives',
-      label: 'Company Representatives',
+      key: "representatives",
+      label: "Company Representatives",
       children: (
         <div>
           {isCompanyRole && (
-            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div
+              style={{
+                marginBottom: "16px",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -919,72 +1317,90 @@ const CompanyDetail = () => {
               showTotal: (total) => `Total ${total} representatives`,
             }}
             locale={{
-              emptyText: 'No representatives found'
+              emptyText: "No representatives found",
             }}
           />
         </div>
       ),
     },
     {
-        key: 'profile',
-        label: 'Profile',
-        children: (
-            <ProfilePreview/>
-        )
-    }
+      key: "profile",
+      label: "Profile",
+      children: (
+        <CompanyProfileEdit
+          companyId={companyId}
+          isEditMode={isProfileEditMode}
+          onClose={handleCloseEditMode}
+          onDownloadPDF={downloadProfileAsPDF}
+          onEditClick={handleEditProfile}
+          previewHtml={previewHtml}
+          previewLoading={previewLoading}
+          canEdit={
+            isCompanyRole && companyData?.onboarding_status === "completed"
+          }
+        />
+      ),
+    },
   ];
 
   return (
-    <div style={{ padding: '24px', width:"100%", margin: '0 auto' }}>
+    <div style={{ padding: "24px", width: "100%", margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ marginBottom: '24px',display:"flex" }}>
-        {!isCompanyRole && 
+      <div style={{ marginBottom: "24px", display: "flex" }}>
+        {!isCompanyRole && (
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(-1)}
             style={{
-                borderRadius: '40px',
-                height:"50px",
-                width:"50px",
-                marginRight:"20px",
+              borderRadius: "40px",
+              height: "50px",
+              width: "50px",
+              marginRight: "20px",
               hover: {
-                backgroundColor: '#1890ff',
-                borderColor: '#1890ff',
-                color: '#fff',
+                backgroundColor: "#1890ff",
+                borderColor: "#1890ff",
+                color: "#fff",
               },
             }}
-          >
-          </Button>}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-center',width:"100%" }}>
+          ></Button>
+        )}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-center",
+            width: "100%",
+          }}
+        >
           <div>
             <Title level={3} style={{ margin: 0 }}>
-              {companyData.company_name || 'Company Details'}
+              {companyData.company_name || "Company Details"}
             </Title>
-            <Space style={{ marginTop: '2px',color:"gray"}}>
-                Status: 
-              <Tag color={
-                companyData.onboarding_status === 'pending' ? 'orange' :
-                companyData.onboarding_status === 'in_review' ? 'blue' :
-                companyData.onboarding_status === 'completed' ? 'green' : 'default'
-              }>
-                {companyData.onboarding_status?.toUpperCase() || 'UNKNOWN'}
+            <Space style={{ marginTop: "2px", color: "gray" }}>
+              Status:
+              <Tag
+                color={
+                  companyData.onboarding_status === "pending"
+                    ? "orange"
+                    : companyData.onboarding_status === "in_review"
+                    ? "blue"
+                    : companyData.onboarding_status === "completed"
+                    ? "green"
+                    : "default"
+                }
+              >
+                {companyData.onboarding_status?.toUpperCase() || "UNKNOWN"}
               </Tag>
             </Space>
           </div>
 
-          <div style={{right:0}}>
-            {renderActionButtons()}
-          </div>
+          <div style={{ right: 0 }}>{renderActionButtons()}</div>
         </div>
       </div>
 
       {/* Tabs */}
       <Card>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-        />
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
       {/* Add Representative Modal */}
@@ -1008,7 +1424,9 @@ const CompanyDetail = () => {
           <Form.Item
             name="name"
             label="Full Name"
-            rules={[{ required: true, message: 'Please enter representative name' }]}
+            rules={[
+              { required: true, message: "Please enter representative name" },
+            ]}
           >
             <Input placeholder="Enter full name" />
           </Form.Item>
@@ -1017,17 +1435,14 @@ const CompanyDetail = () => {
             name="email"
             label="Email"
             rules={[
-              { required: true, message: 'Please enter email' },
-              { type: 'email', message: 'Please enter a valid email' }
+              { required: true, message: "Please enter email" },
+              { type: "email", message: "Please enter a valid email" },
             ]}
           >
             <Input placeholder="Enter email address" />
           </Form.Item>
 
-          <Form.Item
-            name="contact"
-            label="Contact Number (Optional)"
-          >
+          <Form.Item name="contact" label="Contact Number (Optional)">
             <Input placeholder="Enter contact number" />
           </Form.Item>
         </Form>
@@ -1046,11 +1461,12 @@ const CompanyDetail = () => {
         okButtonProps={{ danger: true }}
       >
         <Space>
-          <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: '22px' }} />
+          <ExclamationCircleOutlined
+            style={{ color: "#ff4d4f", fontSize: "22px" }}
+          />
           <Text>Are you sure you want to delete this representative?</Text>
         </Space>
       </Modal>
-
     </div>
   );
 };

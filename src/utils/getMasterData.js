@@ -100,7 +100,7 @@ const getCurrencyOptions = async (searchText = "") => {
     const currencies = await getCurrencyList(searchText);
     return currencies.map(currency => ({
         label: `${currency.currency} (${currency.alphabetic_code})`,
-        value: currency.id,
+        value: currency.alphabetic_code,
         code: currency.alphabetic_code,
         numericCode: currency.numeric_code
     }));
